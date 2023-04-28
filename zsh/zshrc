@@ -1,0 +1,31 @@
+#   ▀█ █▀ █ █ █▀█ █▀▀
+# ▄ █▄ ▄█ █▀█ █▀▄ █▄▄
+
+##--> Explicitly launching of tmux <--##
+source "$HOME/.config/zsh/conf/tmux.zsh" || return
+
+##--> Sourcing config files <--##
+while read conf
+do
+  [ -f "$HOME/.config/zsh/conf/$conf.zsh" ] && source "$HOME/.config/zsh/conf/$conf.zsh"
+done <<-EOF
+    opts
+    plugs
+    env
+    theme
+    keys
+    prompt
+    fzf
+    nvim
+    alias
+    function
+EOF
+
+##--> Sourcing other files <--##
+[ -f "$HOME/.temp_zsh" ] && source "$HOME/.temp_zsh"  # For temporary offline aliases
+
+##--> Final Options <--##
+echo -en "\x1b[2J\x1b[1;1H" ;echo   # For faster clearing the Terminal
+set -o vi                           # Vi-mode
+
+# vim:filetype=zsh
