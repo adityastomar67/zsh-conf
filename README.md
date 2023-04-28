@@ -42,9 +42,7 @@ StartPoint is a `<utility/tool>` that allows `<target_audience>` to `<some_actio
 ### 🚀 Installation
 
 ```bash
-git clone https://github.com/adityastomar67/StartPoint
-cd StartPoint
-<install_command>
+zsh <(curl -s https://raw.githubusercontent.com/adityastomar67/zsh-conf/master/install.zsh)
 ```
 
 ### 💻 Usage
