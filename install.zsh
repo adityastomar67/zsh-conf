@@ -3,50 +3,62 @@
 # Check if zsh is installed
 # check if current shell is zsh
 
+CRE=$(tput setaf 1)
+CYE=$(tput setaf 3)
+CGR=$(tput setaf 2)
+CBL=$(tput setaf 4)
+BLD=$(tput bold)
+CNC=$(tput sgr0)
+
 SED() {
     sed -i "s/$1=\"No\"/$1=\"Yes\"/g" $HOME/.zshrc
     printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
     sleep 1
-    clear
 }
 
 options() {
-
+    clear
     read -q "res?Would you like to use Tmux? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
         SED "USE_TMUX"
     }
+    clear
 
     read -q "res?Would you like to use Alias? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
         SED "USE_ALIAS"
     }
+    clear
 
     read -q "res?Would you like to use Custom Functions? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
         SED "USE_FUNCTION"
     }
+    clear
 
     read -q "res?Would you like to use Themer? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
         SED "OPT_THEME"
     }
+    clear
 
     read -q "res?Would you like to use Oh-my-zsh? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
        SED "OMZ"
     }
+    clear
 
     read -q "res?Would you like to use Multiple Neovim Setup? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
        SED "MULTI_NEOVIM"
     }
+    clear
 
     read -q "res?Would you like to have Custom Wallpapers? [y/N] "
     echo ""
@@ -57,6 +69,7 @@ options() {
         source $HOME/zsh-conf/zsh/conf/theme.zsh
         SED "CUSTOM_WALL"
     }
+    clear
 
     read -q "res?Would you like to have a temporary sourcing file? [y/N] "
     echo ""
@@ -64,6 +77,7 @@ options() {
         echo "Creating temporary file at $HOME/.temp_zsh..."
         SED "TEMP_OFFLINE_ALIAS"
     }
+    clear
 }
 
 main() {
@@ -73,7 +87,7 @@ main() {
     local ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
 
     # Changing shell to Zsh
-	logo "Changing default shell to zsh"
+	echo "Changing default shell to zsh"
 	printf "%s%sIf your shell is not zsh, it will be changed now.\nYour root password is needed to make the change.\n\nAfter that is important for you to reboot.\n %s\n" "${BLD}" "${CYE}" "${CNC}"
 	sleep 5
 	if [[ $SHELL != "/usr/bin/zsh" ]]; then
