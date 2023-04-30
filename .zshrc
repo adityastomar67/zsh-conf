@@ -3,7 +3,7 @@
 
 ##--> Some options for user <--##
 export OPT_THEME="No"          # Change it to "Yes", if you wants to use theme.sh script.
-export OMZ="No"                # For oh-my-zsh setup, if wants omz with this setup, mv .zshrc.pre-oh-my-zsh to .zshrc
+export PLUG_MANAGER="zap"      # zinit, omz, zap. Choose Wisely
 export USE_TMUX="No"           # Change it to "Yes", to automatically load tmux on every new instance of the terminal.
 export USE_ALIAS="No"          # Pretty self explainotory.
 export USE_FUNCTION="No"       # Pretty self explainotory as well.
