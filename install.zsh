@@ -100,7 +100,9 @@ main() {
 		sleep 5
 	fi
 
-    # Check if the current .zshrc file exists
+    # Check if the current .zshrc config files exists
+    [ -d "$HOME/.oh-my-zsh" ]   && rm -rf "$HOME/.oh-my-zsh"
+    [ -d "$HOME/.zinit" ]       && rm -rf "$HOME/.zinit"
     if [ -f "$ZSHRC" ]; then
         # Move the current .zshrc file to the new filename
         mv "$ZSHRC" "$HOME/.zshrc_${DATE}_${ID}"
