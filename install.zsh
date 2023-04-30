@@ -70,7 +70,8 @@ options() {
         sleep 1
     }
 
-    clear
+echo $res
+    # clear
     read -q "res?Would you like to use Multiple Neovim Setup? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
