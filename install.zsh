@@ -11,6 +11,7 @@ BLD=$(tput bold)
 CNC=$(tput sgr0)
 
 options() {
+    clear
     read -q "res?Would you like to use Tmux? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -19,6 +20,7 @@ options() {
         sleep 1
     }
 
+    clear
     read -q "res?Would you like to use Alias? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -27,6 +29,7 @@ options() {
         sleep 1
     }
 
+    clear
     read -q "res?Would you like to use Custom Functions? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -35,6 +38,7 @@ options() {
         sleep 1
     }
 
+    clear
     read -q "res?Would you like to use Themer? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -43,6 +47,7 @@ options() {
         sleep 1
     }
 
+    clear
     read -q "res?Would you like to use Oh-my-zsh? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -51,6 +56,7 @@ options() {
         sleep 1
     }
 
+    clear
     read -q "res?Would you like to use Multiple Neovim Setup? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -59,6 +65,7 @@ options() {
         sleep 1
     }
 
+    clear
     read -q "res?Would you like to have Custom Wallpapers? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -71,6 +78,7 @@ options() {
         sleep 1
     }
 
+    clear
     read -q "res?Would you like to have a temporary sourcing file? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -88,7 +96,7 @@ main() {
     local ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
 
     # Changing shell to Zsh
-	echo "Changing default shell to zsh"
+	printf "%s%sChanging default shell to zsh!%s\n" "${BLD}" "${CRE}" "${CNC}"
 	printf "%s%sIf your shell is not zsh, it will be changed now.\nYour root password is needed to make the change.\n\nAfter that is important for you to reboot.\n %s\n" "${BLD}" "${CYE}" "${CNC}"
 	sleep 5
 	if [[ $SHELL != "/usr/bin/zsh" ]]; then
