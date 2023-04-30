@@ -49,7 +49,7 @@ options() {
 
     clear
     echo "Which Plugin manager would you like?"
-    printf "A. Zap\nB. Oh-my-zsh\nC. Zinit\n"
+    # printf "A. Zap\nB. Oh-my-zsh\nC. Zinit\n"
     read -q "res?Choose between? [a/b/c] "
     echo ""
     [[ $res == "a" ]] && {
