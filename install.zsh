@@ -11,7 +11,7 @@ BLD=$(tput bold)
 CNC=$(tput sgr0)
 
 options() {
-    clear
+    # clear
     read -q "res?Would you like to use Tmux? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -19,8 +19,9 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
+echo $res
 
-    clear
+    # clear
     read -q "res?Would you like to use Alias? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -28,8 +29,9 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
+echo $res
 
-    clear
+    # clear
     read -q "res?Would you like to use Custom Functions? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -37,8 +39,9 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
+echo $res
 
-    clear
+    # clear
     read -q "res?Would you like to use Themer? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -46,8 +49,9 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
+echo $res
 
-    clear
+    # clear
     echo "Which Plugin manager would you like?"
     # printf "A. Zap\nB. Oh-my-zsh\nC. Zinit\n"
     read -q "res?Choose between? [a/b/c] "
@@ -71,7 +75,7 @@ options() {
     }
 
 echo $res
-    # clear
+    clear
     read -q "res?Would you like to use Multiple Neovim Setup? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -79,8 +83,9 @@ echo $res
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
+echo $res
 
-    clear
+    # clear
     read -q "res?Would you like to have Custom Wallpapers? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -92,8 +97,9 @@ echo $res
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
+echo $res
 
-    clear
+    # clear
     read -q "res?Would you like to have a temporary sourcing file? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -102,6 +108,8 @@ echo $res
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
+echo $res
+sleep 20
 }
 
 main() {
@@ -150,7 +158,7 @@ main() {
     return 0
 }
 
-clear
+# clear
 main $@
 
 [[ $? -eq 0 ]] && exec zsh || return
