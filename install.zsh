@@ -111,7 +111,7 @@ main() {
 
     # Changing shell to Zsh
 	printf "%s%sChanging default shell to zsh!%s\n" "${BLD}" "${CRE}" "${CNC}"
-	printf "%s%sIf your shell is not zsh, it will be changed now.\nYour root password is needed to make the change.\n\nAfter that is important for you to reboot.\n %s\n" "${BLD}" "${CYE}" "${CNC}"
+	printf "%s%sIf your shell is not zsh, it will be changed now.\nYour root password is needed to make the change.\n\nAfter that, it is important for you to reboot.\n %s\n" "${BLD}" "${CYE}" "${CNC}"
 	sleep 5
 	if [[ $SHELL != "/usr/bin/zsh" ]]; then
 		echo "Changing shell to zsh, your root pass is needed."
