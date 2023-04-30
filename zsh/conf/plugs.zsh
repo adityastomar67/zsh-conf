@@ -74,7 +74,7 @@ elif [ $PLUG_MANAGER = "omz" ]; then
     [ -d $ZAP_HOME ] && rm -rf $ZAP_HOME
 
 elif [ $PLUG_MANAGER = "zap" ]; then
-    [[ ! -d "$ZAP_HOME" ]] && git clone --depth 1 -b "${BRANCH:-master}" https://github.com/zap-zsh/zap.git "$ZAP_HOME" > /dev/null 2>&1 || { echo "❌ Failed to install Zap" && return 2 }
+    [[ ! -d "$ZAP_HOME" ]] && git clone --depth 1 https://github.com/zap-zsh/zap.git "$ZAP_HOME" > /dev/null 2>&1
     sleep 1
 
     [ -f "$ZAP_HOME/zap.zsh" ] && source "$ZAP_HOME/zap.zsh"
