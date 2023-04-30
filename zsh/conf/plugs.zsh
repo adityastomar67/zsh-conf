@@ -74,23 +74,10 @@ elif [ $PLUG_MANAGER = "omz" ]; then
     [ -d $ZAP_HOME ] && rm -rf $ZAP_HOME
 
 elif [ $PLUG_MANAGER = "zap" ]; then
-    # check if ZAP_DIR already exists
-    [[ -d "$ZAP_DIR" ]] && {
-        echo "Zap is already installed in '$ZAP_DIR'!"
-        read -q "res?Reinstall Zap? [y/N] "
-        echo ""
-        [[ $res == "n" ]] && {
-            echo "❕ skipped!"
-            return
-        }
-        echo "Reinstalling Zap..."
-        rm -rf "$ZAP_DIR"
-    }
-
-    git clone --depth 1 -b "${BRANCH:-master}" https://github.com/zap-zsh/zap.git "$ZAP_HOME" > /dev/null 2>&1 || { echo "❌ Failed to install Zap" && return 2 }
+    [[ ! -d "$ZAP_HOME" ]] && git clone --depth 1 -b "${BRANCH:-master}" https://github.com/zap-zsh/zap.git "$ZAP_HOME" > /dev/null 2>&1 || { echo "❌ Failed to install Zap" && return 2 }
     sleep 1
 
-    [ -f "$HOME/.local/share/zap/zap.zsh" ] && source "$HOME/.local/share/zap/zap.zsh"
+    [ -f "$ZAP_HOME/zap.zsh" ] && source "$ZAP_HOME/zap.zsh"
 
     plug "zsh-users/zsh-completions"
     plug "hlissner/zsh-autopair"
