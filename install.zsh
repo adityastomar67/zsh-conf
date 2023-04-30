@@ -48,11 +48,25 @@ options() {
     }
 
     clear
-    read -q "res?Would you like to use Oh-my-zsh? [y/N] "
+    echo "Which Plugin manager would you like?"
+    printf "A. Zap\nB. Oh-my-zsh\nC. Zinit\n"
+    read -q "res?Choose between? [a/b/c] "
     echo ""
-    [[ $res == "y" ]] && {
-       sed -i "s/OMZ=\"No\"/OMZ=\"Yes\"/g" $HOME/.zshrc
-        printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
+    [[ $res == "a" ]] && {
+       sed -i "s/PLUG_MANAGER=\".*\"/PLUG_MANAGER=\"zap\"/g" $HOME/.zshrc
+        printf '%s✓ Zap will be used as your plugin manager%s\n' "${CGR}" "${CNC}"
+        sleep 1
+    }
+
+    [[ $res == "b" ]] && {
+       sed -i "s/PLUG_MANAGER=\".*\"/PLUG_MANAGER=\"omz\"/g" $HOME/.zshrc
+        printf '%s✓ Oh-my-zsh will be used as your plugin manager%s\n' "${CGR}" "${CNC}"
+        sleep 1
+    }
+
+    [[ $res == "c" ]] && {
+       sed -i "s/PLUG_MANAGER=\".*\"/PLUG_MANAGER=\"zinit\"/g" $HOME/.zshrc
+        printf '%s✓ Zinit will be used as your plugin manager%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
 
@@ -132,7 +146,6 @@ main() {
     options
 
     rm -rf $HOME/zsh-conf
-
     return 0
 }
 
