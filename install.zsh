@@ -11,7 +11,6 @@ BLD=$(tput bold)
 CNC=$(tput sgr0)
 
 options() {
-    clear
     read -q "res?Would you like to use Tmux? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -19,7 +18,6 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-    clear
 
     read -q "res?Would you like to use Alias? [y/N] "
     echo ""
@@ -28,7 +26,6 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-    clear
 
     read -q "res?Would you like to use Custom Functions? [y/N] "
     echo ""
@@ -37,7 +34,6 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-    clear
 
     read -q "res?Would you like to use Themer? [y/N] "
     echo ""
@@ -46,7 +42,6 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-    clear
 
     read -q "res?Would you like to use Oh-my-zsh? [y/N] "
     echo ""
@@ -55,7 +50,6 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-    clear
 
     read -q "res?Would you like to use Multiple Neovim Setup? [y/N] "
     echo ""
@@ -64,7 +58,6 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-    clear
 
     read -q "res?Would you like to have Custom Wallpapers? [y/N] "
     echo ""
@@ -77,7 +70,6 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-    clear
 
     read -q "res?Would you like to have a temporary sourcing file? [y/N] "
     echo ""
@@ -87,7 +79,6 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-    clear
 }
 
 main() {
