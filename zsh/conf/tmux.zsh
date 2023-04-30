@@ -44,6 +44,8 @@ if [ $USE_TMUX = "Yes" ]; then
         #
         #    return
         # fi
+    else
+        echo "Tmux not installed!"
     fi
 fi
 
