@@ -7,7 +7,7 @@ source "$HOME/.config/zsh/conf/tmux.zsh" || return
 ##--> Sourcing config files <--##
 while read conf
 do
-  [ -f "$HOME/.config/zsh/conf/$conf.zsh" ] && source "$HOME/.config/zsh/conf/$conf.zsh"
+  [ -f "$HOME/.config/zsh/conf/${conf}.zsh" ] && source "$HOME/.config/zsh/conf/${conf}.zsh"
 done <<-EOF
     opts
     plugs

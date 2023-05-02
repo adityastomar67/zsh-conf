@@ -1,8 +1,5 @@
 #!/usr/bin/env zsh
 
-# Check if zsh is installed
-# check if current shell is zsh
-
 CRE=$(tput setaf 1)
 CYE=$(tput setaf 3)
 CGR=$(tput setaf 2)
@@ -11,7 +8,7 @@ BLD=$(tput bold)
 CNC=$(tput sgr0)
 
 options() {
-    # clear
+    clear
     read -q "res?Would you like to use Tmux? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -19,9 +16,8 @@ options() {
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-echo $res
 
-    # clear
+    clear
     read -q "res?Would you like to use Alias? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -29,9 +25,8 @@ echo $res
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-echo $res
 
-    # clear
+    clear
     read -q "res?Would you like to use Custom Functions? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -39,9 +34,8 @@ echo $res
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-echo $res
 
-    # clear
+    clear
     read -q "res?Would you like to use Themer? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -49,32 +43,7 @@ echo $res
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-echo $res
 
-    # clear
-    echo "Which Plugin manager would you like?"
-    # printf "A. Zap\nB. Oh-my-zsh\nC. Zinit\n"
-    read -q "res?Choose between? [a/b/c] "
-    echo ""
-    [[ $res == "a" ]] && {
-       sed -i "s/PLUG_MANAGER=\".*\"/PLUG_MANAGER=\"zap\"/g" $HOME/.zshrc
-        printf '%s✓ Zap will be used as your plugin manager%s\n' "${CGR}" "${CNC}"
-        sleep 1
-    }
-
-    [[ $res == "b" ]] && {
-       sed -i "s/PLUG_MANAGER=\".*\"/PLUG_MANAGER=\"omz\"/g" $HOME/.zshrc
-        printf '%s✓ Oh-my-zsh will be used as your plugin manager%s\n' "${CGR}" "${CNC}"
-        sleep 1
-    }
-
-    [[ $res == "c" ]] && {
-       sed -i "s/PLUG_MANAGER=\".*\"/PLUG_MANAGER=\"zinit\"/g" $HOME/.zshrc
-        printf '%s✓ Zinit will be used as your plugin manager%s\n' "${CGR}" "${CNC}"
-        sleep 1
-    }
-
-echo $res
     clear
     read -q "res?Would you like to use Multiple Neovim Setup? [y/N] "
     echo ""
@@ -83,9 +52,8 @@ echo $res
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-echo $res
 
-    # clear
+    clear
     read -q "res?Would you like to have Custom Wallpapers? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -97,9 +65,8 @@ echo $res
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-echo $res
 
-    # clear
+    clear
     read -q "res?Would you like to have a temporary sourcing file? [y/N] "
     echo ""
     [[ $res == "y" ]] && {
@@ -108,8 +75,6 @@ echo $res
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
-echo $res
-sleep 20
 }
 
 main() {
@@ -135,11 +100,13 @@ main() {
     # Check if the current .zshrc config files exists
     [ -d "$HOME/.oh-my-zsh" ]   && rm -rf "$HOME/.oh-my-zsh"
     [ -d "$HOME/.zinit" ]       && rm -rf "$HOME/.zinit"
+
     if [ -f "$ZSHRC" ]; then
         # Move the current .zshrc file to the new filename
         mv "$ZSHRC" "$HOME/.zshrc_${DATE}_${ID}"
         echo "Moved .zshrc to $HOME/.zshrc_${DATE}_${ID}"
     fi
+    
     if [ -d "$HOME/.config/zsh" ]; then
         # Move the current zsh conf file to the new filename
         mv "$HOME/.config/zsh" "$HOME/.config/zsh_${DATE}_${ID}"
@@ -158,7 +125,7 @@ main() {
     return 0
 }
 
-# clear
+clear
 main $@
 
 [[ $? -eq 0 ]] && exec zsh || return
