@@ -9,7 +9,7 @@ CNC=$(tput sgr0)
 
 options() {
     clear
-    read -q "res?Would you like to use Tmux? [y/N] "
+    read -rp "Would you like to use Tmux? [y/N] " res
     echo ""
     [[ $res == "y" ]] && {
         sed -i "s/USE_TMUX=\"No\"/USE_TMUX=\"Yes\"/g" $HOME/.zshrc
@@ -18,7 +18,7 @@ options() {
     }
 
     clear
-    read -q "res?Would you like to use Alias? [y/N] "
+    read -rp "Would you like to use Alias? [y/N] " res
     echo ""
     [[ $res == "y" ]] && {
         sed -i "s/USE_ALIAS=\"No\"/USE_ALIAS=\"Yes\"/g" $HOME/.zshrc
@@ -27,7 +27,7 @@ options() {
     }
 
     clear
-    read -q "res?Would you like to use Custom Functions? [y/N] "
+    read -rp "Would you like to use Custom Functions? [y/N] " res
     echo ""
     [[ $res == "y" ]] && {
         sed -i "s/USE_FUNCTION=\"No\"/USE_FUNCTION=\"Yes\"/g" $HOME/.zshrc
@@ -36,7 +36,7 @@ options() {
     }
 
     clear
-    read -q "res?Would you like to use Themer? [y/N] "
+    read -rp "Would you like to use Themer? [y/N] " res
     echo ""
     [[ $res == "y" ]] && {
         sed -i "s/OPT_THEME=\"No\"/OPT_THEME=\"Yes\"/g" $HOME/.zshrc
@@ -45,7 +45,7 @@ options() {
     }
 
     clear
-    read -q "res?Would you like to use Multiple Neovim Setup? [y/N] "
+    read -rp "Would you like to use Multiple Neovim Setup? [y/N] " res
     echo ""
     [[ $res == "y" ]] && {
        sed -i "s/MULTI_NEOVIM=\"No\"/MULTI_NEOVIM=\"Yes\"/g" $HOME/.zshrc
@@ -54,7 +54,7 @@ options() {
     }
 
     clear
-    read -q "res?Would you like to have Custom Wallpapers? [y/N] "
+    read -rp "Would you like to have Custom Wallpapers? [y/N] " res
     echo ""
     [[ $res == "y" ]] && {
         echo "It will take some time to download wallpapers..."
@@ -67,7 +67,7 @@ options() {
     }
 
     clear
-    read -q "res?Would you like to have a temporary sourcing file? [y/N] "
+    read -rp "Would you like to have a temporary sourcing file? [y/N] " res
     echo ""
     [[ $res == "y" ]] && {
         echo "Creating temporary file at $HOME/.temp_zsh..."
