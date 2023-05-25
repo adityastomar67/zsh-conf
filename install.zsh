@@ -8,9 +8,8 @@ BLD=$(tput bold)
 CNC=$(tput sgr0)
 
 options() {
-    clear
+    # clear
     read -rp "Would you like to use Tmux? [y/N] " res
-    echo ""
     [[ $res == "y" ]] && {
         sed -i "s/USE_TMUX=\"No\"/USE_TMUX=\"Yes\"/g" $HOME/.zshrc
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
@@ -19,7 +18,6 @@ options() {
 
     clear
     read -rp "Would you like to use Alias? [y/N] " res
-    echo ""
     [[ $res == "y" ]] && {
         sed -i "s/USE_ALIAS=\"No\"/USE_ALIAS=\"Yes\"/g" $HOME/.zshrc
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
@@ -28,7 +26,6 @@ options() {
 
     clear
     read -rp "Would you like to use Custom Functions? [y/N] " res
-    echo ""
     [[ $res == "y" ]] && {
         sed -i "s/USE_FUNCTION=\"No\"/USE_FUNCTION=\"Yes\"/g" $HOME/.zshrc
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
@@ -37,7 +34,6 @@ options() {
 
     clear
     read -rp "Would you like to use Themer? [y/N] " res
-    echo ""
     [[ $res == "y" ]] && {
         sed -i "s/OPT_THEME=\"No\"/OPT_THEME=\"Yes\"/g" $HOME/.zshrc
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
@@ -46,7 +42,6 @@ options() {
 
     clear
     read -rp "Would you like to use Multiple Neovim Setup? [y/N] " res
-    echo ""
     [[ $res == "y" ]] && {
        sed -i "s/MULTI_NEOVIM=\"No\"/MULTI_NEOVIM=\"Yes\"/g" $HOME/.zshrc
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
@@ -55,7 +50,6 @@ options() {
 
     clear
     read -rp "Would you like to have Custom Wallpapers? [y/N] " res
-    echo ""
     [[ $res == "y" ]] && {
         echo "It will take some time to download wallpapers..."
         echo "Wallpapers will be stored at $HOME/.config/wall"
@@ -68,7 +62,6 @@ options() {
 
     clear
     read -rp "Would you like to have a temporary sourcing file? [y/N] " res
-    echo ""
     [[ $res == "y" ]] && {
         echo "Creating temporary file at $HOME/.temp_zsh..."
         sed -i "s/TEMP_OFFLINE_ALIAS=\"No\"/TEMP_OFFLINE_ALIAS=\"Yes\"/g" $HOME/.zshrc
@@ -110,14 +103,15 @@ main() {
         command rm "$ZSHRC"
     fi
     
-    if [ -d "$HOME/.config/zsh" ]; then
+    if [ -d "$HOME/.config/zsh-conf" ]; then
         # Move the current zsh conf file to the new filename
-        command mv "$HOME/.config/zsh" "$HOME/.config/zsh_${DATE}_${ID}"
-        echo "Moved $HOME/.config/zsh to $HOME/.config/zsh_${DATE}_${ID}"
+        command mv "$HOME/.config/zsh-conf" "$HOME/.config/zsh-conf_${DATE}_${ID}"
+        echo "Moved $HOME/.config/zsh-conf to $HOME/.config/zsh-conf_${DATE}_${ID}"
     fi
 
     cd $HOME 
-    git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" $HOME/.config/
+    mkdir -p $HOME/.config/zsh-conf
+    git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" $HOME/.config/zsh-conf
     # Update the ZSH_CONF_PATH variable where you clone the repo
 
     ln -s $HOME/.config/zsh-conf/.zshrc $HOME/.zshrc
