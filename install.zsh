@@ -84,12 +84,13 @@ main() {
     local ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
 
     # Changing shell to Zsh
-	printf "%s%sChanging default shell to zsh!%s\n" "${BLD}" "${CRE}" "${CNC}"
+	printf "%s%sSetting up Z-Shell!%s\n\n" "${BLD}" "${CRE}" "${CNC}"
 	printf "%s%sIf your shell is not zsh, it will be changed now.\nYour root password is needed to make the change.\n\nAfter that, it is important for you to reboot.\n %s\n" "${BLD}" "${CYE}" "${CNC}"
 	sleep 5
 	if [[ $SHELL != "/usr/bin/zsh" ]]; then
 		echo "Changing shell to zsh, your root pass is needed."
 		chsh -s /usr/bin/zsh
+        sleep 2
 		printf '%s✓ Shell changed to ZSH!%s\n' "${CGR}" "${CNC}"
 		sleep 5
 	else
@@ -103,25 +104,30 @@ main() {
 
     if [ -f "$ZSHRC" ]; then
         # Move the current .zshrc file to the new filename
-        mv "$ZSHRC" "$HOME/.zshrc_${DATE}_${ID}"
+        command mv "$ZSHRC" "$HOME/.zshrc_${DATE}_${ID}"
         echo "Moved .zshrc to $HOME/.zshrc_${DATE}_${ID}"
+    elif [ -L "$ZSHRC" ]; then
+        command rm "$ZSHRC"
     fi
     
     if [ -d "$HOME/.config/zsh" ]; then
         # Move the current zsh conf file to the new filename
-        mv "$HOME/.config/zsh" "$HOME/.config/zsh_${DATE}_${ID}"
+        command mv "$HOME/.config/zsh" "$HOME/.config/zsh_${DATE}_${ID}"
         echo "Moved $HOME/.config/zsh to $HOME/.config/zsh_${DATE}_${ID}"
     fi
 
     cd $HOME 
-    git clone --quiet "https://github.com/adityastomar67/zsh-conf.git"
+    git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" $HOME/.config/
+    # Update the ZSH_CONF_PATH variable where you clone the repo
 
-    command mv $HOME/zsh-conf/zsh $HOME/.config/
-    command mv $HOME/zsh-conf/.zshrc $HOME/
+    ln -s $HOME/.config/zsh-conf/.zshrc $HOME/.zshrc
+
+    # command mv $HOME/zsh-conf/zsh $HOME/.config/
+    # command mv $HOME/zsh-conf/.zshrc $HOME/
 
     options
 
-    rm -rf $HOME/zsh-conf
+    # rm -rf $HOME/zsh-conf
     return 0
 }
 

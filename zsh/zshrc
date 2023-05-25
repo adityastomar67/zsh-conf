@@ -2,12 +2,12 @@
 # ▄ █▄ ▄█ █▀█ █▀▄ █▄▄
 
 ##--> Explicitly launching of tmux <--##
-source "$HOME/.config/zsh/conf/tmux.zsh" || return
+source "$ZSH_PATH/zsh/conf/tmux.zsh" || return
 
 ##--> Sourcing config files <--##
 while read conf
 do
-  [ -f "$HOME/.config/zsh/conf/${conf}.zsh" ] && source "$HOME/.config/zsh/conf/${conf}.zsh"
+  [ -f "$ZSH_PATH/zsh/conf/${conf}.zsh" ] && source "$ZSH_PATH/zsh/conf/${conf}.zsh"
 done <<-EOF
     opts
     plugs
@@ -26,6 +26,6 @@ EOF
 
 ##--> Final Options <--##
 echo -en "\x1b[2J\x1b[1;1H" ;echo   # For faster clearing the Terminal
-set -o vi                           # Vi-mode
+set -o vi                            # Vi-mode
 
 # vim:filetype=zsh

@@ -65,17 +65,19 @@ if [ $USE_ALIAS = "Yes" ]; then
     elif [[ -d ~/.dots ]]; then
        alias dt="cd ~/.dots"
     fi
-    [ -d ~/Projects ] && alias pj="cd ~/Projects"
+
+    [ -d ~/Projects ]  && alias pj="cd ~/Projects"
     [ -d ~/Documents ] && alias dc="cd ~/Documents"
     [ -d ~/Downloads ] && alias dl="cd ~/Downloads"
     [ -d ~/Workspace ] && alias wk="cd ~/Workspace"
+
     alias cd..="cd ../"
     alias cd...="cd ../../"
     alias cd....="cd ../../../"
     alias cd.....="cd ../../../../"
     alias cd......="cd ../../../../../"
     alias ~="cd ~" 2>/dev/null
-    alias -="cd -" 2>/dev/null
+    alias "-"="cd -" 2>/dev/null
     alias ..="cd ../"
     alias ...="cd ../../"
     alias ....="cd ../../../"
