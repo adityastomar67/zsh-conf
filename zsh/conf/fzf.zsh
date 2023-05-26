@@ -4,7 +4,7 @@
 if command -v fzf >/dev/null; then
     if [ $USE_FUNCTION = "Yes" ]; then
 
-        AWESOME_FZF_LOCATION="$HOME/.config/zsh/conf/fzf.zsh"
+        AWESOME_FZF_LOCATION="$ZSH_PATH/zsh/conf/fzf.zsh"
         RED_FG=$(tput setaf 1)
         GREEN_BG=$(tput setab 2)
         RESET=$(tput sgr0)

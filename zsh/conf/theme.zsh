@@ -31,9 +31,9 @@ fi
 if [ $CUSTOM_WALL = "Yes" ]; then
     if [ ! -d "$HOME/.config/wall" ]; then
         # Clone it to the perfect location
-        dunstify -u low -i ~/.config/bspwm/assets/reload.svg 'Custom Walls' "Cloning adityastomar67's Walls..." 2>/dev/null 
+        dunstify -u low -i ~/.config/bspwm/assets/reload.svg 'Custom Walls' "Cloning adityastomar67's Walls..." 2>/dev/null
         git clone --quiet https://github.com/adityastomar67/Wallpapers "$HOME/.config/wall"
-        dunstify -u low -i ~/.config/bspwm/assets/reload.svg 'Custom Walls' "Cloning complete." 2>/dev/null 
+        dunstify -u low -i ~/.config/bspwm/assets/reload.svg 'Custom Walls' "Cloning complete." 2>/dev/null
 
         # Move all the static wallpapers to `wall` directory and select the files with .png extension
         cd "$HOME/.config/wall" || exit
@@ -48,6 +48,7 @@ if [ $CUSTOM_WALL = "Yes" ]; then
 
         # Remove unnecessary files and set wallpaper
         command rm -rf .git/ README.md Static Live list.txt
+        cd $HOME
         RandomWall
     fi
 fi
