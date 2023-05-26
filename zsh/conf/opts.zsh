@@ -102,11 +102,11 @@ zle -N _sudo_command_line
 zle -N _toggle-right-prompt
 zle -N _toggle-left-prompt
 
-for dump in ~/.config/zsh/zcompdump(N.mh+24); do
-  compinit -d ~/.config/zsh/zcompdump
+for dump in $ZSH_PATH/zsh/zcompdump(N.mh+24); do
+  compinit -d $ZSH_PATH/zsh/zcompdump
 done
 
-compinit -C -d ~/.config/zsh/zcompdump
+compinit -C -d $ZSH_PATH/zsh/zcompdump
 _comp_options+=(globdots)
 
 ## On-demand rehash
@@ -158,7 +158,7 @@ zstyle ':autocomplete:*' fzf-completion no
 zstyle ':autocomplete:*' add-space executables aliases functions builtins reserved-words commands
 
 ##--> A little OMZ Config <--##
-HISTFILE="$HOME/.config/zsh/zhistory"
+HISTFILE="$ZSH_PATH/zsh/zhistory"
 HISTSIZE=50000
 SAVEHIST=50000
 HISTTIMEFORMAT="%Y/%m/%d %H:%M:%S:   "

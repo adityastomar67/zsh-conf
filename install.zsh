@@ -7,7 +7,7 @@ CBL=$(tput setaf 4)
 BLD=$(tput bold)
 CNC=$(tput sgr0)
 ZSH_PATH="$HOME/.config/zsh-conf"
-dependencies=(tmux ranger fd ripgrep lazygit zoxide fzf lsd npm)
+dependencies=(tmux ranger fd ripgrep lazygit zoxide fzf lsd npm ffmpegthumbnailer)
 
 ##--> Check if the package is already installed or not <--##
 is_installed() {
@@ -112,7 +112,7 @@ main() {
     # Changing shell to Zsh
 	printf "%s%sSetting up Z-Shell!%s\n\n" "${BLD}" "${CRE}" "${CNC}"
 	printf "%s%sIf your shell is not zsh, it will be changed now.\nYour root password is needed to make the change.\n\nAfter that, it is important for you to reboot.\n %s\n" "${BLD}" "${CYE}" "${CNC}"
-	
+
     sleep 5
 	if [[ $SHELL != "/usr/bin/zsh" ]]; then
 		echo "Changing shell to zsh, your root pass is needed."
@@ -136,14 +136,14 @@ main() {
     elif [ -L "$ZSHRC" ]; then
         command rm "$ZSHRC"
     fi
-    
+
     if [ -d "$HOME/.config/zsh-conf" ]; then
         # Move the current zsh conf file to the new filename
         command mv "$HOME/.config/zsh-conf" "$HOME/.config/zsh-conf_${DATE}_${ID}"
         echo "Moved $HOME/.config/zsh-conf to $HOME/.config/zsh-conf_${DATE}_${ID}"
     fi
 
-    cd $HOME 
+    cd $HOME
     mkdir -p $HOME/.config/zsh-conf
 
     # Update the ZSH_CONF_PATH variable where you clone the repo
@@ -152,6 +152,8 @@ main() {
     ln -s $HOME/.config/zsh-conf/.zshrc $HOME/.zshrc
     install_pkg
     options
+
+    [ -e "$ZSH_PATH/install.zsh" ] && command rm -rf "$ZSH_PATH/install.zsh"
     return 0
 }
 
