@@ -1,0 +1,114 @@
+#compdef xh
+
+autoload -U is-at-least
+
+_xh() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" \
+'--pretty=[Controls output processing]: :(all colors format none)' \
+'-s+[Output coloring style]: :(auto solarized monokai)' \
+'--style=[Output coloring style]: :(auto solarized monokai)' \
+'-p+[String specifying what the output should contain]' \
+'--print=[String specifying what the output should contain]' \
+'-o+[Save output to FILE instead of stdout]' \
+'--output=[Save output to FILE instead of stdout]' \
+'-A+[Specify the auth mechanism]: :(basic bearer)' \
+'--auth-type=[Specify the auth mechanism]: :(basic bearer)' \
+'-a+[Authenticate as USER with PASS. PASS will be prompted if missing]' \
+'--auth=[Authenticate as USER with PASS. PASS will be prompted if missing]' \
+'--bearer=[Authenticate with a bearer token]' \
+'--max-redirects=[Number of redirects to follow, only respected if `follow` is set]' \
+'--timeout=[Connection timeout of the request]' \
+'*--proxy=[Use a proxy for a protocol. For example: `--proxy https:http://proxy.host:8080`]' \
+'--verify=[If "no", skip SSL verification. If a file path, use it as a CA bundle]' \
+'--cert=[Use a client side certificate for SSL]' \
+'--cert-key=[A private key file to use with --cert]' \
+'--default-scheme=[The default scheme to use if not specified in the URL]' \
+'-j[(default) Serialize data items from the command line as a JSON object]' \
+'--json[(default) Serialize data items from the command line as a JSON object]' \
+'-f[Serialize data items from the command line as form fields]' \
+'--form[Serialize data items from the command line as form fields]' \
+'-m[Like --form, but force a multipart/form-data request even without files]' \
+'--multipart[Like --form, but force a multipart/form-data request even without files]' \
+'-h[Print only the response headers, shortcut for --print=h]' \
+'--headers[Print only the response headers, shortcut for --print=h]' \
+'-b[Print only the response body, Shortcut for --print=b]' \
+'--body[Print only the response body, Shortcut for --print=b]' \
+'-v[Print the whole request as well as the response]' \
+'--verbose[Print the whole request as well as the response]' \
+'-q[Do not print to stdout or stderr]' \
+'--quiet[Do not print to stdout or stderr]' \
+'-S[Always stream the response body]' \
+'--stream[Always stream the response body]' \
+'-d[Download the body to a file instead of printing it]' \
+'--download[Download the body to a file instead of printing it]' \
+'-c[Resume an interrupted download. Requires --download and --output]' \
+'--continue[Resume an interrupted download. Requires --download and --output]' \
+'--ignore-netrc[Do not use credentials from .netrc]' \
+'--offline[Construct HTTP requests without sending them anywhere]' \
+'--check-status[(default) Exit with an error status code if the server replies with an error]' \
+'-F[Do follow redirects]' \
+'--follow[Do follow redirects]' \
+'--https[Make HTTPS requests if not specified in the URL]' \
+'-I[Do not attempt to read stdin]' \
+'--ignore-stdin[Do not attempt to read stdin]' \
+'--curl[Print a translation to a `curl` command]' \
+'--curl-long[Use the long versions of curl'\''s flags]' \
+'--no-auth[]' \
+'--no-auth-type[]' \
+'--no-bearer[]' \
+'--no-body[]' \
+'--no-cert[]' \
+'--no-cert-key[]' \
+'--no-check-status[]' \
+'--no-continue[]' \
+'--no-curl[]' \
+'--no-curl-long[]' \
+'--no-default-scheme[]' \
+'--no-download[]' \
+'--no-follow[]' \
+'--no-form[]' \
+'--no-headers[]' \
+'--no-https[]' \
+'--no-ignore-netrc[]' \
+'--no-ignore-stdin[]' \
+'--no-json[]' \
+'--no-max-redirects[]' \
+'--no-multipart[]' \
+'--no-offline[]' \
+'--no-output[]' \
+'--no-pretty[]' \
+'--no-print[]' \
+'--no-proxy[]' \
+'--no-quiet[]' \
+'--no-stream[]' \
+'--no-style[]' \
+'--no-timeout[]' \
+'--no-verbose[]' \
+'--no-verify[]' \
+'--help[Prints help information]' \
+'-V[Prints version information]' \
+'--version[Prints version information]' \
+':raw-method-or-url -- The request URL, preceded by an optional HTTP method:_files' \
+'::raw-rest-args -- Optional key-value pairs to be included in the request:_files' \
+&& ret=0
+}
+
+(( $+functions[_xh_commands] )) ||
+_xh_commands() {
+    local commands; commands=()
+
+    _describe -t commands 'xh commands' commands "$@"
+}
+
+_xh "$@"

@@ -3,6 +3,13 @@
 
 if [ $USE_TMUX = "Yes" ]; then
     if command -v tmux >/dev/null; then
+
+        alias tn='tmux new -s '
+        alias ta='tmux a -t '
+        alias tk='tmux kill-session -t '
+        alias tK='tmux kill-server'
+        alias tl='tmux ls'
+        alias tpl='tmuxp load '
     
         ##--> Tmux Launching <--##
         # -2 flag for TMUX to enable 256 colors, use exec in place of command to make terminal close after exiting tmux
