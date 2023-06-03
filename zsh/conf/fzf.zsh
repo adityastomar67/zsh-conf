@@ -12,7 +12,7 @@ if command -v fzf >/dev/null; then
         ##--> List Awesome FZF Functions <--##
         function fzf-awesome-list() {
             if [ -r $AWESOME_FZF_LOCATION ]; then
-                selected=$(grep -E "(function fzf-)(.*?)[^(]*" $AWESOME_FZF_LOCATION | sed -e "s/function fzf-//" | sed -e "s/() {//" | grep -v "selected=" | fzf --reverse --prompt="Awesome-FZF functions > ")
+                selected=$(grep -E "(function fzf-)(.*?)[^(]*" $AWESOME_FZF_LOCATION | sed -e "s/^[ \t]*function fzf-//" | sed -e "s/() {//" | grep -v "selected=" | fzf --prompt="Awesome-FZF functions > ")
             else
                 echo "${RED_FG}Awesome-FZF not found!!${RESET}"
             fi

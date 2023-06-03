@@ -24,16 +24,16 @@ install_pkg() {
 
 	for package in "${dependencies[@]}"; do
         clear
-        read -rp "Would you like to install $package? [y/N] " res
-        [[ $res == "y" ]] && {
-            if ! is_installed "$package"; then
-                sudo pacman -S "$package" --noconfirm
-                printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
-            else
-                printf '%s✓ %s is already installed on your system!%s\n' "${CGR}" "$package" "${CNC}"
-                sleep 1
-            fi
-        }
+        if ! is_installed "$package"; then
+            read -rp "Would you like to install $package? [y/N] " res
+            [[ $res == "y" ]] && {
+                    sudo pacman -S "$package" --noconfirm
+                    printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
+            }
+        else
+            printf '%s✓ %s is already installed on your system!%s\n' "${CGR}" "$package" "${CNC}"
+            sleep 1
+        fi
 	done
     sleep 2
     printf '%s[ ✓ DONE ] All packaegs successfully done as your choice!%s\n' "${CGR}" "${CNC}"
