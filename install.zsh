@@ -45,7 +45,7 @@ options() {
     clear
     read -rp "[1/7] Would you like to use Tmux? [y/N] " res
     [[ $res == "y" ]] && {
-        sed -i "s/USE_TMUX=\"No\"/USE_TMUX=\"Yes\"/g" $ZSH_PATH/.zshrc
+        sed -i "s/USE_TMUX=\"No\"/USE_TMUX=\"Yes\"/g" $ZSH_PATH/.zshenv
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
@@ -53,7 +53,7 @@ options() {
     clear
     read -rp "[2/7] Would you like to use Alias? [y/N] " res
     [[ $res == "y" ]] && {
-        sed -i "s/USE_ALIAS=\"No\"/USE_ALIAS=\"Yes\"/g" $ZSH_PATH/.zshrc
+        sed -i "s/USE_ALIAS=\"No\"/USE_ALIAS=\"Yes\"/g" $ZSH_PATH/.zshenv
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
@@ -61,7 +61,7 @@ options() {
     clear
     read -rp "[3/7] Would you like to use Custom Functions? [y/N] " res
     [[ $res == "y" ]] && {
-        sed -i "s/USE_FUNCTION=\"No\"/USE_FUNCTION=\"Yes\"/g" $ZSH_PATH/.zshrc
+        sed -i "s/USE_FUNCTION=\"No\"/USE_FUNCTION=\"Yes\"/g" $ZSH_PATH/.zshenv
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
@@ -69,7 +69,7 @@ options() {
     clear
     read -rp "[4/7] Would you like to use Themer? [y/N] " res
     [[ $res == "y" ]] && {
-        sed -i "s/OPT_THEME=\"No\"/OPT_THEME=\"Yes\"/g" $ZSH_PATH/.zshrc
+        sed -i "s/OPT_THEME=\"No\"/OPT_THEME=\"Yes\"/g" $ZSH_PATH/.zshenv
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
@@ -77,7 +77,7 @@ options() {
     clear
     read -rp "[5/7] Would you like to use Multiple Neovim Setup? [y/N] " res
     [[ $res == "y" ]] && {
-       sed -i "s/MULTI_NEOVIM=\"No\"/MULTI_NEOVIM=\"Yes\"/g" $ZSH_PATH/.zshrc
+       sed -i "s/MULTI_NEOVIM=\"No\"/MULTI_NEOVIM=\"Yes\"/g" $ZSH_PATH/.zshenv
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
@@ -89,7 +89,7 @@ options() {
         echo "Wallpapers will be stored at $HOME/.config/wall"
         export CUSTOM_WALL="Yes"
         source $ZSH_PATH/zsh/conf/theme.zsh
-        sed -i "s/CUSTOM_WALL=\"No\"/CUSTOM_WALL=\"Yes\"/g" $ZSH_PATH/.zshrc
+        sed -i "s/CUSTOM_WALL=\"No\"/CUSTOM_WALL=\"Yes\"/g" $ZSH_PATH/.zshenv
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
@@ -98,7 +98,7 @@ options() {
     read -rp "[7/7] Would you like to have a temporary sourcing file? [y/N] " res
     [[ $res == "y" ]] && {
         echo "Creating temporary file at $HOME/.temp_zsh..."
-        sed -i "s/TEMP_OFFLINE_ALIAS=\"No\"/TEMP_OFFLINE_ALIAS=\"Yes\"/g" $ZSH_PATH/.zshrc
+        sed -i "s/TEMP_OFFLINE_ALIAS=\"No\"/TEMP_OFFLINE_ALIAS=\"Yes\"/g" $ZSH_PATH/.zshenv
         printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
         sleep 1
     }
@@ -108,6 +108,7 @@ main() {
     local DATE=$(date +%Y-%m-%d)
     local ID=$(date +%s)
     local ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
+    local ZENV="${ZDOTDIR:-$HOME}/.zshenv"
 
     # Changing shell to Zsh
 	printf "%s%sSetting up Z-Shell!%s\n\n" "${BLD}" "${CRE}" "${CNC}"
@@ -137,6 +138,14 @@ main() {
         command rm "$ZSHRC"
     fi
 
+    if [ -f "$ZENV" ]; then
+        # Move the current .zshrc file to the new filename
+        command mv "$ZENV" "$HOME/.zshenv_${DATE}_${ID}"
+        echo "Moved .zshenv to $HOME/.zshenv_${DATE}_${ID}"
+    elif [ -L "$ZENV" ]; then
+        command rm "$ZENV"
+    fi
+
     if [ -d "$HOME/.config/zsh-conf" ]; then
         # Move the current zsh conf file to the new filename
         command mv "$HOME/.config/zsh-conf" "$HOME/.config/zsh-conf_${DATE}_${ID}"
@@ -150,6 +159,8 @@ main() {
     git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" $HOME/.config/zsh-conf
 
     ln -s $HOME/.config/zsh-conf/.zshrc $HOME/.zshrc
+    ln -s $HOME/.config/zsh-conf/.zshenv $HOME/.zshenv
+
     install_pkg
     options
 
