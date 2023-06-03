@@ -367,11 +367,6 @@ if [ $USE_FUNCTION = "Yes" ]; then
         grep -v "./" | sort -nr | head -20 | column -c3 -s " " -t | nl
     }
 
-    weather () {
-        local options="${2:-1}"
-        curl https://wttr.in/"${1}"\?"${options}"
-    }
-
     erapi_key=71afe1269a1f5f7206152de2b43a9819
     rate () {
         local from=${1:-usd}
