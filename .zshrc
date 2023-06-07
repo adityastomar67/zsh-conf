@@ -11,4 +11,4 @@ elif [ -x motivate ]; then
     motivate; echo                  # Random Motivational Quotes
 fi
 
-# TIP: Install binaries like fzf, tmux, zoxide, bat, motivate, lazygit to make this config work like charm.
+# TIP: Install binaries like fzf, tmux, zoxide, bat, motivate, lazygit, navi to make this config work like charm.
