@@ -17,7 +17,7 @@ if [ $USE_ALIAS = "Yes" ]; then
 
     ##--> Sudo not required for some system commands <--##
     for command in mount umount sv pacman updatedb su shutdown poweroff reboot; do
-        alias $command="sudo $command"
+        alias -g $command="sudo $command"
     done
     unset command
 
@@ -111,6 +111,7 @@ if [ $USE_ALIAS = "Yes" ]; then
 
     ##--> More Flags <--##
     alias mv="mv -i"
+    alias md="mkdir -p"
     alias calc="bc -l"
     alias tar="tar tf"
     alias wget="wget -c"
