@@ -201,6 +201,7 @@ if [ $USE_ALIAS = "Yes" ]; then
     is_installed trash && alias rm="trash --trash-dir='$HOME/.Trash' --recursive"
     is_installed go-mtpfs && alias mount-phone="go-mtpfs $HOME/Phone &>/dev/null & disown"
     is_installed cbonsai && alias ccbonsai="cbonsai -ilt 0.02 -c '  ,  ,  ,  ,  ' -L 5"
+    is_installed code && alias code="code --extensions-dir=\"$HOME/.config/Code/User/extensions\""
     is_installed transmission-cli && alias tsm='transmission-cli -D -u 10 -w ~/Downloads/torrents'
 
     if is_installed exa; then
