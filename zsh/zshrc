@@ -2,7 +2,7 @@
 # ▄ █▄ ▄█ █▀█ █▀▄ █▄▄
 
 ##--> Explicitly launching of tmux <--##
-source "$ZSH_PATH/zsh/conf/tmux.zsh" || return
+source "$ZSH_PATH/zsh/conf/tmux.zsh"
 
 ##--> Sourcing config files <--##
 while read conf
@@ -25,7 +25,7 @@ EOF
 [ -f "$HOME/.temp_zsh" ] && source "$HOME/.temp_zsh"  # For temporary offline aliases
 
 ##--> Final Options <--##
-echo -en "\x1b[2J\x1b[1;1H" ;echo   # For faster clearing the Terminal
+echo -en "\x1b[2J\x1b[1;1H" ;echo    # For faster clearing the Terminal
 set -o vi                            # Vi-mode
 
 # vim:filetype=zsh
