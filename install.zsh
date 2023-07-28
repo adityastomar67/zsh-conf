@@ -9,6 +9,9 @@ CNC=$(tput sgr0)
 ZSH_PATH="$HOME/.config/zsh-conf"
 dependencies=(tmux ranger fd ripgrep lazygit zoxide fzf lsd npm ffmpegthumbnailer navi)
 
+## TODO
+# locale-gen
+
 ##--> Check if the package is already installed or not <--##
 is_installed() {
 	pacman -Qi "$1" &>/dev/null
