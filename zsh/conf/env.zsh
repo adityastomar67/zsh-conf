@@ -7,7 +7,8 @@ export KEYTIMEOUT=1
 export GPG_TTY="$(tty)"
 export TERMINAL=alacritty
 export TERM="xterm-256color"  # TERM="screen-256color" doesn't support italics
-export LC_CTYPE="en_IN.UTF-8"
+export LC_CTYPE="en_US.UTF-8"
+export LC_ALL="en_US.UTF-8"
 export ARCHFLAGS="-arch x86_64"
 export QT_STYLE_OVERRIDE=kvantum
 export XDG_DOTS="$HOME/dotfiles"
