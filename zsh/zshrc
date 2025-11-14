@@ -12,14 +12,20 @@ done <<-EOF
     opts
     plugs
     env
-    theme
+    # theme
     keys
     prompt
-    fzf
-    nvim
-    alias
-    function
+    # fzf
+    # nvim
+    # alias
+    # function
 EOF
+
+# Add the directory containing the functions to $fpath
+fpath=($ZSH_PATH/zsh/conf $fpath)
+
+# Autoload the functions when they're needed
+autoload -U $HOME/.config/zsh/functions.zsh
 
 ##--> Sourcing other files <--##
 [ -f "$HOME/.temp_zsh" ] && source "$HOME/.temp_zsh"  # For temporary offline aliases

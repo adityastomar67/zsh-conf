@@ -5,8 +5,7 @@
 export VISUAL=nvim
 export KEYTIMEOUT=1
 export GPG_TTY="$(tty)"
-export TERMINAL=alacritty
-export TERM="xterm-256color"  # TERM="screen-256color" doesn't support italics
+export TERM="xterm-256color"  
 export LC_CTYPE="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 export ARCHFLAGS="-arch x86_64"
@@ -30,7 +29,11 @@ export XDG_TEMPLATES_DIR="$HOME/Templates"
 export XDG_DOCUMENTS_DIR="$HOME/Documents"
 export XDG_RUNTIME_DIR="/run/user/$(id -u)"
 export HISTORY_IGNORE="(ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
-export XDG_DATA_DIRS="/usr/local/share:/usr/share:/var/lib/flatpak/exports/share:$XDG_DATA_HOME/flatpak/exports/share"
+
+[[ $COLORTERM = truecolor || $TERM = *256* ]] && {
+    export TERM=xterm-256color # TERM="screen-256color" doesn't support italics
+    export BAT_THEME=TwoDark
+}
 
 ##--> Choice of MANPAGER <--##
 # If either nvim, vim or bat is present

@@ -618,8 +618,28 @@ if command -v fzf >/dev/null; then
 --pointer ' '
 --border none
 --height 40"
-    export FZF_DEFAULT_COMMAND='fd --hidden --follow'
-    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+
+    # Smart file finder with ripgrep content preview
+    if command -v rg &> /dev/null; then
+        export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git/*" --glob "!node_modules/*"'
+    elif command -v fd &> /dev/null; then
+        export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git --exclude node_modules'
+    else
+        export FZF_DEFAULT_COMMAND='find . -type f'
+    fi
+        export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    fi
+
+    # Enhanced file preview with syntax highlighting
+    export FZF_CTRL_T_OPTS="
+    --preview 'bat --color=always --style=numbers --line-range=:500 {} 2>/dev/null || cat {} 2>/dev/null || tree -C {} 2>/dev/null'
+    --bind 'ctrl-/:toggle-preview'
+    "
+
+    # Enhanced directory search
+    export FZF_ALT_C_OPTS="
+    --preview 'eza --tree --color=always {} | head -200'
+    "
 fi
 
 # vim:filetype=zsh

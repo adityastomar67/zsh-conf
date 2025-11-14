@@ -1,0 +1,6 @@
+Ignore/
+.zshrc_bak
+env.zsh
+temp.sh
+TODO.md
+.DS_Store

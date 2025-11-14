@@ -70,6 +70,10 @@ elif [ $PLUG_MANAGER = "omz" ]; then
       command mv $HOME/.zshrc.pre-oh-my-zsh $HOME/.zshrc
     fi
 
+    DISABLE_UPDATE_PROMPT="true"
+    ENABLE_CORRECTION="true"
+    COMPLETION_WAITING_DOTS="true"
+
     [ -d $ZINIT_HOME ] && rm -rf $ZINIT_HOME
     [ -d $ZAP_HOME ] && rm -rf $ZAP_HOME
 
@@ -100,7 +104,10 @@ if [ -f $HOME/.zcompdump ]; then
 fi
 
 ##--> Other Plugins <--##
-command -v aws &>/dev/null && complete -C aws_completer aws
-command -v zoxide &>/dev/null && eval "$(zoxide init zsh)"
+# Initialize tools (lightweight ones) - guard with command checks
+command -v aws &> /dev/null && complete -C aws_completer aws
+command -v zoxide &> /dev/null && eval "$(zoxide init zsh)"
+command -v starship &> /dev/null && eval "$(starship init zsh)"
+command -v atuin &> /dev/null && eval "$(atuin init zsh)"
 
 # vim:filetype=zsh

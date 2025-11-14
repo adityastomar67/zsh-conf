@@ -320,14 +320,24 @@ gh0st_prompt() {
 }
 
 ##--> Calling the Prompt <--##
-if [ $PROMPT_THEME = "gh0st" ]; then
-  gh0st_prompt
-elif [ $PROMPT_THEME = "z" ]; then
-  z_prompt
-elif [ $PROMPT_THEME = "10k" ]; then
-  10k_prompt
-else
-  return
-fi
+# if [ $PROMPT_THEME = "gh0st" ]; then
+#   gh0st_prompt
+# elif [ $PROMPT_THEME = "z" ]; then
+#   z_prompt
+# elif [ $PROMPT_THEME = "10k" ]; then
+#   10k_prompt
+# else
+#   return
+# fi
+
+function dir_icon {
+  if [[ "$PWD" == "$HOME" ]]; then
+    echo "%B%F{cyan}%f%b"
+  else
+    echo "%B%F{cyan}%f%b"
+  fi
+}
+
+PS1='%B%F{magenta}%n %B%F{red}/ %B%F{magenta}%m%f%b %B%F{grey}[%~]%f%b${vcs_info_msg_0_} %(?.%B%F{green}.%F{red})%f%b '
 
 # vim:filetype=zsh

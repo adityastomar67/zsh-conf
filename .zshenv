@@ -1,5 +1,5 @@
 ##--> Some options for user <--##
-export ZSH_PATH="$HOME/.config/zsh-conf" # Path for Zsh Confis
+export ZSH_PATH="$HOME/.config/zsh-conf"  # Path for Zsh Confis
 export OPT_THEME="No"                     # Change it to "Yes", if you wants to use theme.sh script.
 export PLUG_MANAGER="zap"                 # zinit, omz, zap. Choose Wisely
 export USE_TMUX="No"                      # Change it to "Yes", to automatically load tmux on every new instance of the terminal.
@@ -10,3 +10,15 @@ export CUSTOM_WALL="No"                   # For my personal wallpapers, source z
 export PROMPT_THEME="z"                   # And many more like gh0st, z, 10k.
 export TEMP_OFFLINE_ALIAS="No"            # For temporary, offline alias files, to store personal configs that are not meant to be published.
 export OPENAI_API_KEY=""                  # API Key for chatgpt options for commandline.
+export ZSH_BENCHMARK="0"
+
+
+# Enable startup timing (run 'zsh-benchmark' to see results)
+if [[ "$ZSH_BENCHMARK" == "1" ]]; then
+  zmodload zsh/zprof
+fi
+
+if [[ "$ZSH_BENCHMARK" == "1" ]]; then
+  echo "Startup time report:"
+  zprof | head -20
+fi
