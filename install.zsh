@@ -17,6 +17,21 @@ DEPENDENCIES=("tmux" "ranger" "fd" "ripgrep" "lazygit" "zoxide" "fzf" "lsd" "npm
 print() {
     printf "${BLD}$2[$1] $3${CNC}\n"
 }
+header() {
+    clear
+    echo "
+▒███████▒  ██████  ██░ ██  ▄████▄   ▒█████   ███▄    █   █████▒
+▒ ▒ ▒ ▄▀░▒██    ▒ ▓██░ ██▒▒██▀ ▀█  ▒██▒  ██▒ ██ ▀█   █ ▓██   ▒ 
+░ ▒ ▄▀▒░ ░ ▓██▄   ▒██▀▀██░▒▓█    ▄ ▒██░  ██▒▓██  ▀█ ██▒▒████ ░ 
+  ▄▀▒   ░  ▒   ██▒░▓█ ░██ ▒▓▓▄ ▄██▒▒██   ██░▓██▒  ▐▌██▒░▓█▒  ░ 
+▒███████▒▒██████▒▒░▓█▒░██▓▒ ▓███▀ ░░ ████▓▒░▒██░   ▓██░░▒█░    
+░▒▒ ▓░▒░▒▒ ▒▓▒ ▒ ░ ▒ ░░▒░▒░ ░▒ ▒  ░░ ▒░▒░▒░ ░ ▒░   ▒ ▒  ▒ ░    
+░░▒ ▒ ░ ▒░ ░▒  ░ ░ ▒ ░▒░ ░  ░  ▒     ░ ▒ ▒░ ░ ░░   ░ ▒░ ░      
+░ ░ ░ ░ ░░  ░  ░   ░  ░░ ░░        ░ ░ ░ ▒     ░   ░ ░  ░ ░    
+  ░ ░          ░   ░  ░  ░░ ░          ░ ░           ░         
+░                         ░                                    
+"
+}
 
 # Detect OS and package manager
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -45,7 +60,7 @@ install_packages() {
     sleep 1
 
     for package in "${DEPENDENCIES[@]}"; do
-        clear
+        header
         if ! is_installed "$package"; then
             echo "Would you like to install $package? [y/N]"
             read res
@@ -95,7 +110,7 @@ set_shell_config() {
     local total=${#options[@]}
     if [[ -f "$ZSH_PATH/.zshenv" ]]; then
         for ((i=0; i<total; i++)); do
-            clear
+            header
             echo "[$((i+1))/$total] Enable ${options[$i]}? [y/N] "
             read res
 
@@ -164,7 +179,7 @@ main() {
         && printf "${CBL}    Linked new .zshenv!\n${CNC}"
 
     sleep 2
-    clear
+    header
 
     # Changing shell to Zsh
     print "NOTE" $CYE "Setting up Z-Shell!\n"
@@ -198,7 +213,7 @@ main() {
 }
 
 # Clear the terminal and run the main function
-clear
+header
 main "$@"
 
 [[ $? -eq 0 ]] && SHOW_CONFIG_WARNING=1 exec zsh || return

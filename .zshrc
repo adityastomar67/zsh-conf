@@ -1,6 +1,9 @@
 # This file was created by the 'adityastomar67/zsh-conf'.
 # Do not edit the main config file directly. Instead, add any settings overrides in this file.
 
+# If not running interactively, don't do anything
+[[ $- != *i* ]] && return
+
 ##--> Sourcing main config file <--##
 [ -r "$ZSH_PATH/zsh/zshrc" ] && source "$ZSH_PATH/zsh/zshrc"
 
