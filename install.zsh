@@ -14,13 +14,17 @@ ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
 ZENV="${ZDOTDIR:-$HOME}/.zshenv"
 DEPENDENCIES=("tmux" "ranger" "fd" "ripgrep" "lazygit" "zoxide" "fzf" "lsd" "npm" "ffmpegthumbnailer" "navi" "eza" "bat" "git-delta" "ripgrep" "fd" "starship" "zoxide" "atuin" "shellcheck")
 
+print() {
+    printf "${BLD}$2[$1] $3${CNC}\n"
+}
+
 # Detect OS and package manager
 if [[ "$OSTYPE" == "darwin"* ]]; then
     PKG_MANAGER="brew"
 elif command -v pacman &>/dev/null; then
     PKG_MANAGER="pacman"
 else
-    printf "%s%s[ERROR] Unsupported OS or Package Manager not found!%s" "${CRE}" "${BLD}" "${CNC}"
+    print "ERROR" $CRE "Unsupported OS or Package Manager not found!"
     exit 1
 fi
 
@@ -43,7 +47,8 @@ install_packages() {
     for package in "${DEPENDENCIES[@]}"; do
         clear
         if ! is_installed "$package"; then
-            read -rp "Would you like to install $package? [y/N] " res
+            echo "Would you like to install $package? [y/N]"
+            read res
             if [[ $res == "y" ]]; then
                 if [[ "$PKG_MANAGER" == "pacman" ]]; then
                     sudo pacman -S "$package" --noconfirm
@@ -51,14 +56,17 @@ install_packages() {
                     brew install "$package"
                 fi
                 printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
+                echo
+                echo
+                print "DONE" $CGR "$package is installed."
+                sleep 2
             fi
         else
             printf '%s✓ %s is already installed on your system!%s\n' "${CGR}" "$package" "${CNC}"
             sleep 1
         fi
     done
-
-    printf '%s[ ✓ DONE ] All packages successfully installed as per your choice!%s\n' "${CGR}" "${CNC}"
+    print "DONE" $CGR "All packages successfully installed as per your choice!"
     sleep 2
 }
 
@@ -88,40 +96,45 @@ set_shell_config() {
     if [[ -f "$ZSH_PATH/.zshenv" ]]; then
         for ((i=0; i<total; i++)); do
             clear
-            read -rp "[$((i+1))/$total] Enable ${options[$i]}? [y/N] " res
+            echo "[$((i+1))/$total] Enable ${options[$i]}? [y/N] "
+            read res
 
             if [[ $res =~ ^[Yy]$ ]]; then
                 sed -i "s/${config_var[$i]}=\"No\"/${config_var[$i]}=\"Yes\"/g" "$ZSH_PATH/.zshenv"
                 printf '✓ Enabled: %s\n' "${options[$i]}"
                 
             else
-                printf 'Skipped: %s\n' "${options[$i]}"
+                printf 'X Skipped: %s\n' "${options[$i]}"
             fi
-
-            sleep 0.6
+            sleep 1
         done
     else
-        printf '%s%s[ERROR] %s not found.%s\n' "${CRE}" "${BLD}" "$ZSH_PATH/.zshenv" "${CNC}"
+        print "ERROR" $CRE "$ZSH_PATH/.zshenv not found."
+
     fi
 }
 
 
 check_and_install_zsh() {
     if ! command -v zsh &>/dev/null; then
-        read -rp "Zsh is not installed. Would you like to install it? [y/N] " res
+        print "QUESTION" $CYE "Zsh is not installed. Would you like to install it? [y/N]"
+        read res
         if [[ $res == "y" ]]; then
             if [[ "$PKG_MANAGER" == "pacman" ]]; then
                 sudo pacman -S zsh --noconfirm
             elif [[ "$PKG_MANAGER" == "brew" ]]; then
                 brew install zsh
             fi
-            echo "Zsh has been installed successfully!"
+            print "DONE" $CGR "Zsh has been installed successfully!"
+
         else
-            echo "Installation of Zsh was skipped."
+            print "NOTE" $CYE "Installation of Zsh is skipped."
+
         fi
     else
-        echo "Zsh is already installed."
+        print "NOTE" $CGR "Zsh is already installed."
     fi
+    sleep 2
 }
 
 # Main function
@@ -132,30 +145,40 @@ main() {
     check_and_install_zsh
 
     # Check if the current .zshrc and .zshenv config files exist and move them if they do
-    [ -f "$ZSHRC" ] && mv "$ZSHRC" "$HOME/.zshrc_${DATE}_${ID}" && printf "    Moved .zshrc to $HOME/.zshrc_${DATE}_${ID}\n"
-    [ -f "$ZENV" ] && mv "$ZENV" "$HOME/.zshenv_${DATE}_${ID}" && printf "    Moved .zshenv to $HOME/.zshenv_${DATE}_${ID}\n"
+    print "NOTE" $CYE "Backing up the previous config files, ${CRE}IF FOUND!\n"
+
+    [ -f "$ZSHRC" ] && mv "$ZSHRC" "$HOME/.zshrc_${DATE}_${ID}" \
+        && printf "${CBL}    Moved .zshrc --> $HOME/.zshrc_${DATE}_${ID}\n${CNC}"
+    [ -f "$ZENV" ] && mv "$ZENV" "$HOME/.zshenv_${DATE}_${ID}" \
+        && printf "${CBL}    Moved .zshenv --> $HOME/.zshenv_${DATE}_${ID}\n\n${CNC}"
 
     # Clone the Git repository containing Zsh configuration files
     [ -d "$ZSH_PATH" ] && mv "$ZSH_PATH" "${ZSH_PATH}_${DATE}_${ID}"  # Backup existing config if it exists
     git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" "$ZSH_PATH"
+    print "NOTE" $CYE "New ZSH Config downloaded to \"$ZSH_PATH\"!\n"
 
     # Create symbolic links to the configuration files in the user's home directory
-    ln -sf "$ZSH_PATH/.zshrc" "$ZSHRC"
-    ln -sf "$ZSH_PATH/.zshenv" "$ZENV"
+    ln -sf "$ZSH_PATH/.zshrc" "$ZSHRC" \
+        && printf "${CBL}    Linked new .zshrc!\n${CNC}"
+    ln -sf "$ZSH_PATH/.zshenv" "$ZENV" \
+        && printf "${CBL}    Linked new .zshenv!\n${CNC}"
+
+    sleep 2
+    clear
 
     # Changing shell to Zsh
-	printf "%s%s[NOTE] Setting up Z-Shell!%s\n\n" "${BLD}" "${CYE}" "${CNC}"
+    print "NOTE" $CYE "Setting up Z-Shell!\n"
     sleep 5
 
     # Change the user's shell to Zsh if it's not already
     if [[ $SHELL != "/usr/bin/zsh" ]]; then
-    	printf "%s%sChanging shell to Zsh.\nYour root password is needed to make the change.\n\nAfter that, it is important for you to reboot.\n %s\n" "${BLD}" "${CYE}" "${CNC}"
+        print "NOTE" $CYE "Changing shell to Zsh.\nYour root password is needed to make the change.\n\nAfter that, it is important for you to reboot.\n\n"
         chsh -s /usr/bin/zsh
         sleep 2
-        printf '%s%s[DONE] Shell changed to ZSH!%s\n' "${BLD}" "${CGR}" "${CNC}"
+        print "DONE" $CGR "Shell changed to ZSH!"
         sleep 5
     else
-        printf "%s%sYour shell is already ZSH%s\n" "${BLD}" "${CGR}" "${CNC}"
+        print "NOTE" $CYE "Your shell is already ZSH"
         sleep 5
     fi
 
@@ -167,7 +190,7 @@ main() {
 
     if command -v zsh &> /dev/null; then
         echo "Compiling Zsh configuration files..."
-        zsh -c "autoload -U zrecompile && zrecompile -p \"$ZSH_PATH/.zshrc\"" 2>/dev/null || true
+        zsh -c "autoload -U zrecompile && zrecompile -p $ZSH_PATH/.zshrc" 2>/dev/null || true
     fi
 
     [ -e "$ZSH_PATH/install.zsh" ] && rm -rf "$ZSH_PATH/install.zsh"

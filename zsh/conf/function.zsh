@@ -3,6 +3,8 @@
 
 if [ $USE_FUNCTION = "Yes" ]; then
 
+    [ -f "$ZSH_PATH/zsh/conf/fzf.zsh" ] && source "$ZSH_PATH/zsh/conf/fzf.zsh" &> /dev/null
+
     ##--> If $1 is a directory, remove it with rm only <--##
     function rm() {
         for arg in "$@"; do
