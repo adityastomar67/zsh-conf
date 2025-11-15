@@ -56,13 +56,14 @@ is_installed() {
 
 # Function to install packages
 install_packages() {
-    printf "\n%s%sInstalling Packages...%s\n" "${BLD}${CBL}" "${CNC}"
-    sleep 1
+    print "NOTE" $CBL "INSTALLING PACKAGES..."
+    sleep 2
 
     for package in "${DEPENDENCIES[@]}"; do
         header
+        print "NOTE" $CBL "INSTALLING PACKAGES..."
         if ! is_installed "$package"; then
-            echo "Would you like to install $package? [y/N]"
+            printf "Would you like to install $package? [y/N]: "
             read res
             if [[ $res == "y" ]]; then
                 if [[ "$PKG_MANAGER" == "pacman" ]]; then
@@ -72,7 +73,6 @@ install_packages() {
                 fi
                 printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
                 echo
-                echo
                 print "DONE" $CGR "$package is installed."
                 sleep 2
             fi
@@ -81,12 +81,15 @@ install_packages() {
             sleep 1
         fi
     done
+    header
     print "DONE" $CGR "All packages successfully installed as per your choice!"
     sleep 2
 }
 
 # Function to set shell configuration options
 set_shell_config() {
+    print "NOTE" $CBL "SETTING SHELL-CONFIG..."
+    sleep 2
     local options=(
         "Tmux"
         "Alias"
@@ -111,17 +114,17 @@ set_shell_config() {
     if [[ -f "$ZSH_PATH/.zshenv" ]]; then
         for ((i=0; i<total; i++)); do
             header
-            echo "[$((i+1))/$total] Enable ${options[$i]}? [y/N] "
+            print "NOTE" $CBL "SETTING SHELL-CONFIG...\n"
+            printf "[$((i+1))/$total] Enable ${options[$i]}? [y/N]: "
             read res
 
             if [[ $res =~ ^[Yy]$ ]]; then
                 sed -i "s/${config_var[$i]}=\"No\"/${config_var[$i]}=\"Yes\"/g" "$ZSH_PATH/.zshenv"
-                printf '✓ Enabled: %s\n' "${options[$i]}"
-                
+                printf "${CGR}✓ Enabled: %s${CNC}" "${options[$i]}"
             else
-                printf 'X Skipped: %s\n' "${options[$i]}"
+                printf "${CRE}X Skipped: %s${CNC}" "${options[$i]}"
             fi
-            sleep 1
+            sleep 2
         done
     else
         print "ERROR" $CRE "$ZSH_PATH/.zshenv not found."
@@ -158,9 +161,9 @@ main() {
     local ID=$(date +%s)
 
     check_and_install_zsh
-
+    header
     # Check if the current .zshrc and .zshenv config files exist and move them if they do
-    print "NOTE" $CYE "Backing up the previous config files, ${CRE}IF FOUND!\n"
+    print "NOTE" $CYE "Backing up the previous config files, ${CRE}IF FOUND!!"
 
     [ -f "$ZSHRC" ] && mv "$ZSHRC" "$HOME/.zshrc_${DATE}_${ID}" \
         && printf "${CBL}    Moved .zshrc --> $HOME/.zshrc_${DATE}_${ID}\n${CNC}"
@@ -170,7 +173,7 @@ main() {
     # Clone the Git repository containing Zsh configuration files
     [ -d "$ZSH_PATH" ] && mv "$ZSH_PATH" "${ZSH_PATH}_${DATE}_${ID}"  # Backup existing config if it exists
     git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" "$ZSH_PATH"
-    print "NOTE" $CYE "New ZSH Config downloaded to \"$ZSH_PATH\"!\n"
+    print "NOTE" $CYE "New ZSH Config downloaded to \"$ZSH_PATH\"!"
 
     # Create symbolic links to the configuration files in the user's home directory
     ln -sf "$ZSH_PATH/.zshrc" "$ZSHRC" \
@@ -184,6 +187,7 @@ main() {
     # Changing shell to Zsh
     print "NOTE" $CYE "Setting up Z-Shell!\n"
     sleep 5
+    header
 
     # Change the user's shell to Zsh if it's not already
     if [[ $SHELL != "/usr/bin/zsh" ]]; then
@@ -198,22 +202,31 @@ main() {
     fi
 
     # Install necessary packages
+    header
     install_packages
 
     # Set shell configuration options
     set_shell_config
 
     if command -v zsh &> /dev/null; then
-        echo "Compiling Zsh configuration files..."
+        header
+        print "NOTE" $CYE "Compiling Zsh configuration files..."
         zsh -c "autoload -U zrecompile && zrecompile -p $ZSH_PATH/.zshrc" 2>/dev/null || true
     fi
 
-    [ -e "$ZSH_PATH/install.zsh" ] && rm -rf "$ZSH_PATH/install.zsh"
+    header
+    print "NOTE" $CYE "REMOVING INSTALLER SCRIPTS..."
+    sleep 2
+    [ -e "$ZSH_PATH/install.zsh" ] && rm -rf "$ZSH_PATH/install.zsh" \
+        && printf "${CBL} REMOVED.${CNC}"
+    sleep 2
     return 0
 }
 
 # Clear the terminal and run the main function
 header
 main "$@"
+header
+print "DONE" $CGR "INSTALLATION FINISHED."
 
 [[ $? -eq 0 ]] && SHOW_CONFIG_WARNING=1 exec zsh || return
