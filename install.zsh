@@ -188,7 +188,8 @@ main() {
     print "NOTE" $CYE "Backing up the previous config files, ${CRE}IF FOUND!!"
     sleep 2
     [ -f "$ZSHRC" ] && mv "$ZSHRC" "$HOME/.zshrc_${DATE}_${ID}" \
-        && printf "${CBL}    Moved .zshrc --> $HOME/.zshrc_${DATE}_${ID}\n${CNC}"
+        && printf "${CBL}    Moved .zshrc --> $HOME/.zshrc_${DATE}_${ID}\n${CNC}" \
+        && sleep 1
     [ -f "$ZENV" ] && mv "$ZENV" "$HOME/.zshenv_${DATE}_${ID}" \
         && printf "${CBL}    Moved .zshenv --> $HOME/.zshenv_${DATE}_${ID}\n\n${CNC}"
     sleep 2
@@ -201,7 +202,8 @@ main() {
 
     # Create symbolic links to the configuration files in the user's home directory
     ln -sf "$ZSH_PATH/.zshrc" "$ZSHRC" \
-        && printf "${CBL}    Linked new .zshrc!\n${CNC}"
+        && printf "${CBL}    Linked new .zshrc!\n${CNC}" \
+        && sleep 1
     ln -sf "$ZSH_PATH/.zshenv" "$ZENV" \
         && printf "${CBL}    Linked new .zshenv!\n${CNC}"
     sleep 2
