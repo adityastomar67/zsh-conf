@@ -7,24 +7,35 @@ CGR=$(tput setaf 2)
 CBL=$(tput setaf 4)
 BLD=$(tput bold)
 CNC=$(tput sgr0)
+# 
+spinner() {
+  local frames=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
+  typeset -i i=1                    # start at 1 (zsh arrays are 1-based)
+  local n=${#frames[@]}
 
-# Configuration variables
-ZSH_PATH="$HOME/.config/zsh-conf"
-ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
-ZENV="${ZDOTDIR:-$HOME}/.zshenv"
-DEPENDENCIES=("tmux" "ranger" "fd" "ripgrep" "lazygit" "zoxide" "fzf" "lsd" "npm" "ffmpegthumbnailer" "navi" "eza" "bat" "git-delta" "ripgrep" "fd" "starship" "zoxide" "atuin" "shellcheck")
+  trap 'printf "\r\033[K"; exit' INT TERM
+
+  while true; do
+    # print one frame and clear rest of line
+    printf "%s\r\033[K%s %s" $CBL "${frames[i]}" $1
+    # advance 1..n
+    i=$(( i % n + 1 ))
+    sleep 0.08
+  done
+}
 
 print() {
     printf "${BLD}$2[$1] $3${CNC}\n"
 }
+
 header() {
     clear
     echo "
 ▒███████▒  ██████  ██░ ██  ▄████▄   ▒█████   ███▄    █   █████▒
 ▒ ▒ ▒ ▄▀░▒██    ▒ ▓██░ ██▒▒██▀ ▀█  ▒██▒  ██▒ ██ ▀█   █ ▓██   ▒ 
 ░ ▒ ▄▀▒░ ░ ▓██▄   ▒██▀▀██░▒▓█    ▄ ▒██░  ██▒▓██  ▀█ ██▒▒████ ░ 
-  ▄▀▒   ░  ▒   ██▒░▓█ ░██ ▒▓▓▄ ▄██▒▒██   ██░▓██▒  ▐▌██▒░▓█▒  ░ 
-▒███████▒▒██████▒▒░▓█▒░██▓▒ ▓███▀ ░░ ████▓▒░▒██░   ▓██░░▒█░    
+  ▄▀▒   ░  ▒   ██▒░▓█ ░██ ▒▓▓▄ ▄██▒▒██   ██ ▓██▒  ▐▌██▒ ▓█▒  ░ 
+▒███████▒▒██████▒▒░▓█▒░██▓▒ ▓███▀ ░░ ████▓▒ ▒██░   ▓██. ▒█░    
 ░▒▒ ▓░▒░▒▒ ▒▓▒ ▒ ░ ▒ ░░▒░▒░ ░▒ ▒  ░░ ▒░▒░▒░ ░ ▒░   ▒ ▒  ▒ ░    
 ░░▒ ▒ ░ ▒░ ░▒  ░ ░ ▒ ░▒░ ░  ░  ▒     ░ ▒ ▒░ ░ ░░   ░ ▒░ ░      
 ░ ░ ░ ░ ░░  ░  ░   ░  ░░ ░░        ░ ░ ░ ▒     ░   ░ ░  ░ ░    
@@ -32,6 +43,12 @@ header() {
 ░                         ░                                    
 "
 }
+
+# Configuration variables
+ZSH_PATH="$HOME/.config/zsh-conf"
+ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
+ZENV="${ZDOTDIR:-$HOME}/.zshenv"
+DEPENDENCIES=("tmux" "ranger" "fd" "ripgrep" "lazygit" "zoxide" "fzf" "lsd" "npm" "ffmpegthumbnailer" "navi" "eza" "bat" "git-delta" "ripgrep" "fd" "starship" "zoxide" "atuin" "shellcheck")
 
 # Detect OS and package manager
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -88,6 +105,7 @@ install_packages() {
 
 # Function to set shell configuration options
 set_shell_config() {
+    header
     print "NOTE" $CBL "SETTING SHELL-CONFIG..."
     sleep 2
     local options=(
@@ -110,9 +128,9 @@ set_shell_config() {
         "TEMP_OFFLINE_ALIAS"
     )
 
-    local total=${#options[@]}
+    local total=${#options[@]} 
     if [[ -f "$ZSH_PATH/.zshenv" ]]; then
-        for ((i=0; i<total; i++)); do
+        for ((i=1; i<=total; i++)); do  # start at 1 (zsh arrays are 1-based)
             header
             print "NOTE" $CBL "SETTING SHELL-CONFIG...\n"
             printf "[$((i+1))/$total] Enable ${options[$i]}? [y/N]: "
@@ -225,6 +243,11 @@ main() {
 
 # Clear the terminal and run the main function
 header
+spinner "Setting Up Pre-requisites & Starting the Installation..." &
+SPIN_PID=$!
+sleep 5
+kill $SPIN_PID 2>/dev/null
+printf "${CNC}"
 main "$@"
 header
 print "DONE" $CGR "INSTALLATION FINISHED."
