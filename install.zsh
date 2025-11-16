@@ -178,21 +178,25 @@ main() {
     local DATE=$(date +%Y-%m-%d)
     local ID=$(date +%s)
 
+    header
+    print "INFO" $CYE "INSTALLING ZSH..."
+    sleep 2
     check_and_install_zsh
     header
     # Check if the current .zshrc and .zshenv config files exist and move them if they do
     print "NOTE" $CYE "Backing up the previous config files, ${CRE}IF FOUND!!"
-
+    sleep 2
     [ -f "$ZSHRC" ] && mv "$ZSHRC" "$HOME/.zshrc_${DATE}_${ID}" \
         && printf "${CBL}    Moved .zshrc --> $HOME/.zshrc_${DATE}_${ID}\n${CNC}"
     [ -f "$ZENV" ] && mv "$ZENV" "$HOME/.zshenv_${DATE}_${ID}" \
         && printf "${CBL}    Moved .zshenv --> $HOME/.zshenv_${DATE}_${ID}\n\n${CNC}"
 
+    sleep 2
     # Clone the Git repository containing Zsh configuration files
     [ -d "$ZSH_PATH" ] && mv "$ZSH_PATH" "${ZSH_PATH}_${DATE}_${ID}"  # Backup existing config if it exists
     git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" "$ZSH_PATH"
     print "NOTE" $CYE "New ZSH Config downloaded to \"$ZSH_PATH\"!"
-
+    sleep 2
     # Create symbolic links to the configuration files in the user's home directory
     ln -sf "$ZSH_PATH/.zshrc" "$ZSHRC" \
         && printf "${CBL}    Linked new .zshrc!\n${CNC}"
@@ -203,7 +207,7 @@ main() {
     header
 
     # Changing shell to Zsh
-    print "NOTE" $CYE "Setting up Z-Shell!\n"
+    print "INFO" $CYE "Setting up Z-Shell!\n"
     sleep 5
     header
 
@@ -231,12 +235,13 @@ main() {
         print "NOTE" $CYE "Compiling Zsh configuration files..."
         zsh -c "autoload -U zrecompile && zrecompile -p $ZSH_PATH/.zshrc" 2>/dev/null || true
     fi
+    sleep 2
 
     header
     print "NOTE" $CYE "REMOVING INSTALLER SCRIPTS..."
     sleep 2
     [ -e "$ZSH_PATH/install.zsh" ] && rm -rf "$ZSH_PATH/install.zsh" \
-        && printf "${CBL} REMOVED.${CNC}"
+        && printf "${CBL}REMOVED.${CNC}"
     sleep 2
     return 0
 }
