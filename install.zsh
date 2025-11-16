@@ -80,7 +80,7 @@ install_packages() {
         header
         print "NOTE" $CBL "INSTALLING PACKAGES..."
         if ! is_installed "$package"; then
-            printf "Would you like to install $package? [y/N]: "
+            printf "    Q. Would you like to install $package? [y/N]: "
             read res
             if [[ $res == "y" ]]; then
                 if [[ "$PKG_MANAGER" == "pacman" ]]; then
@@ -94,7 +94,7 @@ install_packages() {
                 sleep 2
             fi
         else
-            printf '%s✓ %s is already installed on your system!%s\n' "${CGR}" "$package" "${CNC}"
+            printf '    %s✓ %s is already installed on your system!%s\n' "${CGR}" "$package" "${CNC}"
             sleep 1
         fi
     done
@@ -132,15 +132,15 @@ set_shell_config() {
     if [[ -f "$ZSH_PATH/.zshenv" ]]; then
         for ((i=1; i<=total; i++)); do  # start at 1 (zsh arrays are 1-based)
             header
-            print "NOTE" $CBL "SETTING SHELL-CONFIG...\n"
-            printf "[$((i+1))/$total] Enable ${options[$i]}? [y/N]: "
+            print "NOTE" $CBL "SETTING SHELL-CONFIG..."
+            printf "    [$((i))/$total] Enable ${options[$i]}? [y/N]: "
             read res
 
             if [[ $res =~ ^[Yy]$ ]]; then
                 sed -i "s/${config_var[$i]}=\"No\"/${config_var[$i]}=\"Yes\"/g" "$ZSH_PATH/.zshenv"
-                printf "${CGR}✓ Enabled: %s${CNC}" "${options[$i]}"
+                printf "    ${CGR}✓ Enabled: %s${CNC}" "${options[$i]}"
             else
-                printf "${CRE}X Skipped: %s${CNC}" "${options[$i]}"
+                printf "    ${CRE}X Skipped: %s${CNC}" "${options[$i]}"
             fi
             sleep 2
         done
@@ -183,6 +183,7 @@ main() {
     sleep 2
     check_and_install_zsh
     header
+
     # Check if the current .zshrc and .zshenv config files exist and move them if they do
     print "NOTE" $CYE "Backing up the previous config files, ${CRE}IF FOUND!!"
     sleep 2
@@ -190,19 +191,19 @@ main() {
         && printf "${CBL}    Moved .zshrc --> $HOME/.zshrc_${DATE}_${ID}\n${CNC}"
     [ -f "$ZENV" ] && mv "$ZENV" "$HOME/.zshenv_${DATE}_${ID}" \
         && printf "${CBL}    Moved .zshenv --> $HOME/.zshenv_${DATE}_${ID}\n\n${CNC}"
-
     sleep 2
+
     # Clone the Git repository containing Zsh configuration files
     [ -d "$ZSH_PATH" ] && mv "$ZSH_PATH" "${ZSH_PATH}_${DATE}_${ID}"  # Backup existing config if it exists
     git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" "$ZSH_PATH"
     print "NOTE" $CYE "New ZSH Config downloaded to \"$ZSH_PATH\"!"
     sleep 2
+
     # Create symbolic links to the configuration files in the user's home directory
     ln -sf "$ZSH_PATH/.zshrc" "$ZSHRC" \
         && printf "${CBL}    Linked new .zshrc!\n${CNC}"
     ln -sf "$ZSH_PATH/.zshenv" "$ZENV" \
         && printf "${CBL}    Linked new .zshenv!\n${CNC}"
-
     sleep 2
     header
 
@@ -234,8 +235,8 @@ main() {
         header
         print "NOTE" $CYE "Compiling Zsh configuration files..."
         zsh -c "autoload -U zrecompile && zrecompile -p $ZSH_PATH/.zshrc" 2>/dev/null || true
+        sleep 2 
     fi
-    sleep 2
 
     header
     print "NOTE" $CYE "REMOVING INSTALLER SCRIPTS..."
