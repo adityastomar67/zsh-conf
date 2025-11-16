@@ -153,6 +153,7 @@ set_shell_config() {
 
 check_and_install_zsh() {
     if ! command -v zsh &>/dev/null; then
+        printf "\t"
         print "QUESTION" $CYE "Zsh is not installed. Would you like to install it? [y/N]"
         read res
         if [[ $res == "y" ]]; then
@@ -161,13 +162,16 @@ check_and_install_zsh() {
             elif [[ "$PKG_MANAGER" == "brew" ]]; then
                 brew install zsh
             fi
+            printf "\t"
             print "DONE" $CGR "Zsh has been installed successfully!"
 
         else
+            printf "\t"
             print "NOTE" $CYE "Installation of Zsh is skipped."
 
         fi
     else
+        printf "\t"
         print "NOTE" $CGR "Zsh is already installed."
     fi
     sleep 2
