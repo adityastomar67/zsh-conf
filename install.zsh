@@ -236,6 +236,7 @@ main() {
     if command -v zsh &> /dev/null; then
         header
         print "NOTE" $CYE "Compiling Zsh configuration files..."
+        sleep 2
         zsh -c "autoload -U zrecompile && zrecompile -p $ZSH_PATH/.zshrc" 2>/dev/null || true
         sleep 2 
     fi

@@ -294,6 +294,18 @@ z_prompt() {
 }
 
 gh0st_prompt() {
+  # Styles for Prompt
+  declare -a PROMPTS
+  PROMPTS=(
+      " "
+      ""
+      "-->"
+      "➤"
+      "󰮯 "
+      ""
+    )
+  ignition=${PROMPTS[1 + $RANDOM%6]}
+
   git_prompt() {
     local branch="$(git symbolic-ref HEAD 2> /dev/null | cut -d'/' -f3-)"
     local branch_truncated="${branch:0:30}"
@@ -315,29 +327,19 @@ gh0st_prompt() {
     fi
   }
 
-  PS1='%B%F{blue}%f%b  %B%F{magenta}%n%f%b $(dir_icon)  %B%F{red}%~%f%b${vcs_info_msg_0_} %(?.%B%F{green}.%F{red})%f%b '
-
+  # PS1='%B%F{blue}%f%b  %B%F{magenta}%n%f%b $(dir_icon)  %B%F{red}%~%f%b${vcs_info_msg_0_} %(?.%B%F{green}.%F{red})%f%b '
+  PS1='%B%F{blue}%n %B%F{red}/ %B%F{yellow}%m%f%b %B%F{grey}[%~]%f%b${vcs_info_msg_0_} %(?.%B%F{green}$ignition.%F{red})%f%b '
 }
 
 ##--> Calling the Prompt <--##
-# if [ $PROMPT_THEME = "gh0st" ]; then
-#   gh0st_prompt
-# elif [ $PROMPT_THEME = "z" ]; then
-#   z_prompt
-# elif [ $PROMPT_THEME = "10k" ]; then
-#   10k_prompt
-# else
-#   return
-# fi
-
-function dir_icon {
-  if [[ "$PWD" == "$HOME" ]]; then
-    echo "%B%F{cyan}%f%b"
-  else
-    echo "%B%F{cyan}%f%b"
-  fi
-}
-
-PS1='%B%F{magenta}%n %B%F{red}/ %B%F{magenta}%m%f%b %B%F{grey}[%~]%f%b${vcs_info_msg_0_} %(?.%B%F{green}.%F{red})%f%b '
+if [ $PROMPT_THEME = "gh0st" ]; then
+  gh0st_prompt
+elif [ $PROMPT_THEME = "z" ]; then
+  z_prompt
+elif [ $PROMPT_THEME = "10k" ]; then
+  10k_prompt
+else
+  return
+fi
 
 # vim:filetype=zsh
