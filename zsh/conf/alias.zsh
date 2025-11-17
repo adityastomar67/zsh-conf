@@ -204,13 +204,13 @@ if [ $USE_ALIAS = "Yes" ]; then
     is_installed code && alias code="code --extensions-dir=\"$HOME/.config/Code/User/extensions\""
     is_installed transmission-cli && alias tsm='transmission-cli -D -u 10 -w ~/Downloads/torrents'
 
-    if is_installed exa; then
-        alias l.="exa -a | egrep '^\.'"
-        alias la="exa -a --color=always --icons --group-directories-first"
-        alias ll="exa -l --color=always --icons --group-directories-first"
-        alias lt="exa -aT --level=2 --color=always --group-directories-first"
-        alias l="exa -l --color=always --icons --git --group-directories-first"
-        alias ls="clr && exa -al --color=always --icons --git --group-directories-first"
+    if is_installed eza; then
+        alias l.="eza -a | egrep '^\.'"
+        alias la="eza -a --color=always --icons --group-directories-first"
+        alias ll="eza -l --color=always --icons --group-directories-first"
+        alias lt="eza -aT --level=2 --color=always --group-directories-first"
+        alias l="eza -l --color=always --icons --git --group-directories-first"
+        alias ls="clr && eza -al --color=always --icons --git --group-directories-first"
     fi
 
     if is_installed lsd; then

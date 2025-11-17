@@ -137,7 +137,14 @@ set_shell_config() {
             read res
 
             if [[ $res =~ ^[Yy]$ ]]; then
-                sed -i "s/${config_var[$i]}=\"No\"/${config_var[$i]}=\"Yes\"/g" "$ZSH_PATH/.zshenv"
+                # sed -i "s/${config_var[$i]}=\"No\"/${config_var[$i]}=\"Yes\"/g" "$ZSH_PATH/.zshenv"
+                if sed --version >/dev/null 2>&1; then
+                    # GNU sed (Linux)
+                    sed -i "s|${config_var[$i]}=\"No\"|${config_var[$i]}=\"Yes\"|g" "$ZSH_PATH/.zshenv"
+                else
+                    # BSD sed (macOS)
+                    sed -i '' "s|${config_var[$i]}=\"No\"|${config_var[$i]}=\"Yes\"|g" "$ZSH_PATH/.zshenv"
+                fi
                 printf "    ${CGR}✓ Enabled: %s${CNC}" "${options[$i]}"
             else
                 printf "    ${CRE}X Skipped: %s${CNC}" "${options[$i]}"
@@ -188,10 +195,12 @@ main() {
     print "NOTE" $CYE "Backing up the previous config files, ${CRE}IF FOUND!!"
     sleep 2
     [ -f "$ZSHRC" ] && mv "$ZSHRC" "$HOME/.zshrc_${DATE}_${ID}" \
-        && printf "${CBL}    Moved .zshrc --> $HOME/.zshrc_${DATE}_${ID}\n${CNC}" 
+        && printf "${CBL}    Moved .zshrc --> $HOME/.zshrc_${DATE}_${ID}\n${CNC}" \
+        || printf "${CBL}    No .zshrc found!\n${CNC}"
     sleep 2
     [ -f "$ZENV" ] && mv "$ZENV" "$HOME/.zshenv_${DATE}_${ID}" \
-        && printf "${CBL}    Moved .zshenv --> $HOME/.zshenv_${DATE}_${ID}\n\n${CNC}"
+        && printf "${CBL}    Moved .zshenv --> $HOME/.zshenv_${DATE}_${ID}\n\n${CNC}" \
+        || printf "${CBL}    No .zshenv found!\n${CNC}"
     sleep 2
 
     # Clone the Git repository containing Zsh configuration files
