@@ -1,88 +1,96 @@
-# █▀█ █   █ █ █▀▀ █ █▄ █ █▀
-# █▀▀ █▄▄ █▄█ █▄█ █ █ ▀█ ▄█
+# ------------------------[  PLUGIN MANAGER CONFIGURATION  ]------------------------ #
+# This file handles the installation and loading of plugins based on the
+# selected manager (Zinit, Oh-My-Zsh, or Zap).
 
-export ZSH_COMPDUMP=~/.cache/.zcompdump-$HOST
-OMZ_HOME="$HOME/.oh-my-zsh"
-ZINIT_HOME="$HOME/.zinit"
-ZAP_HOME="$HOME/.local/share/zap"
 
-if [ $PLUG_MANAGER = "zinit" ]; then
-    ##--> Zinit setup <--##
+# ........................[  1. Path Definitions  ]........................ #
+
+export ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump-$HOST"
+
+local OMZ_HOME="$HOME/.oh-my-zsh"
+local ZINIT_HOME="$HOME/.zinit"
+local ZAP_HOME="$HOME/.local/share/zap"
+
+
+# ........................[  2. Plugin Manager Logic  ]........................ #
+
+# Option A: Zinit (Flexible & Fast)
+if [ "$PLUG_MANAGER" = "zinit" ]; then
+
+    # 1. Install Zinit if missing
     if [ ! -d "$ZINIT_HOME" ]; then
-      clear
-      echo "ZINIT not found. Cloning..."
-      git clone --depth 1 https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
+        echo "ZINIT not found. Cloning..."
+        git clone --quiet --depth 1 https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
     fi
     source "$ZINIT_HOME/zinit.zsh"
 
+    # 2. Aliases for cleaner syntax
     alias use='zinit light'
     alias ice='zinit ice'
     alias load='zinit load'
 
+    # 3. Load Plugins
     ice depth"1"
-
     use zsh-users/zsh-completions
     use hlissner/zsh-autopair
     use zdharma-continuum/fast-syntax-highlighting
     use MichaelAquilina/zsh-you-should-use
     use Aloxaf/fzf-tab
 
-    ice wait'3' lucid
-    load zsh-users/zsh-history-substring-search
+    ice wait'3' lucid;  load zsh-users/zsh-history-substring-search
+    ice wait'3' lucid;  load zsh-users/zsh-autosuggestions
+    ice wait'3' lucid;  load zsh-users/zsh-syntax-highlighting
+    ice wait'2' lucid;  load zdharma-continuum/history-search-multi-word
+    ice wait'2' lucid;  load jeffreytse/zsh-vi-mode
 
-    ice wait'3' lucid
-    load zsh-users/zsh-autosuggestions
+    # 4. Cleanup
+    ice wait'5' lucid;  unalias use ice load
 
-    ice wait'3' lucid
-    load zsh-users/zsh-syntax-highlighting
+    # Remove conflicting managers
+    [ -d "$ZAP_HOME" ] && rm -rf "$ZAP_HOME"
+    [ -d "$OMZ_HOME" ] && rm -rf "$OMZ_HOME"
 
-    ice wait'2' lucid
-    load zdharma-continuum/history-search-multi-word
 
-    ice wait'2' lucid
-    load jeffreytse/zsh-vi-mode
+# Option B: Oh-My-Zsh (Standard & Robust)
+elif [ "$PLUG_MANAGER" = "omz" ]; then
 
-    ice wait'5' lucid
-    unalias use ice load
-
-    [ -d $ZAP_HOME ] && rm -rf $ZAP_HOME
-    [ -d $OMZ_HOME ] && rm -rf $OMZ_HOME
-
-elif [ $PLUG_MANAGER = "omz" ]; then
-    ##--> OMZ setup <--##
+    # 1. Install OMZ if missing
     if [ ! -d "$OMZ_HOME" ]; then
-      clear
-      echo "OH-MY-ZSH not found. Cloning..."
-      sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+        echo "OH-MY-ZSH not found. Cloning..."
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
     fi
 
-    plugins=(
-      git
-      history
-      web-search
-      copybuffer
-      dirhistory
-    )
-    source "$OMZ_HOME/oh-my-zsh.sh"
-    sleep 2
-    if [ -f $HOME/.zshrc.pre-oh-my-zsh ]; then
-      rm -rf $HOME/.zshrc
-      command mv $HOME/.zshrc.pre-oh-my-zsh $HOME/.zshrc
-    fi
-
+    # 2. Configuration
+    plugins=(git history web-search copybuffer dirhistory)
+    
     DISABLE_UPDATE_PROMPT="true"
     ENABLE_CORRECTION="true"
     COMPLETION_WAITING_DOTS="true"
 
-    [ -d $ZINIT_HOME ] && rm -rf $ZINIT_HOME
-    [ -d $ZAP_HOME ] && rm -rf $ZAP_HOME
+    source "$OMZ_HOME/oh-my-zsh.sh"
 
-elif [ $PLUG_MANAGER = "zap" ]; then
-    [[ ! -d "$ZAP_HOME" ]] && git clone --depth 1 https://github.com/zap-zsh/zap.git "$ZAP_HOME" > /dev/null 2>&1
-    sleep 1
+    # 3. Fix Zshrc (OMZ installer overwrites it)
+    if [ -f "$HOME/.zshrc.pre-oh-my-zsh" ]; then
+        rm -rf "$HOME/.zshrc"
+        mv "$HOME/.zshrc.pre-oh-my-zsh" "$HOME/.zshrc"
+    fi
+
+    # Remove conflicting managers
+    [ -d "$ZINIT_HOME" ] && rm -rf "$ZINIT_HOME"
+    [ -d "$ZAP_HOME" ]   && rm -rf "$ZAP_HOME"
+
+
+# Option C: Zap (Minimal & Blazing Fast)
+elif [ "$PLUG_MANAGER" = "zap" ]; then
+
+    # 1. Install Zap if missing
+    if [ ! -d "$ZAP_HOME" ]; then
+        git clone --quiet --depth 1 https://github.com/zap-zsh/zap.git "$ZAP_HOME"
+    fi
 
     [ -f "$ZAP_HOME/zap.zsh" ] && source "$ZAP_HOME/zap.zsh"
 
+    # 2. Load Plugins
     plug "zsh-users/zsh-completions"
     plug "hlissner/zsh-autopair"
     plug "zdharma-continuum/fast-syntax-highlighting"
@@ -94,20 +102,40 @@ elif [ $PLUG_MANAGER = "zap" ]; then
     plug "zdharma-continuum/history-search-multi-word"
     plug "jeffreytse/zsh-vi-mode"
 
-    [ -d $ZINIT_HOME ] && rm -rf $ZINIT_HOME
-    [ -d $OMZ_HOME ] && rm -rf $OMZ_HOME
+    # Remove conflicting managers
+    [ -d "$ZINIT_HOME" ] && rm -rf "$ZINIT_HOME"
+    [ -d "$OMZ_HOME" ]   && rm -rf "$OMZ_HOME"
 fi
 
-##--> Checking for .zcompdump file generated by plugs.zsh <--##
-if [ -f $HOME/.zcompdump ]; then
-  rm -rf $HOME/.zcompdump
+
+# ........................[  3. Housekeeping  ]........................ #
+
+# Remove legacy dump file if generated by plugins
+if [ -f "$HOME/.zcompdump" ]; then
+    rm -rf "$HOME/.zcompdump"
 fi
 
-##--> Other Plugins <--##
-# Initialize tools (lightweight ones) - guard with command checks
-command -v aws &> /dev/null && complete -C aws_completer aws
-command -v zoxide &> /dev/null && eval "$(zoxide init zsh)"
-command -v starship &> /dev/null && eval "$(starship init zsh)"
-command -v atuin &> /dev/null && eval "$(atuin init zsh)"
+
+# ........................[  4. External Tools Initialization  ]........................ #
+
+# AWS CLI
+if command -v aws &>/dev/null; then
+    complete -C aws_completer aws
+fi
+
+# Zoxide (Smarter cd)
+if command -v zoxide &>/dev/null; then
+    eval "$(zoxide init zsh)"
+fi
+
+# Starship (Prompt)
+if command -v starship &>/dev/null; then
+    eval "$(starship init zsh)"
+fi
+
+# Atuin (Shell History)
+if command -v atuin &>/dev/null; then
+    eval "$(atuin init zsh)"
+fi
 
 # vim:filetype=zsh

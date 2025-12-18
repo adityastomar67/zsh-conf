@@ -1,177 +1,216 @@
-# █▀█ █▀█ ▀█▀ █ █▀█ █▄ █ █▀
-# █▄█ █▀▀  █  █ █▄█ █ ▀█ ▄█
+# ------------------------[  ZSH SHELL OPTIONS  ]------------------------ #
+# This file configures the core behavior of Zsh (options, completion, history).
+
+
+# ........................[  1. Initialization & Modules  ]........................ #
 
 autoload -Uz add-zsh-hook
-autoload _vi_search_fix
 autoload -U colors && colors
+autoload -Uz compinit
+autoload _vi_search_fix
 
-# Load more completions
-fpath=(
-  $ZSH_PATH/zsh/comp
-  $fpath
-)
+# Load Zsh Modules
+zmodload zsh/zle
+zmodload zsh/zpty
+zmodload zsh/complist
 
-# Allow C-w to delete words separated by | or - or .
-WORDCHARS='|-.'
-
-##--> Changing the Title of the Terminals <--##
-function xterm_title_precmd () {
-	print -Pn -- '\e]2;%n@%m %~\a'
-	[[ "$TERM" == 'screen'* ]] && print -Pn -- '\e_\005{g}%n\005{-}@\005{m}%m\005{-} \005{B}%~\005{-}\e\\'
-}
-
-function xterm_title_preexec () {
-	print -Pn -- '\e]2;%n@%m %~ %# ' && print -n -- "${(q)1}\a"
-	[[ "$TERM" == 'screen'* ]] && { print -Pn -- '\e_\005{g}%n\005{-}@\005{m}%m\005{-} \005{B}%~\005{-} %# ' && print -n -- "${(q)1}\e\\"; }
-}
-
-if [[ "$TERM" == (Eterm*|alacritty*|termite*|gnome*|konsole*|kterm*|putty*|rxvt*|screen*|tmux*|xterm*) ]]; then
-	add-zsh-hook -Uz precmd xterm_title_precmd
-	add-zsh-hook -Uz preexec xterm_title_preexec
+# Add Custom Completions
+if [[ -d "$ZSH_PATH/zsh/comp" ]]; then
+    fpath=("$ZSH_PATH/zsh/comp" $fpath)
 fi
 
-##--> Setting/Unsetting the options <--##
-while read -r OPT
-do
-  setopt $OPT
-done <<-EOF
-AUTO_CD
-AUTO_LIST
-AUTO_MENU
-AUTO_PARAM_SLASH
-COMPLETE_IN_WORD
-MENU_COMPLETE
-HASH_LIST_ALL
-ALWAYS_TO_END
-LIST_PACKED
-promptsubst
-NOTIFY
-NOHUP
-MAILWARN
-INTERACTIVE_COMMENTS
-NOBEEP
-GLOB_COMPLETE
-APPEND_HISTORY
-SHARE_HISTORY
-INC_APPEND_HISTORY
-INC_APPEND_HISTORY_TIME
-EXTENDED_HISTORY
-HIST_IGNORE_ALL_DUPS
-HIST_IGNORE_SPACE
-HIST_NO_FUNCTIONS
-HIST_EXPIRE_DUPS_FIRST
-HIST_SAVE_NO_DUPS
-HIST_REDUCE_BLANKS
-EOF
+# Permissions mask
+umask 022
 
-while read -r OPT
-do
-  unsetopt $OPT
-done <<-EOF
-FLOWCONTROL
-NOMATCH
-CORRECT
-EQUALS
-EOF
+# Word Characters (Allow Ctrl+w to delete parts of paths/IPs)
+WORDCHARS='|-.'
 
-##--> Waiting dots <--##
+
+# ........................[  2. Terminal Title  ]........................ #
+
+function xterm_title_precmd() {
+    print -Pn -- '\e]2;%n@%m %~\a'
+    [[ "$TERM" == 'screen'* ]] && print -Pn -- '\e_\005{g}%n\005{-}@\005{m}%m\005{-} \005{B}%~\005{-}\e\\'
+}
+
+function xterm_title_preexec() {
+    print -Pn -- '\e]2;%n@%m %~ %# ' && print -n -- "${(q)1}\a"
+    [[ "$TERM" == 'screen'* ]] && { print -Pn -- '\e_\005{g}%n\005{-}@\005{m}%m\005{-} \005{B}%~\005{-} %# ' && print -n -- "${(q)1}\e\\"; }
+}
+
+case "$TERM" in
+    Eterm*|alacritty*|termite*|gnome*|konsole*|kterm*|putty*|rxvt*|screen*|tmux*|xterm*)
+        add-zsh-hook -Uz precmd xterm_title_precmd
+        add-zsh-hook -Uz preexec xterm_title_preexec
+        ;;
+esac
+
+
+# ........................[  3. Zsh Options (Setopt)  ]........................ #
+
+# Navigation & Listing
+setopt AUTO_CD              # cd by typing directory name
+setopt AUTO_LIST            # List choices on ambiguous completion
+setopt AUTO_MENU            # Show completion menu on successive tab press
+setopt AUTO_PARAM_SLASH     # Tab completing directory appends a slash
+setopt LIST_PACKED          # Compact completion list
+
+# Completion Behavior
+setopt COMPLETE_IN_WORD     # Complete from both ends of a word
+setopt MENU_COMPLETE        # Insert first match immediately
+setopt GLOB_COMPLETE        # Show autocompletion menu with globs
+setopt HASH_LIST_ALL        # Hash entire command path first
+
+# History
+setopt APPEND_HISTORY          # Append history instead of replacing
+setopt SHARE_HISTORY           # Share history between sessions
+setopt INC_APPEND_HISTORY      # Write to history file immediately
+setopt INC_APPEND_HISTORY_TIME # Add timestamps to history
+setopt EXTENDED_HISTORY        # Save timestamp and duration
+setopt HIST_IGNORE_ALL_DUPS    # Remove older duplicate entries
+setopt HIST_IGNORE_SPACE       # Don't save commands starting with space
+setopt HIST_NO_FUNCTIONS       # Don't save function definitions
+setopt HIST_EXPIRE_DUPS_FIRST  # Expire duplicates first when trimming
+setopt HIST_SAVE_NO_DUPS       # Don't write duplicates to history file
+setopt HIST_REDUCE_BLANKS      # Remove superfluous blanks
+
+# General
+setopt NOTIFY                  # Report status of background jobs immediately
+setopt NOHUP                   # Don't kill background jobs on exit
+setopt MAILWARN                # Print mail warning message
+setopt INTERACTIVE_COMMENTS    # Allow comments in interactive shell
+setopt ALWAYS_TO_END           # Move cursor to end of word after completion
+setopt NOBEEP                  # No beep on error
+
+# Disable unwanted features
+unsetopt FLOWCONTROL           # Disable start/stop characters (Ctrl-S/Ctrl-Q)
+unsetopt NOMATCH               # Don't print error on no match (pass glob to command)
+unsetopt CORRECT               # Disable spelling correction
+unsetopt EQUALS                # Disable =filename expansion
+
+
+# ........................[  4. ZLE & Cursor  ]........................ #
+
+# Waiting Dots (Visual feedback during slow completion)
 expand-or-complete-with-dots() {
-  echo -n "\e[31m…\e[0m"
-  zle expand-or-complete
-  zle redisplay
+    echo -n "\e[31m…\e[0m"
+    zle expand-or-complete
+    zle redisplay
 }
 zle -N expand-or-complete-with-dots
 bindkey "^I" expand-or-complete-with-dots
 
-##--> Change cursor shape for different vi modes. <--##
-function zle-keymap-select () {
+# Cursor Shape (Beam for insert, Block for normal)
+function set_cursor_shape() {
+    echo -ne "$1"
+}
+
+function zle-keymap-select() {
     case $KEYMAP in
-        vicmd) echo -ne '\e[1 q';;      # block
-        viins|main) echo -ne '\e[5 q';; # beam
+        vicmd)      set_cursor_shape '\e[1 q' ;; # Block
+        viins|main) set_cursor_shape '\e[5 q' ;; # Beam
     esac
 }
 zle -N zle-keymap-select
 
 zle-line-init() {
-    # initiate `vi insert` as keymap (can be removed if `bindkey -V` has been set elsewhere)
     zle -K viins
-    echo -ne "\e[5 q"
+    set_cursor_shape '\e[5 q'
 }
 zle -N zle-line-init
-echo -ne '\e[2 q' # Use beam shape cursor on startup.
 
-preexec() { echo -ne '\e[5 q' ;} # Use beam shape cursor for each new prompt.
+# Reset cursor on startup/new prompt
+set_cursor_shape '\e[2 q'
+preexec() { set_cursor_shape '\e[5 q'; }
 
-##--> Denying write permission for group and others <--##
-umask 022
-zmodload zsh/zle
-zmodload zsh/zpty
-zmodload zsh/complist
-
-autoload -Uz compinit
-
+# Register Custom Widgets
 zle -N _vi_search_fix
 zle -N _sudo_command_line
 zle -N _toggle-right-prompt
 zle -N _toggle-left-prompt
 
-for dump in $ZSH_PATH/zsh/zcompdump(N.mh+24); do
-  compinit -d $ZSH_PATH/zsh/zcompdump
-done
 
-compinit -C -d $ZSH_PATH/zsh/zcompdump
+# ........................[  5. Completion System  ]........................ #
+
+# Initialize Completion System
+if [[ -n "$ZSH_PATH/zsh/zcompdump"(#qN.mh+24) ]]; then
+    compinit -d "$ZSH_PATH/zsh/zcompdump"
+else
+    compinit -C -d "$ZSH_PATH/zsh/zcompdump"
+fi
+
 _comp_options+=(globdots)
 
-## On-demand rehash
+# On-demand Rehash (Pacman cache check)
 zshcache_time="$(date +%s%N)"
 rehash_precmd() {
-  if [[ -a /var/cache/zsh/pacman ]]; then
-    local paccache_time="$(date -r /var/cache/zsh/pacman +%s%N)"
-    if (( zshcache_time < paccache_time )); then
-      rehash
-      zshcache_time="$paccache_time"
+    if [[ -a /var/cache/zsh/pacman ]]; then
+        local paccache_time="$(date -r /var/cache/zsh/pacman +%s%N)"
+        if (( zshcache_time < paccache_time )); then
+            rehash
+            zshcache_time="$paccache_time"
+        fi
     fi
-  fi
 }
 add-zsh-hook -Uz precmd rehash_precmd
 
-# ==== Colors ====
-local meta='%f'  # default foreground
-local orange='%F{#fe8019}'
-local ivory='%F{#d5c4a1}'
-local green='%F{#b8bb26}'
-local yellow='%F{#fabd2f}'
-local red='%F{#fb4934}'
-local blue='%F{#83a598}'
-local magenta='%F{#d3869b}'
+# --- Unified Zstyle Configuration ---
 
-##--> Completion Hooks <--##
+# 1. Base Options
 zstyle ":completion:*" sort false
-zstyle ':completion:*' matcher-list '' 'm:{a-z}={A-Z}' 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=* l:|=*'
 zstyle ":completion:*" special-dirs true
 zstyle ":completion:*" ignored-patterns
-zstyle ":completion:*" completer _complete
-zstyle ':completion:*' menu select=2
 zstyle ':completion:*' auto-description 'specify: %d'
-zstyle ':completion:*' completer _expand _complete _correct _approximate
-zstyle ':completion:*' format 'Suggesting %d'
-zstyle ':completion:*' group-name ''
-zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
-zstyle ':completion:*' list-colors ''
-zstyle ':completion:*' list-prompt %SAt %p: Hit TAB for more, or the character to insert%s
-zstyle ':completion:*' select-prompt %SScrolling active: current selection at %p%s
-zstyle ':completion:*' use-compctl false
 zstyle ':completion:*' verbose true
-zstyle ':completion:*:*:*:*:*' menu select
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' # case insensitive tab completion
+zstyle ':completion:*' use-compctl false
+zstyle ':completion:*' complete-options true
+zstyle ':completion:*' complete true
 
-# Groups format
+# 2. Matchers & Completers
+# Combine _extensions, _complete, _correct, and _approximate
+zstyle ':completion:*' completer _extensions _complete _correct _approximate
+# Case insensitive matching (hyphen/underscore tolerant)
+zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+
+# 3. Menu & UI
+zstyle ':completion:*' menu select=2
+zstyle ':completion:*' list-prompt '' # Disable "Display all possibilities?"
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+zstyle ':completion:*' select-prompt %SScrolling active: current selection at %p%s
+
+# 4. Grouping & Formatting
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:*:-command-:*:*' group-order aliases builtins functions commands
+zstyle ':completion:*' file-sort modification
+
+# Colors for groups
+local meta='%f' orange='%F{#fe8019}' ivory='%F{#d5c4a1}'
+local green='%F{#b8bb26}' yellow='%F{#fabd2f}' red='%F{#fb4934}'
+local blue='%F{#83a598}' magenta='%F{#d3869b}'
+
+zstyle ':completion:*' format 'Suggesting %d'
 zstyle ':completion:*:*:*:*:corrections' format "${yellow}  ${ivory}%d${meta}"
-zstyle ':completion:*:*:*:*:descriptions' format "${magenta} 硫${ivory}%d${meta}"
-zstyle ':completion:*:*:*:*:messages' format "${blue}  ${ivory}%d${meta}"
-zstyle ':completion:*:*:*:*:warnings' format "${red}  ${ivory}No Matches Found${meta}"
+zstyle ':completion:*:*:*:*:descriptions' format "${magenta} 硫${ivory}%d${meta}"
+zstyle ':completion:*:*:*:*:messages'     format "${blue}  ${ivory}%d${meta}"
+zstyle ':completion:*:*:*:*:warnings'     format "${red}  ${ivory}No Matches Found${meta}"
 
-##--> Autocompletion Hooks <--##
+# 5. Specific Completions
+# Alias Expansion Widget (Ctrl-x a)
+zle -C alias-expension complete-word _generic
+bindkey '^xa' alias-expension
+zstyle ':completion:alias-expension:*' completer _expand_alias
+
+# SSH/Remote Hosts
+zstyle -e ':completion:*:(pssh|ssh|scp|sftp|rsh|rsync):hosts' hosts 'reply=(${=${${(f)"$(cat {/etc/ssh_,~/.ssh/known_}hosts(|2)(N) /dev/null)"}%%[# ]*}//,/ })'
+# Zoxide
+if command -v z >/dev/null; then
+    compdef _dirs z
+fi
+
+
+# ........................[  6. Autocomplete Plugin Hooks  ]........................ #
+# These settings apply if using zsh-autocomplete plugin
+
 zstyle ':autocomplete:*' default-context ''
 zstyle ':autocomplete:*' min-delay 0.05
 zstyle ':autocomplete:*' min-input 1
@@ -185,68 +224,28 @@ zstyle ':autocomplete:*' widget-style complete-word
 zstyle ':autocomplete:*' fzf-completion no
 zstyle ':autocomplete:*' add-space executables aliases functions builtins reserved-words commands
 
-# ======== General =======
-# Define completers
-zstyle ':completion:*' completer _extensions _complete _approximate
 
-# Use cache for commands using cache
-zstyle ':completion:*' use-cache on
-zstyle ':completion:*' cache-path $ZSH_PATH/zsh/zcompcache
+# ........................[  7. History & Syntax Highlighting  ]........................ #
 
-# Highlights menu selection
-zstyle ':completion:*' menu select
-
-# Sort by modification date for every completer
-zstyle ':completion:*' file-sort modification
-
-# Disable "Display all possibilities?" message
-zstyle ':completion:*' list-prompt ''
-
-# Required for completion to be in good groups (named after the tags)
-zstyle ':completion:*' group-name ''
-
-# Groups order
-zstyle ':completion:*:*:-command-:*:*' group-order aliases builtins functions commands
-
-# Setting the style matcher-list allows you to filter the matches of the completion with even more patterns.
-# See ZSHCOMPWID "completion matching control"
-zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
-
-# ==== Specifics ====
-# Autocomplete options for cd instead of directory stack
-zstyle ':completion:*' complete-options true
-
-# Complete the alias when _expand_alias is used as a function
-zstyle ':completion:*' complete true
-
-# Expand aliases by pressing Ctrl-x a
-zle -C alias-expension complete-word _generic
-bindkey '^xa' alias-expension
-zstyle ':completion:alias-expension:*' completer _expand_alias
-
-# Host completions for remote connections
-zstyle -e ':completion:*:(pssh|ssh|scp|sftp|rsh|rsync):hosts' hosts 'reply=(${=${${(f)"$(cat {/etc/ssh_,~/.ssh/known_}hosts(|2)(N) /dev/null)"}%%[# ]*}//,/ })'
-
-##--> A little OMZ Config <--##
+# History File Configuration
 HISTFILE="$ZSH_PATH/zsh/zhistory"
 HISTSIZE=50000
 SAVEHIST=50000
 HISTTIMEFORMAT="%Y/%m/%d %H:%M:%S:   "
+HIST_STAMPS="mm/dd/yyyy"
 
+# Syntax Highlighting & Autosuggestions
 ZSH_AUTOSUGGEST_USE_ASYNC="true"
 ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern cursor regexp root line)
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 ZSH_HIGHLIGHT_MAXLENGTH=512
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=$color8,bold"
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=8,bold"
 ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
+# Misc Flags
 ENABLE_CORRECTION="true"
 DISABLE_AUTO_UPDATE="true"
 DISABLE_UPDATE_PROMPT="true"
 COMPLETION_WAITING_DOTS="true"
-HIST_STAMPS="mm/dd/yyyy"
-
-# Complete zoxide with dirs only
-compdef _dirs z
 
 # vim:filetype=zsh

@@ -1,30 +1,86 @@
-#   ▀█ █▀ █ █ █▀█ █▀▀
-# ▄ █▄ ▄█ █▀█ █▀▄ █▄▄
+# ------------------------[  ZSH MAIN CONFIGURATION  ]------------------------ #
+# This file orchestrates the loading of all modules, plugins, and settings.
+# It is sourced by the main ~/.zshrc file.
 
-##--> Explicitly launching of tmux <--##
-source "$ZSH_PATH/zsh/conf/tmux.zsh"
 
-##--> Sourcing config files <--##
-while read conf
-do
-  [ -f "$ZSH_PATH/zsh/conf/${conf}.zsh" ] && source "$ZSH_PATH/zsh/conf/${conf}.zsh"
-done <<-EOF
-    opts
-    plugs
-    env
-    # theme
-    keys
-    prompt
-    # nvim
-EOF
+# ........................[  1. Tmux Integration  ]........................ #
+# Explicitly handle Tmux launching/attaching logic first
+if [[ -r "$ZSH_PATH/zsh/conf/tmux.zsh" ]]; then
+    source "$ZSH_PATH/zsh/conf/tmux.zsh"
+fi
 
-##--> Sourcing other files <--##
-[ -f "$ZSH_PATH/zsh/conf/alias.zsh" ] && source "$ZSH_PATH/zsh/conf/alias.zsh" &> /dev/null
-[ -f "$ZSH_PATH/zsh/conf/function.zsh" ] && source "$ZSH_PATH/zsh/conf/function.zsh" &> /dev/null
-[ -f "$HOME/.temp_zsh" ] && source "$HOME/.temp_zsh"  # For temporary offline aliases
 
-##--> Final Options <--##
-echo -en "\x1b[2J\x1b[1;1H" ;echo    # For faster clearing the Terminal
-set -o vi                            # Vi-mode
+# ........................[  2. Module Loader  ]........................ #
+
+# Define modules to load (Order matters: env -> opts -> others)
+typeset -a core_modules
+core_modules=(
+    opts      # Options & History
+    plugs     # Plugin Manager
+    env       # Environment Variables
+    icons     # Icons & Glyphs
+    keys      # Keybindings
+    fzf       # FZF Integration
+    prompt    # Theme/Prompt
+    # theme   # Theme Switcher (Optional)
+    # nvim    # Neovim Switcher (Optional)
+)
+
+typeset -a aux_modules
+aux_modules=(
+    alias     # Aliases
+    function  # Custom Functions
+)
+
+# Source Core Modules
+for mod in $core_modules; do
+    [[ -f "$ZSH_PATH/zsh/conf/${mod}.zsh" ]] && source "$ZSH_PATH/zsh/conf/${mod}.zsh"
+done
+
+# Source Auxiliary Modules (Suppress output for cleaner startup)
+for mod in $aux_modules; do
+    [[ -f "$ZSH_PATH/zsh/conf/${mod}.zsh" ]] && source "$ZSH_PATH/zsh/conf/${mod}.zsh" &> /dev/null
+done
+
+# Source Offline/Temp Configs
+[[ -f "$HOME/.temp_zsh" ]] && source "$HOME/.temp_zsh" &> /dev/null
+
+
+# ........................[  3. Performance Optimization  ]........................ #
+# Compiles .zsh files to .zwc in the background to speed up FUTURE shell starts.
+# Zsh automatically prefers the .zwc file if it is newer than the source.
+
+function _zsh_maintain_bytecode() {
+    local dir="$ZSH_PATH/zsh/conf"
+    local file
+
+    # Compile module files
+    for file in "$dir"/*.zsh; do
+        if [[ -f "$file" ]]; then
+            # Compile if .zwc doesn't exist OR source is newer than .zwc
+            if [[ ! -f "${file}.zwc" || "$file" -nt "${file}.zwc" ]]; then
+                zcompile "$file"
+            fi
+        fi
+    done
+
+    # Compile main entry points
+    local main_rc="$HOME/.zshrc"
+    if [[ -f "$main_rc" && ( ! -f "${main_rc}.zwc" || "$main_rc" -nt "${main_rc}.zwc" ) ]]; then
+        zcompile "$main_rc"
+    fi
+}
+
+# Run maintenance in background immediately
+_zsh_maintain_bytecode &!
+
+
+# ........................[  4. Finalization  ]........................ #
+
+# Instant terminal clear (Removes initialization artifacts)
+echo -en "\x1b[2J\x1b[1;1H" ; echo
+
+# Enable Vi-mode for command line editing
+set -o vi
 
 # vim:filetype=zsh

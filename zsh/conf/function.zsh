@@ -1,446 +1,327 @@
-# █▀▀ █ █ █▄ █ █▀▀ ▀█▀ █ █▀█ █▄ █ █▀
-# █▀  █▄█ █ ▀█ █▄▄  █  █ █▄█ █ ▀█ ▄█
+# ------------------------[  ZSH FUNCTIONS CONFIGURATION  ]------------------------ #
+# This file defines custom shell functions and utilities.
+#
+# NOTE: To disable functions, set USE_FUNCTION="No" in ~/.zshenv
 
-if [ $USE_FUNCTION = "Yes" ]; then
 
-    [ -f "$ZSH_PATH/zsh/conf/fzf.zsh" ] && source "$ZSH_PATH/zsh/conf/fzf.zsh" &> /dev/null
+# ........................[  1. Initialization  ]........................ #
 
-    ##--> If $1 is a directory, remove it with rm only <--##
-    function rm() {
-        for arg in "$@"; do
-            # check if the argument is a directory
-            if [ -d "$arg" ]; then
-                # if it is, then remove it with rm
-                command rm -rf "$arg"
-                # and continue to the next argument
-                continue
-            fi
-            # if it is not a directory, then remove it with the original rm
-            command rm "$arg"
-        done
-    }
+# Exit if functions are disabled in config
+[[ "$USE_FUNCTION" != "Yes" ]] && return
 
-    ##--> For Launcing NeoVim and SudoEdit with same command <--##
-    function v() {
-        if [ $MULTI_NEOVIM = "Yes" ] && [ $(nvim --version | grep -oP '(?<=^NVIM v)[0-9|.][0-9|.][0-9|.]') = 0.9 ] && [ $# -gt 1 ] && [ ! -f $1 ] && [ ! -d $1 ]; then
-            case "$1" in
-            -a | --astro)
-                NVIM_APPNAME=AstroNvim nvim $2
-                ;;
-            -l | --lazy)
-                NVIM_APPNAME=LazyVim nvim $2
-                ;;
-            -c | --chad)
-                NVIM_APPNAME=NvChad nvim $2
-                ;;
-            -n | --nv)
-                NVIM_APPNAME=LazyNV nvim $2
-                ;;
-            *)
-                echo "No config found for the choice!" >&2
-                ;;
-            esac
-        else
-            file=$1
-            if [[ -e $file && ! -w $file ]]; then
-                sudoedit $file
-            else
-                nvim $file
-            fi
+# Load FZF integration if available
+[ -f "$ZSH_PATH/zsh/conf/fzf.zsh" ] && source "$ZSH_PATH/zsh/conf/fzf.zsh" &> /dev/null
+
+
+# ........................[  2. Core Overrides & Wrappers  ]........................ #
+
+# Safer rm: Removes directories with -rf automatically
+rm() {
+    for arg in "$@"; do
+        if [ -d "$arg" ]; then
+            command rm -rf "$arg"
+            continue
         fi
-    }
+        command rm "$arg"
+    done
+}
 
-    ##--> Get Temperature for $CITY <--##
-    function get_temperature() {
-        local response=""
-        response=$(curl --silent 'https://api.openweathermap.org/data/2.5/weather?id=5110253&units=imperial&appid=<your_api_key>')
-        local status=$(echo $response | jq -r '.cod')
-        case $status in
-        200)
-            printf "Location: %s %s\n" "$(echo $response | jq '.name') $(echo $response | jq '.sys.country')"
-            printf "Forecast: %s\n" "$(echo $response | jq '.weather[].description')"
-            printf "Temperature: %.1f°F\n" "$(echo $response | jq '.main.temp')"
-            printf "Temp Min: %.1f°F\n" "$(echo $response | jq '.main.temp_min')"
-            printf "Temp Max: %.1f°F\n" "$(echo $response | jq '.main.temp_max')"
-            ;;
-        401)
-            echo "401 error"
-            ;;
-        *)
-            echo "error"
-            ;;
+# Advanced Editor Launcher (Supports Multi-Config Neovim)
+v() {
+    if [ "$MULTI_NEOVIM" = "Yes" ] && [ $# -gt 1 ] && [ ! -f "$1" ] && [ ! -d "$1" ]; then
+        case "$1" in
+            -a | --astro)  NVIM_APPNAME=AstroNvim nvim "$2" ;;
+            -l | --lazy)   NVIM_APPNAME=LazyVim nvim "$2"   ;;
+            -c | --chad)   NVIM_APPNAME=NvChad nvim "$2"    ;;
+            -n | --nv)     NVIM_APPNAME=LazyNV nvim "$2"    ;;
+            *)             echo "No config found for the choice!" >&2 ;;
         esac
-    }
-
-    ##--> Empty Trash Bin <--##
-    function empty_trash() {
-        [ ! -d "$HOME/.Trash/files" ] && return
-        printf "%s\n" "EMPTYING TRASH"
-        sudo command rm -rf $HOME/.Trash/files/*
-    }
-
-    ##--> Initializing a Repository <--##
-    function repo() {
-        git init
-        if [[ ! -e "./README.md" ]]; then
-            touch README.md
-        fi
-        if [[ ! -e "./.gitignore" ]]; then
-            touch .gitignore
-        fi
-        git branch -m main
-        git remote add origin "$1"
-        git add .
-        git commit -m "First Commit"
-        git push origin HEAD
-    }
-
-    ##--> Countdown function for terminal <--##
-    function countdown() {
-        date1=$(($(date +%s) + $1))
-        while [ "$date1" -ge $(date +%s) ]; do
-            echo -ne "$(date -u --date @$(($date1 - $(date +%s))) +%H:%M:%S)\r"
-            sleep 0.1
-        done
-    }
-
-    ##--> Stopwatch function for terminal <--##
-    function stopwatch() {
-        date1=$(date +%s)
-        while true; do
-            echo -ne "$(date -u --date @$(($(date +%s) - $date1)) +%H:%M:%S)\r"
-            sleep 0.1
-        done
-    }
-
-    ##--> Create the directory while creating the file <--##
-    function touchdir() { mkdir -p "$(dirname "$1")" && touch "$1"; }
-
-    ##--> Recursively delete `passed type' files <--##
-    function del() {
-        find . -type f -name "$1" -ls -delete
-    }
-
-    ##--> Initialize conda <--##
-    function cond() {
-        __conda_setup="$('/opt/miniconda3/bin/conda' 'shell.bash' 'hook' 2>/dev/null)"
-        if [ $? -eq 0 ]; then
-            eval "$__conda_setup"
+    else
+        local file="${1:-.}"
+        if [[ -e "$file" && ! -w "$file" ]]; then
+            sudoedit "$file"
         else
-            if [ -f "/opt/miniconda3/etc/profile.d/conda.sh" ]; then
-                . "/opt/miniconda3/etc/profile.d/conda.sh"
-            else
-                export PATH="/opt/miniconda3/bin:$PATH"
-            fi
+            nvim "$file"
         fi
-        unset __conda_setup
-    }
-
-    ##--> Sorting file's content <--##
-    function srt() {
-        mv "$1" "$1.bak"
-        sort "$1.bak" | uniq >$1
-        rm "$1.bak"
-    }
-
-    ##--> Determine size of a file or total size of a directory <--##
-    function fs() {
-        if du -b /dev/null >/dev/null 2>&1; then
-            local arg=-sbh
-        else
-            local arg=-sh
-        fi
-        if [[ -n "$@" ]]; then
-            du $arg -- "$@"
-        else
-            du $arg .[^.]* ./*
-        fi
-    }
-
-    ##--> Code Runner <--##
-    function prog() {
-        if [ -f "$1" ]; then
-            case $1 in
-            *.cpp) g++ -std=c++20 "$1" && ./a.out && rm -f a.out ;;
-            *.c) gcc "$1" && ./a.out && rm -f a.out ;;
-            *.java) javac "$1" && java "$(basename -s .java "$1")" && rm -f *.class ;;
-            *.py) python "$1" ;;
-            *.sh) bash "$1" ;;
-            *.pl) perl "$1" ;;
-            *.rb) ruby "$1" ;;
-            *.go) go run "$1" ;;
-            *.js) node "$1" ;;
-            *.php) php "$1" ;;
-            *) echo "'$1' is not a supported file type." ;;
-            esac
-        else
-            echo "'$1' is not a valid file"
-        fi
-    }
-
-    ##--> Function extract for common file formats <--##
-    function ex() {
-        if [ -f "$1" ]; then
-            case $1 in
-            *.tar.bz2) tar xjf $1 ;;
-            *.tar.gz) tar xzf $1 ;;
-            *.bz2) bunzip2 $1 ;;
-            *.rar) unrar x $1 ;;
-            *.gz) gunzip $1 ;;
-            *.tar) tar xf $1 ;;
-            *.tbz2) tar xjf $1 ;;
-            *.tgz) tar xzf $1 ;;
-            *.zip) unzip $1 ;;
-            *.Z) uncompress $1 ;;
-            *.7z) 7z x $1 ;;
-            *.deb) ar x $1 ;;
-            *.tar.xz) tar xf $1 ;;
-            *.tar.zst) unzstd $1 ;;
-            *) echo "'$1' cannot be extracted via extract()" ;;
-            esac
-        else
-            echo "'$1' is not a valid file"
-        fi
-    }
-
-    ##--> Navigation <--##
-    function up() {
-        local d=""
-        local limit="$1"
-
-        # Default to limit of 1
-        if [ -z "$limit" ] || [ "$limit" -le 0 ]; then
-            limit=1
-        fi
-
-        for ((i = 1; i <= limit; i++)); do
-            d="../$d"
-        done
-
-        # perform cd. Show error if cd fails
-        if ! cd "$d"; then
-            echo "Couldn't go up $limit dirs."
-        fi
-    }
-
-    ##--> Directly backup the data to gdrive using terminal <--##
-    function backupToDrive() {
-        cp "$1" /Users/ <username >/Google\ Drive/Config/.zshrc
-        echo "New .zshrc backed up to Google Drive."
-    }
-
-    ##--> Editing .zshrc and sourcing <--##
-    function editZsh() {
-        [ ! -f ~/.zshrc ] && return
-        nvim ~/.zshrc
-        source ~/.zshrc
-        backupToDrive ~/.zshrc
-        echo "New .zshrc sourced."
-    }
-
-    ##--> Create a data URL from a file <--##
-    function dataurl() {
-        local mimeType=$(file -b --mime-type "$1")
-        if [[ $mimeType == text/* ]]; then
-            mimeType="${mimeType};charset=utf-8"
-        fi
-        echo "data:${mimeType};base64,$(openssl base64 -in "$1" | tr -d '\n')"
-    }
-
-    ##--> Create a new React App <--##
-    function react() {
-        npx create-react-app $1
-        cd $1
-        npm i -D eslint
-        npm i -D eslint-config-prettier eslint-plugin-prettier
-        npm i -D eslint-config-airbnb eslint-plugin-import eslint-plugin-jsx-a11y eslint-plugin-react eslint-plugin-react-hooks
-        [ -f "~/.eslintrc.json" ] && cp "${HOME}/.eslintrc.json" .
-        [ -f "~/.prettierrc.json" ] && cp "${HOME}/.prettierrc" .
-        echo $1 >README.md
-        rm -rf yarn.lock
-        # cd src
-        # rm -f App.css App.test.js index.css logo.svg serviceWorker.js
-        mkdir components views
-        git add -A
-        git commit -m "Initial commit."
-        cd ..
-        clear
-        code .
-    }
-
-    ##--> Use Git’s colored diff when available <--##
-    hash git &>/dev/null
-    if [ $? -eq 0 ]; then
-        function diff() {
-            git diff --no-index --color-words "$@"
-        }
     fi
+}
 
-    ##--> Start an HTTP server from a directory, optionally specifying the port <--##
-    function server() {
-        local port="${1:-8000}"
-        sleep 1 && open "http://localhost:${port}/" &
-        # Set the default Content-Type to `text/plain` instead of `application/octet-stream`
-        # And serve everything as UTF-8 (although not technically correct, this doesn’t break anything for binary files)
-        python -c $'import SimpleHTTPServer;\nmap = SimpleHTTPServer.SimpleHTTPRequestHandler.extensions_map;\nmap[""] = "text/plain";\nfor key, value in map.items():\n\tmap[key] = value + ";charset=UTF-8";\nSimpleHTTPServer.test();' "$port"
+# Use Git’s colored diff when available
+if command -v git &>/dev/null; then
+    diff() {
+        git diff --no-index --color-words "$@"
     }
-
-    ##--> Git commit browser. needs fzf <--##
-    function git_log() {
-        git log --graph --color=always \
-            --format="%C(auto)%h%d %s %C(black)%C(bold)%cr" "$@" |
-            fzf --ansi --no-sort --reverse --tiebreak=index --toggle-sort=\` \
-                --bind "ctrl-m:execute:
-            echo '{}' | grep -o '[a-f0-9]\{7\}' | head -1 |
-                xargs -I % sh -c 'git show --color=always % | less -R'"
-    }
-
-    ##--> Compress the PDF <--##
-    function compress-pdf() {
-        local level="screen"
-        [[ "$3" != "" ]] && level="$3"
-        [ $(command -v gs) ] &&
-            gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/"$level" -dNOPAUSE -dQUIET -dBATCH -sOutputFile="$2.pdf" "$1.pdf" ||
-            echo 'Ghostscript - gs needs to be installed.'
-    }
-
-    ##--> Files with FZF <--##
-    function _smooth_fzf() {
-        local fname
-        local current_dir="$PWD"
-        cd "${XDG_CONFIG_HOME:-~/.config}"
-        fname="$(fzf)" || return
-        $EDITOR "$fname"
-        cd "$current_dir"
-    }
-
-    ##--> Shell greeter <--##
-    function _default_greeter() {
-        c1="\033[1;30m"
-        c2="\033[1;31m"
-        c3="\033[1;32m"
-        c4="\033[1;33m"
-        c5="\033[1;34m"
-        c6="\033[1;35m"
-        c7="\033[1;36m"
-        c8="\033[1;37m"
-        reset="\033[1;0m"
-        printf "\n $c1▇▇ $c2▇▇ $c3▇▇ $c4▇▇ $c5▇▇ $c6▇▇ $c7▇▇ $c8▇▇ $reset\n\n"
-    }
-
-    ##--> Top memory hawk processes <--##
-    function toppy() {
-        history |
-            awk '{
-            CMD[$2]++;
-            count++;
-        } END {
-        for (a in CMD)
-            print CMD[a] " " CMD[a] / count * 100 "% " a;
-        }' |
-            grep -v "./" |
-            column -c3 -s " " -t |
-            sort -nr |
-            nl |
-          
-            head -n 21
-    }
-
-    takedir () {
-        mkdir -p $@ && cd ${@:$#}
-    }
-
-    takegit () {
-        git clone $1
-        cd $(basename ${1%%.git})
-    }
-
-    take () {
-        if [[ $1 =~ ^([A-Za-z0-9]\+@|https?|git|ssh|ftps?|rsync).*\.git/?$ ]]; then
-            takegit $1
-        else
-            takedir $1
-        fi
-    }
-
-    hstat() {
-        fc -l 1 |
-        awk '{ CMD[$2]++; count++; } END { for (a in CMD) print CMD[a] " " CMD[a]*100/count "% " a }' |
-        grep -v "./" | sort -nr | head -20 | column -c3 -s " " -t | nl
-    }
-
-    erapi_key=71afe1269a1f5f7206152de2b43a9819
-    rate () {
-        local from=${1:-usd}
-        local to=${2:-rub}
-        local rate=$(curl -s http://api.exchangeratesapi.io/v1/latest\?access_key=${erapi_key} | jq .rates.${(U)to})
-        echo 1 ${(U)from} is ${rate} ${(U)to}
-    }
-
-    crate () {
-        local coin=${1:-bitcoin}
-        local currency=${2:-usd}
-        local crate=$(curl -s https://api.coingecko.com/api/v3/simple/price\?ids=${coin}\&vs_currencies=${currency} \
-            | jq .${coin}.${currency})
-        echo 1 ${coin} is ${crate} $currency
-    }
-
-    cht () {
-        local options=${2:-Q}
-        curl cht.sh/${1}\?${options}
-    }
-
-    matrix () {
-        local lines=$(tput lines)
-        cols=$(tput cols)
-
-        awkscript='
-        {
-            letters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()"
-            lines=$1
-            random_col=$3
-            c=$4
-            letter=substr(letters,c,1)
-            cols[random_col]=0;
-            for (col in cols) {
-            line=cols[col];
-            cols[col]=cols[col]+1;
-            printf "\033[%s;%sH\033[2;32m%s", line, col, letter;
-            printf "\033[%s;%sH\033[1;37m%s\033[0;0H", cols[col], col, letter;
-            if (cols[col] >= lines) {
-                cols[col]=0;
-            }
-            }
-        }
-        '
-
-        echo -e "\e[1;40m"
-        clear
-
-        while :; do
-            echo $lines $cols $(( $RANDOM % $cols)) $(( $RANDOM % 72 ))
-            sleep 0.05
-        done | awk "$awkscript"
-    }
-
-
-    ##--> Setting lz for lazygit <--##
-    if [[ $(command -v lazygit) ]]; then
-        function lz() {
-            export LAZYGIT_NEW_DIR_FILE=~/.lazygit/newdir
-
-            lazygit "$@"
-
-            if [ -f $LAZYGIT_NEW_DIR_FILE ]; then
-                cd "$(command cat $LAZYGIT_NEW_DIR_FILE)"
-                rm -f $LAZYGIT_NEW_DIR_FILE >/dev/null
-            fi
-        }
-    fi
-
 fi
 
-# TODO: Not Working correcly...Need to check
-# fd --type f --hidden --exclude .git | fzf-tmux -p --reverse | xargs nvim
+
+# ........................[  3. File & Directory Operations  ]........................ #
+
+# Smart Directory Creation: mkdir -p then touch file
+touchdir() { mkdir -p "$(dirname "$1")" && touch "$1"; }
+
+# Create dir and enter it
+takedir() { mkdir -p "$@" && cd "${@:$#}"; }
+
+# Smart 'Take': Clones git repo or creates dir
+take() {
+    if [[ $1 =~ ^([A-Za-z0-9]\+@|https?|git|ssh|ftps?|rsync).*\.git/?$ ]]; then
+        git clone "$1"
+        cd "$(basename "${1%%.git}")"
+    else
+        takedir "$1"
+    fi
+}
+
+# Go Up Multiple Directories (e.g., up 3)
+up() {
+    local limit="${1:-1}"
+    local d=""
+    for ((i = 1; i <= limit; i++)); do
+        d="../$d"
+    done
+    cd "$d" || echo "Couldn't go up $limit dirs."
+}
+
+# Smart Extraction
+ex() {
+    if [ -f "$1" ]; then
+        case "$1" in
+            *.tar.bz2) tar xjf "$1" ;;
+            *.tar.gz)  tar xzf "$1" ;;
+            *.bz2)     bunzip2 "$1" ;;
+            *.rar)     unrar x "$1" ;;
+            *.gz)      gunzip "$1" ;;
+            *.tar)     tar xf "$1" ;;
+            *.tbz2)    tar xjf "$1" ;;
+            *.tgz)     tar xzf "$1" ;;
+            *.zip)     unzip "$1" ;;
+            *.Z)       uncompress "$1" ;;
+            *.7z)      7z x "$1" ;;
+            *.deb)     ar x "$1" ;;
+            *.tar.xz)  tar xf "$1" ;;
+            *.tar.zst) unzstd "$1" ;;
+            *)         echo "'$1' cannot be extracted via extract()" ;;
+        esac
+    else
+        echo "'$1' is not a valid file"
+    fi
+}
+
+# Calculate Size (File or Directory)
+fs() {
+    if du -b /dev/null >/dev/null 2>&1; then
+        local arg=-sbh
+    else
+        local arg=-sh
+    fi
+    if [[ -n "$@" ]]; then
+        du $arg -- "$@"
+    else
+        du $arg .[^.]* ./*
+    fi
+}
+
+# Sort File Content Unique
+srt() {
+    mv "$1" "$1.bak"
+    sort "$1.bak" | uniq > "$1"
+    rm "$1.bak"
+}
+
+# Delete files recursively by name
+del() {
+    find . -type f -name "$1" -ls -delete
+}
+
+# Empty Trash
+empty_trash() {
+    [ ! -d "$HOME/.Trash/files" ] && return
+    printf "%s\n" "EMPTYING TRASH"
+    sudo command rm -rf "$HOME/.Trash/files/*"
+}
+
+
+# ........................[  4. Developer Tools  ]........................ #
+
+# Universal Code Runner
+prog() {
+    if [ -f "$1" ]; then
+        case "$1" in
+            *.cpp)  g++ -std=c++20 "$1" && ./a.out && rm -f a.out ;;
+            *.c)    gcc "$1" && ./a.out && rm -f a.out ;;
+            *.java) javac "$1" && java "$(basename -s .java "$1")" && rm -f *.class ;;
+            *.py)   python "$1" ;;
+            *.sh)   bash "$1" ;;
+            *.pl)   perl "$1" ;;
+            *.rb)   ruby "$1" ;;
+            *.go)   go run "$1" ;;
+            *.js)   node "$1" ;;
+            *.php)  php "$1" ;;
+            *)      echo "'$1' is not a supported file type." ;;
+        esac
+    else
+        echo "'$1' is not a valid file"
+    fi
+}
+
+# Initialize Git Repository
+repo() {
+    git init
+    [ ! -e "./README.md" ] && touch README.md
+    [ ! -e "./.gitignore" ] && touch .gitignore
+    git branch -m main
+    git remote add origin "$1"
+    git add .
+    git commit -m "First Commit"
+    git push origin HEAD
+}
+
+# Git Log Browser (Requires fzf)
+git_log() {
+    git log --graph --color=always --format="%C(auto)%h%d %s %C(black)%C(bold)%cr" "$@" |
+    fzf --ansi --no-sort --reverse --tiebreak=index --toggle-sort=\` \
+        --bind "ctrl-m:execute:echo '{}' | grep -o '[a-f0-9]\{7\}' | head -1 | xargs -I % sh -c 'git show --color=always % | less -R'"
+}
+
+# Lazygit Integration (Changes dir on exit)
+if command -v lazygit &>/dev/null; then
+    lz() {
+        export LAZYGIT_NEW_DIR_FILE=~/.lazygit/newdir
+        lazygit "$@"
+        if [ -f "$LAZYGIT_NEW_DIR_FILE" ]; then
+            cd "$(cat "$LAZYGIT_NEW_DIR_FILE")"
+            rm -f "$LAZYGIT_NEW_DIR_FILE" >/dev/null
+        fi
+    }
+fi
+
+# Simple Python HTTP Server
+server() {
+    local port="${1:-8000}"
+    sleep 1 && open "http://localhost:${port}/" &
+    python -c $'import SimpleHTTPServer;\nmap = SimpleHTTPServer.SimpleHTTPRequestHandler.extensions_map;\nmap[""] = "text/plain";\nfor key, value in map.items():\n\tmap[key] = value + ";charset=UTF-8";\nSimpleHTTPServer.test();' "$port"
+}
+
+# Cheat Sheet Lookup
+cht() {
+    local options=${2:-Q}
+    curl cht.sh/"$1"?"$options"
+}
+
+
+# ........................[  5. Utilities & Stats  ]........................ #
+
+# Stopwatch
+stopwatch() {
+    local date1=$(date +%s)
+    while true; do
+        echo -ne "$(date -u --date @$(($(date +%s) - date1)) +%H:%M:%S)\r"
+        sleep 0.1
+    done
+}
+
+# Countdown (Usage: countdown 60)
+countdown() {
+    local date1=$(($(date +%s) + $1))
+    while [ "$date1" -ge $(date +%s) ]; do
+        echo -ne "$(date -u --date @$(($date1 - $(date +%s))) +%H:%M:%S)\r"
+        sleep 0.1
+    done
+}
+
+# Weather Check
+get_temperature() {
+    local response
+    response=$(curl --silent 'https://api.openweathermap.org/data/2.5/weather?id=5110253&units=imperial&appid=<your_api_key>')
+    local status=$(echo "$response" | jq -r '.cod')
+    case $status in
+        200)
+            printf "Location: %s %s\n" "$(echo "$response" | jq '.name') $(echo "$response" | jq '.sys.country')"
+            printf "Forecast: %s\n" "$(echo "$response" | jq '.weather[].description')"
+            printf "Temperature: %.1f°F\n" "$(echo "$response" | jq '.main.temp')"
+            ;;
+        *) echo "Error: $status" ;;
+    esac
+}
+
+# Most Used Commands Stats
+hstat() {
+    fc -l 1 | awk '{ CMD[$2]++; count++; } END { for (a in CMD) print CMD[a] " " CMD[a]*100/count "% " a }' | grep -v "./" | sort -nr | head -20 | column -c3 -s " " -t | nl
+}
+
+# Currency Rate (USD -> RUB default)
+rate() {
+    local from=${1:-usd}
+    local to=${2:-rub}
+    local erapi_key="71afe1269a1f5f7206152de2b43a9819"
+    local rate=$(curl -s "http://api.exchangeratesapi.io/v1/latest?access_key=${erapi_key}" | jq .rates.${(U)to})
+    echo "1 ${(U)from} is ${rate} ${(U)to}"
+}
+
+# Crypto Rate (Bitcoin -> USD default)
+crate() {
+    local coin=${1:-bitcoin}
+    local currency=${2:-usd}
+    local crate=$(curl -s "https://api.coingecko.com/api/v3/simple/price?ids=${coin}&vs_currencies=${currency}" | jq .${coin}.${currency})
+    echo "1 ${coin} is ${crate} $currency"
+}
+
+
+# ........................[  6. Miscellaneous  ]........................ #
+
+# Default Greeter (Color Bars)
+_default_greeter() {
+    local c1="\033[1;30m" c2="\033[1;31m" c3="\033[1;32m" c4="\033[1;33m"
+    local c5="\033[1;34m" c6="\033[1;35m" c7="\033[1;36m" c8="\033[1;37m"
+    local reset="\033[1;0m"
+    printf "\n $c1▇▇ $c2▇▇ $c3▇▇ $c4▇▇ $c5▇▇ $c6▇▇ $c7▇▇ $c8▇▇ $reset\n\n"
+}
+
+# Edit & Source Zshrc
+editZsh() {
+    [ ! -f ~/.zshrc ] && return
+    nvim ~/.zshrc
+    source ~/.zshrc
+    echo "New .zshrc sourced."
+}
+
+# Conda Initialization
+cond() {
+    __conda_setup="$('/opt/miniconda3/bin/conda' 'shell.bash' 'hook' 2>/dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__conda_setup"
+    else
+        if [ -f "/opt/miniconda3/etc/profile.d/conda.sh" ]; then
+            . "/opt/miniconda3/etc/profile.d/conda.sh"
+        else
+            export PATH="/opt/miniconda3/bin:$PATH"
+        fi
+    fi
+    unset __conda_setup
+}
+
+# Matrix Effect
+matrix() {
+    local lines=$(tput lines)
+    local cols=$(tput cols)
+    echo -e "\e[1;40m"
+    clear
+    while :; do
+        echo $lines $cols $(( $RANDOM % $cols)) $(( $RANDOM % 72 ))
+        sleep 0.05
+    done | awk '
+    {
+        letters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()"
+        lines=$1; random_col=$3; c=$4
+        letter=substr(letters,c,1)
+        cols[random_col]=0;
+        for (col in cols) {
+            line=cols[col]; cols[col]=cols[col]+1;
+            printf "\033[%s;%sH\033[2;32m%s", line, col, letter;
+            printf "\033[%s;%sH\033[1;37m%s\033[0;0H", cols[col], col, letter;
+            if (cols[col] >= lines) { cols[col]=0; }
+        }
+    }'
+}
 
 # vim:filetype=zsh

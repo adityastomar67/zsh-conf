@@ -1,345 +1,269 @@
-# ▀█ ▄▄ █▀█ █▀█ █▀█ █▀▄▀█ █▀█ ▀█▀
-# █▄    █▀▀ █▀▄ █▄█ █ ▀ █ █▀▀  █
+# ------------------------[  ZSH PROMPT CONFIGURATION  ]------------------------ #
+# This file defines the visual appearance of the command prompt.
+# Themes: "z", "10k" (Custom), "gh0st"
 
-##--> Prompt Definitions <--##
-z_prompt() {
-  # Styles for Prompt
-  declare -a PROMPTS
-  PROMPTS=(
-      " "
-      ""
-      "-->"
-      "➤"
-      "󰮯 "
-    )
 
-  # Autoload vcs and colors
-  autoload -Uz vcs_info
-  autoload -U colors && colors
+# ........................[  1. Shared Utilities  ]........................ #
 
-  # Enable only git
-  zstyle ':vcs_info:*' enable git
+# Initialize core modules once
+autoload -Uz vcs_info
+autoload -Uz add-zsh-hook
+autoload -U colors && colors
 
-  # Setup a hook that runs before every prompt.
-  precmd_vcs_info() { 
-    vcs_info 
-  }
-  precmd_functions+=( precmd_vcs_info )
-  setopt prompt_subst
+# Enable dynamic prompt expansion
+setopt PROMPT_SUBST
 
-  # Add a function to check for untracked files in the directory. from https://github.com/zsh-users/zsh/blob/master/Misc/vcs_info-examples
-  zstyle ':vcs_info:git*+set-message:*' hooks git-untracked
-
-  +vi-git-untracked(){
-      if [[ $(git rev-parse --is-inside-work-tree 2> /dev/null) == 'true' ]] && \
-          git status --porcelain | grep '??' &> /dev/null ; then
-          # This will show the marker if there are any untracked files in repo. If instead you want to show the marker only if there are untracked files in $PWD, use:
-          #[[ -n $(git ls-files --others --exclude-standard) ]] ; then
-          hook_com[staged]+='!' # signify new files with a bang
-      fi
-  }
-
-  zstyle ':vcs_info:*' check-for-changes true
-  zstyle ':vcs_info:git:*' formats " %{$fg[blue]%}(%{$fg[red]%}%m%u%c%{$fg[yellow]%}%{$fg[magenta]%} %b%{$fg[blue]%}) "
-  # zstyle ':vcs_info:git:*' formats " %r/%S %b %m%u%c "
-
-  ##--> Actual Prompt Definition <--##
-  ignition=${PROMPTS[1 + $RANDOM%6]}
-  PROMPT='%T %F{yellow}$ignition%f %F{blue}%1~%f '
-  RPROMPT=\$vcs_info_msg_0_
+# Helper: Get a random "Ignition" symbol
+# Used by 'z_prompt' and 'gh0st_prompt'
+get_ignition_symbol() {
+    local symbols=(" " "" "-->" "➤" "󰮯 " "")
+    echo "${symbols[1 + $RANDOM % ${#symbols[@]}]}"
 }
 
+# Helper: Git Untracked Check (Shared Logic)
+# Returns true (0) if there are untracked files, false (1) otherwise.
+has_untracked_files() {
+    command -v git >/dev/null 2>&1 || return 1
+    [[ $(git rev-parse --is-inside-work-tree 2>/dev/null) == 'true' ]] && \
+    git status --porcelain | grep '??' &>/dev/null
+}
+
+
+# ........................[  2. Theme: 'Z'  ]........................ #
+# A minimal, Git-focused prompt.
+
+z_prompt() {
+    # --[ VCS Configuration ]--
+    zstyle ':vcs_info:*' enable git
+    zstyle ':vcs_info:*' check-for-changes true
+    
+    # Format: (branch) in magenta/blue
+    zstyle ':vcs_info:git:*' formats " %{$fg[blue]%}(%{$fg[red]%}%m%u%c%{$fg[yellow]%}%{$fg[magenta]%} %b%{$fg[blue]%}) "
+
+    # Hook: Check for untracked files
+    zstyle ':vcs_info:git*+set-message:*' hooks git-untracked
+
+    +vi-git-untracked() {
+        if has_untracked_files; then
+            hook_com[staged]+='!' # Signify new files with a bang
+        fi
+    }
+
+    # --[ Pre-cmd Hooks ]--
+    precmd_vcs_info() { vcs_info; }
+    add-zsh-hook precmd precmd_vcs_info
+
+    # --[ Final Output ]--
+    local ignition=$(get_ignition_symbol)
+    PROMPT='%T %F{yellow}'"$ignition"'%f %F{blue}%1~%f '
+    RPROMPT=\$vcs_info_msg_0_
+}
+
+
+# ........................[  3. Theme: '10k' (Custom)  ]........................ #
+# A complex, feature-rich prompt handling window titles, timing, and Git/Hg.
+
 10k_prompt() {
-    ##--> Toggle prompt <--##
+    # --[ P10K Toggles ]--
     function _toggle-prompt() {
-        case "$1" in
-            right) p10k display '*/right'=hide,show ;;
-            left) p10k display '*/left'=hide,show ;;
-        esac
+        if command -v p10k >/dev/null; then
+            p10k display "*/$1"=hide,show
+        fi
     }
+    function _toggle-right-prompt() { _toggle-prompt right; }
+    function _toggle-left-prompt()  { _toggle-prompt left; }
 
-    function _toggle-right-prompt() {
-        _toggle-prompt right
-    }
-
-    function _toggle-left-prompt() {
-        _toggle-prompt left
-    }
-
-    autoload -U add-zsh-hook
-    autoload -U colors
-    colors
-
-    # http://zsh.sourceforge.net/Doc/Release/User-Contributions.html
-    autoload -Uz vcs_info
+    # --[ VCS Configuration ]--
     zstyle ':vcs_info:*' enable git hg
     zstyle ':vcs_info:*' check-for-changes true
     zstyle ':vcs_info:*' use-simple true
+    zstyle ':vcs_info:*' stagedstr "%F{green}●%f"
+    zstyle ':vcs_info:*' unstagedstr "%F{red}●%f"
+
+    # Git & Hg Formats
     zstyle ':vcs_info:git+set-message:*' hooks git-untracked
-    zstyle ':vcs_info:*' stagedstr "%F{green}●%f"            # default 'S'
-    zstyle ':vcs_info:*' unstagedstr "%F{red}●%f"            # default 'U'
-    zstyle ':vcs_info:git*:*' formats '[%b%m%c%u] '          # default ' (%s)-[%b]%c%u-'
-    zstyle ':vcs_info:git*:*' actionformats '[%b|%a%m%c%u] ' # default ' (%s)-[%b|%a]%c%u-'
+    zstyle ':vcs_info:git*:*' formats '[%b%m%c%u] '
+    zstyle ':vcs_info:git*:*' actionformats '[%b|%a%m%c%u] '
+    
     zstyle ':vcs_info:hg*:*' formats '[%m%b] '
     zstyle ':vcs_info:hg*:*' actionformats '[%b|%a%m] '
-    zstyle ':vcs_info:hg*:*' branchformat '%b'
-    zstyle ':vcs_info:hg*:*' get-bookmarks true
-    zstyle ':vcs_info:hg*:*' get-revision true
-    zstyle ':vcs_info:hg*:*' get-mq false
     zstyle ':vcs_info:hg*+gen-hg-bookmark-string:*' hooks hg-bookmarks
     zstyle ':vcs_info:hg*+set-message:*' hooks hg-message
 
-    function -set-tab-and-window-title() {
-      emulate -L zsh
-      local CMD="${1:gs/$/\\$}"
-      print -Pn "\e]0;$CMD:q\a"
+    # --[ Window Titles ]--
+    function -set-window-title() {
+        emulate -L zsh
+        print -Pn "\e]0;${1:gs/$/\\$}:q\a"
     }
 
-    # $HISTCMD (the current history event number) is shared across all shells
-    # (due to SHARE_HISTORY). Maintain this local variable to count the number of
-    # commands run in this specific shell.
     HISTCMD_LOCAL=0
 
-    # Executed before displaying prompt.
-    function -update-window-title-precmd() {
-      emulate -L zsh
-      if [[ HISTCMD_LOCAL -eq 0 ]]; then
-        # About to display prompt for the first time; nothing interesting to show in
-        # the history. Show $PWD.
-        -set-tab-and-window-title "$(basename $PWD)"
-      else
-        local LAST=$(history | tail -1 | awk '{print $2}')
-        if [ -n "$TMUX" ]; then
-          # Inside tmux, just show the last command: tmux will prefix it with the
-          # session name (for context).
-          -set-tab-and-window-title "$LAST"
-        else
-          # Outside tmux, show $PWD (for context) followed by the last command.
-          -set-tab-and-window-title "$(basename $PWD) > $LAST"
+    function -update-window-title() {
+        emulate -L zsh
+        local title_content
+        
+        # Determine content based on context (tmux vs normal)
+        if [[ $1 == "precmd" ]]; then
+            if [[ HISTCMD_LOCAL -eq 0 ]]; then
+                title_content="$(basename "$PWD")"
+            else
+                local last_cmd=$(history | tail -1 | awk '{print $2}')
+                title_content="$([ -z "$TMUX" ] && echo "$(basename "$PWD") > ")$last_cmd"
+            fi
+        else # preexec
+            setopt EXTENDED_GLOB
+            HISTCMD_LOCAL=$((++HISTCMD_LOCAL))
+            local trimmed_cmd="${2[(wr)^(*=*|mosh|ssh|sudo)]}"
+            title_content="$([ -z "$TMUX" ] && echo "$(basename "$PWD") > ")$trimmed_cmd"
         fi
-      fi
+        
+        -set-window-title "$title_content"
     }
-    add-zsh-hook precmd -update-window-title-precmd
+    
+    add-zsh-hook precmd  -update-window-title
+    add-zsh-hook preexec -update-window-title
 
-    # Executed before executing a command: $2 is one-line (truncated) version of
-    # the command.
-    function -update-window-title-preexec() {
-      emulate -L zsh
-      setopt EXTENDED_GLOB
-      HISTCMD_LOCAL=$((++HISTCMD_LOCAL))
-
-      # Skip ENV=settings, sudo, ssh; show first distinctive word of command;
-      # mostly stolen from:
-      #   https://github.com/robbyrussell/oh-my-zsh/blob/master/lib/termsupport.zsh
-      local TRIMMED="${2[(wr)^(*=*|mosh|ssh|sudo)]}"
-      if [ -n "$TMUX" ]; then
-        # Inside tmux, show the running command: tmux will prefix it with the
-        # session name (for context).
-        -set-tab-and-window-title "$TRIMMED"
-      else
-        # Outside tmux, show $PWD (for context) followed by the running command.
-        -set-tab-and-window-title "$(basename $PWD) > $TRIMMED"
-      fi
-    }
-    add-zsh-hook preexec -update-window-title-preexec
-
+    # --[ Execution Timer ]--
     typeset -F SECONDS
-    function -record-start-time() {
-      emulate -L zsh
-      ZSH_START_TIME=${ZSH_START_TIME:-$SECONDS}
-    }
+    function -record-start-time() { ZSH_START_TIME=${ZSH_START_TIME:-$SECONDS}; }
     add-zsh-hook preexec -record-start-time
 
     function -report-start-time() {
-      emulate -L zsh
-      if [ $ZSH_START_TIME ]; then
-        local DELTA=$(($SECONDS - $ZSH_START_TIME))
-        local DAYS=$((~~($DELTA / 86400)))
-        local HOURS=$((~~(($DELTA - $DAYS * 86400) / 3600)))
-        local MINUTES=$((~~(($DELTA - $DAYS * 86400 - $HOURS * 3600) / 60)))
-        local SECS=$(($DELTA - $DAYS * 86400 - $HOURS * 3600 - $MINUTES * 60))
-        local ELAPSED=''
-        test "$DAYS" != '0' && ELAPSED="${DAYS}d"
-        test "$HOURS" != '0' && ELAPSED="${ELAPSED}${HOURS}h"
-        test "$MINUTES" != '0' && ELAPSED="${ELAPSED}${MINUTES}m"
-        if [ "$ELAPSED" = '' ]; then
-          SECS="$(print -f "%.2f" $SECS)s"
-        elif [ "$DAYS" != '0' ]; then
-          SECS=''
+        if [ $ZSH_START_TIME ]; then
+            local delta=$(($SECONDS - $ZSH_START_TIME))
+            local elapsed=""
+            
+            # Calc time
+            local d=$((delta / 86400))
+            local h=$(((delta - d * 86400) / 3600))
+            local m=$(((delta - d * 86400 - h * 3600) / 60))
+            local s=$(($delta - d * 86400 - h * 3600 - m * 60))
+
+            [ "$d" != "0" ] && elapsed="${d}d"
+            [ "$h" != "0" ] && elapsed="${elapsed}${h}h"
+            [ "$m" != "0" ] && elapsed="${elapsed}${m}m"
+            
+            if [ -z "$elapsed" ]; then
+                s="$(print -f "%.2f" $s)s"
+            else
+                s="$((~~$s))s"
+            fi
+            elapsed="${elapsed}${s}"
+
+            export RPROMPT="%F{cyan}%{$__Prompt[ITALIC_ON]%}${elapsed}%{$__Prompt[ITALIC_OFF]%}%f $RPROMPT_BASE"
+            unset ZSH_START_TIME
         else
-          SECS="$((~~$SECS))s"
+            export RPROMPT="$RPROMPT_BASE"
         fi
-        ELAPSED="${ELAPSED}${SECS}"
-        export RPROMPT="%F{cyan}%{$__Prompt[ITALIC_ON]%}${ELAPSED}%{$__Prompt[ITALIC_OFF]%}%f $RPROMPT_BASE"
-        unset ZSH_START_TIME
-      else
-        export RPROMPT="$RPROMPT_BASE"
-      fi
     }
     add-zsh-hook precmd -report-start-time
 
+    # --[ Utilities ]--
     function -auto-ls-after-cd() {
-      emulate -L zsh
-      # Only in response to a user-initiated `cd`, not indirectly (eg. via another
-      # function).
-      if [ "$ZSH_EVAL_CONTEXT" = "toplevel:shfunc" ]; then
-        if command -v exa &> /dev/null; then
-          exa --icons -a
-        else
-          ls -a
+        if [ "$ZSH_EVAL_CONTEXT" = "toplevel:shfunc" ]; then
+            if command -v eza &>/dev/null; then eza --icons -a
+            elif command -v exa &>/dev/null; then exa --icons -a
+            else ls -a; fi
         fi
-      fi
     }
     add-zsh-hook chpwd -auto-ls-after-cd
 
-    # Remember each command we run.
-    function -record-command() {
-      __Prompt[LAST_COMMAND]="$2"
-    }
+    # Update VCS info selectively (Performance)
+    function -record-command() { __Prompt[LAST_COMMAND]="$2"; }
     add-zsh-hook preexec -record-command
 
-    # Update vcs_info (slow) after any command that probably changed it.
     function -maybe-show-vcs-info() {
-      local LAST="$__Prompt[LAST_COMMAND]"
-
-      # In case user just hit enter, overwrite LAST_COMMAND, because preexec
-      # won't run and it will otherwise linger.
-      __Prompt[LAST_COMMAND]="<unset>"
-
-      # Check first word; via:
-      # http://tim.vanwerkhoven.org/post/2012/10/28/ZSH/Bash-string-manipulation
-      case "$LAST[(w)1]" in
-        cd|cp|git|rm|touch|mv)
-          vcs_info
-          ;;
-        *)
-          ;;
-      esac
+        local last_cmd="$__Prompt[LAST_COMMAND]"
+        __Prompt[LAST_COMMAND]="<unset>"
+        case "$last_cmd[(w)1]" in
+            cd|cp|git|rm|touch|mv|hg) vcs_info ;;
+        esac
     }
     add-zsh-hook precmd -maybe-show-vcs-info
 
-    # adds `cdr` command for navigating to recent directories
-    autoload -Uz chpwd_recent_dirs cdr add-zsh-hook
+    # Recent Dirs (cdr)
+    autoload -Uz chpwd_recent_dirs cdr
     add-zsh-hook chpwd chpwd_recent_dirs
-
-    # enable menu-style completion for cdr
     zstyle ':completion:*:*:cdr:*:*' menu selection
-
-    # fall through to cd if cdr is passed a non-recent dir as an argument
     zstyle ':chpwd:*' recent-dirs-default true
 
-    ############
-    #  Prompt  #
-    ############
-
+    # --[ Hooks Implementation ]--
     function +vi-hg-bookmarks() {
-      emulate -L zsh
-      if [[ -n "${hook_com[hg-active-bookmark]}" ]]; then
-        hook_com[hg-bookmark-string]="${(Mj:,:)@}"
-        ret=1
-      fi
+        [[ -n "${hook_com[hg-active-bookmark]}" ]] && hook_com[hg-bookmark-string]="${(Mj:,:)@}" && ret=1
     }
-
     function +vi-hg-message() {
-      emulate -L zsh
-
-      # Suppress hg branch display if we can display a bookmark instead.
-      if [[ -n "${hook_com[misc]}" ]]; then
-        hook_com[branch]=''
-      fi
-      return 0
+        [[ -n "${hook_com[misc]}" ]] && hook_com[branch]=''
+        return 0
     }
-
     function +vi-git-untracked() {
-      emulate -L zsh
-      if [[ -n $(git ls-files --exclude-standard --others 2> /dev/null) ]]; then
-        hook_com[unstaged]+="%F{blue}●%f"
-      fi
+        if has_untracked_files; then
+            hook_com[unstaged]+="%F{blue}●%f"
+        fi
     }
 
+    # --[ Final Construction ]--
     RPROMPT_BASE="\${vcs_info_msg_0_}%F{blue}%~%f"
-    setopt PROMPT_SUBST
 
-    # Anonymous function to avoid leaking variables.
+    # Dynamic Prompt Construction (Nested for variable safety)
     function () {
-      # Check for tmux by looking at $TERM, because $TMUX won't be propagated to any
-      # nested sudo shells but $TERM will.
-      local TMUXING=$([[ "$TERM" =~ "tmux" ]] && echo tmux)
-      local INTMUX=""
-      if [ -n "$TMUXING" -a -n "$TMUX" ]; then
-        # In a tmux session created in a non-root or root shell.
-        INTMUX='tmux'
-      fi
+        local in_tmux=""
+        [[ "$TERM" =~ "tmux" ]] && [[ -n "$TMUX" ]] && in_tmux='tmux'
 
-      # Either in a root shell created inside a non-root tmux session,
-      # or not in a tmux session.
-      local LVL="$(($(pstree -s $$ | grep -wo 'zsh' | wc -l)-1))"
-
-      if [[ $USER == "root" ]]; then
-        LVL="$(($LVL-1))"
-        export PS1="%F{green}${SSH_TTY:+%n@%m}%f%B${SSH_TTY:+:}%b%F{blue}%B%1~%b%F{yellow}%B%(1j.*.)%(?..!)%b%f %B%F{yellow}${INTMUX}%f${SUFFIX}%b "
-      fi
-      local SUFFIX='%(!.%F{yellow}%n%f.)%(!.%F{yellow}.%F{red})'$(printf '\u276f%.0s' {1..$LVL})'%f'
-
-      export PS1="%F{green}${SSH_TTY:+%n@%m}%f%B${SSH_TTY:+:}%b%F{blue}%B%1~%b%F{yellow}%B%(1j.*.)%(?..!)%b%f %B%F{yellow}${INTMUX}%f${SUFFIX}%b "
-      if [[ -n "$TMUXING" ]]; then
-        # Outside tmux, ZLE_RPROMPT_INDENT ends up eating the space after PS1, and
-        # prompt still gets corrupted even if we add an extra space to compensate.
-        export ZLE_RPROMPT_INDENT=0
-      fi
+        local lvl=1
+        if command -v pstree >/dev/null; then
+            lvl="$(($(pstree -s $$ | grep -wo 'zsh' | wc -l)-1))"
+        fi
+        [[ $USER == "root" ]] && lvl="$(($lvl-1))"
+        
+        local suffix='%(!.%F{yellow}%n%f.)%(!.%F{yellow}.%F{red})'$(printf '\u276f%.0s' {1..$lvl})'%f'
+        export PS1="%F{green}${SSH_TTY:+%n@%m}%f%B${SSH_TTY:+:}%b%F{blue}%B%1~%b%F{yellow}%B%(1j.*.)%(?..!)%b%f %B%F{yellow}${in_tmux}%f${suffix}%b "
+        
+        # Fix TLE indentation glitch in TMUX
+        [[ -n "$in_tmux" ]] && export ZLE_RPROMPT_INDENT=0
     }
 
     export RPROMPT=$RPROMPT_BASE
     export SPROMPT="zsh: correct %F{red}'%R'%f to %F{red}'%r'%f [%B%Uy%u%bes, %B%Un%u%bo, %B%Ue%u%bdit, %B%Ua%u%bbort]? "
 }
 
+
+# ........................[  4. Theme: 'Gh0st'  ]........................ #
+# A sleek, modern prompt with icons and path separators.
+
 gh0st_prompt() {
-  # Styles for Prompt
-  declare -a PROMPTS
-  PROMPTS=(
-      " "
-      ""
-      "-->"
-      "➤"
-      "󰮯 "
-      ""
-    )
-  ignition=${PROMPTS[1 + $RANDOM%6]}
+    # Helper: Git Branch
+    git_prompt() {
+        command -v git >/dev/null 2>&1 || return
+        local branch="$(git symbolic-ref HEAD 2> /dev/null | cut -d'/' -f3-)"
+        [ -z "$branch" ] && return
+        
+        # Truncate long branch names
+        local branch_truncated="${branch:0:30}"
+        (( ${#branch} > ${#branch_truncated} )) && branch="${branch_truncated}..."
+        echo "  ${branch}"
+    }
 
-  git_prompt() {
-    local branch="$(git symbolic-ref HEAD 2> /dev/null | cut -d'/' -f3-)"
-    local branch_truncated="${branch:0:30}"
-    if (( ${#branch} > ${#branch_truncated} )); then
-        branch="${branch_truncated}..."
-    fi
+    # Helper: Directory Icon
+    dir_icon() {
+        if [[ "$PWD" == "$HOME" ]]; then
+            echo "%B%F{black}%f%b"
+        else
+            echo "%B%F{cyan}%f%b"
+        fi
+    }
 
-    [ -n "${branch}" ] && echo "  ${branch}"
-  }
-
-  setopt PROMPT_SUBST
-  # PROMPT='%B%F{blue}󰣇%f%b  %B%F{magenta}%n%f%b %B%F{red}%~%f%b%B%F{yellow}$(git_prompt)%f%b %(?.%B%F{green}✓.%F{red}✕)%f%b %B%F{green}%f%b '
-
-  function dir_icon {
-    if [[ "$PWD" == "$HOME" ]]; then
-      echo "%B%F{black}%f%b"
-    else
-      echo "%B%F{cyan}%f%b"
-    fi
-  }
-
-  # PS1='%B%F{blue}%f%b  %B%F{magenta}%n%f%b $(dir_icon)  %B%F{red}%~%f%b${vcs_info_msg_0_} %(?.%B%F{green}.%F{red})%f%b '
-  PS1='%B%F{blue}%n %B%F{red}/ %B%F{yellow}%m%f%b %B%F{grey}[%~]%f%b${vcs_info_msg_0_} %(?.%B%F{green}$ignition.%F{red})%f%b '
+    local ignition=$(get_ignition_symbol)
+    PS1='%B%F{blue}%n %B%F{red}/ %B%F{yellow}%m%f%b %B%F{grey}[%~]%f%b${vcs_info_msg_0_} %(?.%B%F{green}'"$ignition"'.%F{red})%f%b '
 }
 
-##--> Calling the Prompt <--##
-if [ $PROMPT_THEME = "gh0st" ]; then
-  gh0st_prompt
-elif [ $PROMPT_THEME = "z" ]; then
-  z_prompt
-elif [ $PROMPT_THEME = "10k" ]; then
-  10k_prompt
-else
-  return
-fi
+
+# ........................[  5. Prompt Initialization  ]........................ #
+
+case "$PROMPT_THEME" in
+    "gh0st") gh0st_prompt ;;
+    "z")     z_prompt     ;;
+    "10k")   10k_prompt   ;;
+    *)       return       ;;
+esac
 
 # vim:filetype=zsh
