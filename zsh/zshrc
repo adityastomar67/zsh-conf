@@ -4,6 +4,7 @@
 
 
 # ........................[  1. Tmux Integration  ]........................ #
+
 # Explicitly handle Tmux launching/attaching logic first
 if [[ -r "$ZSH_PATH/zsh/conf/tmux.zsh" ]]; then
     source "$ZSH_PATH/zsh/conf/tmux.zsh"
@@ -15,15 +16,14 @@ fi
 # Define modules to load (Order matters: env -> opts -> others)
 typeset -a core_modules
 core_modules=(
+    env       # Environment Variables
     opts      # Options & History
     plugs     # Plugin Manager
-    env       # Environment Variables
-    icons     # Icons & Glyphs
     keys      # Keybindings
-    fzf       # FZF Integration
     prompt    # Theme/Prompt
-    # theme   # Theme Switcher (Optional)
-    # nvim    # Neovim Switcher (Optional)
+    # icons     # Icons & Glyphs (Optional)
+    # theme     # Theme Switcher (Optional)
+    # nvim      # Neovim Switcher (Optional)
 )
 
 typeset -a aux_modules
@@ -47,6 +47,7 @@ done
 
 
 # ........................[  3. Performance Optimization  ]........................ #
+
 # Compiles .zsh files to .zwc in the background to speed up FUTURE shell starts.
 # Zsh automatically prefers the .zwc file if it is newer than the source.
 
@@ -82,5 +83,6 @@ echo -en "\x1b[2J\x1b[1;1H" ; echo
 
 # Enable Vi-mode for command line editing
 set -o vi
+
 
 # vim:filetype=zsh

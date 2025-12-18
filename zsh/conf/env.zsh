@@ -10,6 +10,7 @@ export LC_CTYPE="en_US.UTF-8"
 export KEYTIMEOUT=1
 export GPG_TTY="$(tty)"
 export ARCHFLAGS="-arch x86_64"
+export ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump-$HOST"
 
 # True Color Support
 if [[ $COLORTERM == "truecolor" || $TERM == *256* ]]; then

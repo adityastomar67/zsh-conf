@@ -14,10 +14,6 @@ zmodload zsh/zle
 zmodload zsh/zpty
 zmodload zsh/complist
 
-# Add Custom Completions
-if [[ -d "$ZSH_PATH/zsh/comp" ]]; then
-    fpath=("$ZSH_PATH/zsh/comp" $fpath)
-fi
 
 # Permissions mask
 umask 022
