@@ -117,7 +117,7 @@ fi
 # ........................[  7. Miscellaneous  ]........................ #
 
 # Temporary Offline Alias File
-if [ "$TEMP_OFFLINE_ALIAS" = "Yes" ]; then
+if [ "$TEMP_OFFLINE_CONFIG" = "Yes" ]; then
     [ ! -f "$HOME/.temp_zsh" ] && touch "$HOME/.temp_zsh"
 fi
 

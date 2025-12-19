@@ -39,7 +39,7 @@ export MULTI_NEOVIM="No"
 export CUSTOM_WALL="No"
 
 # Load private/offline aliases (Not meant for git tracking)
-export TEMP_OFFLINE_ALIAS="No"
+export TEMP_OFFLINE_CONFIG="No"
 
 
 # ........................[  Secrets & Debugging  ]........................ #

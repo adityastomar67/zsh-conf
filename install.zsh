@@ -1,273 +1,391 @@
 #!/usr/bin/env zsh
 
-# Define colors and formatting
-CRE=$(tput setaf 1)
-CYE=$(tput setaf 3)
-CGR=$(tput setaf 2)
-CBL=$(tput setaf 4)
-BLD=$(tput bold)
-CNC=$(tput sgr0)
-# 
-spinner() {
-  local frames=(⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏)
-  typeset -i i=1                    # start at 1 (zsh arrays are 1-based)
-  local n=${#frames[@]}
+# ------------------------[  ZSH CONFIGURATION INSTALLER  ]------------------------ #
+# This script automates the setup of a custom Zsh environment.
+#
+# ARCHITECTURE (Object-Based):
+#   1. Theme::      -> Colors, Icons, and visual constants.
+#   2. Config::     -> Global paths and dependency lists.
+#   3. UI::         -> Visual components (Spinner, Header, Confirm).
+#   4. Log::        -> Standardized output wrappers.
+#   5. Sys::        -> OS detection and Package Management abstraction.
+#   6. FileSys::    -> File operations (Backup, Symlink, Patching).
+#   7. Installer::  -> Business logic orchestration.
 
-  trap 'printf "\r\033[K"; exit' INT TERM
 
-  while true; do
-    # print one frame and clear rest of line
-    printf "%s\r\033[K%s %s" $CBL "${frames[i]}" $1
-    # advance 1..n
-    i=$(( i % n + 1 ))
-    sleep 0.08
-  done
+# ........................[  1. Class: Theme  ]........................ #
+# Responsible for defining the visual palette and symbols.
+
+typeset -A Color
+typeset -A Icon
+
+Theme::init() {
+    # Palette
+    Color[R]=$(tput setaf 203) # Red
+    Color[G]=$(tput setaf 156) # Green
+    Color[Y]=$(tput setaf 220) # Yellow
+    Color[B]=$(tput setaf 111) # Blue
+    Color[P]=$(tput setaf 176) # Purple
+    Color[C]=$(tput setaf 14)  # Cyan
+    Color[W]=$(tput setaf 255) # White
+    Color[K]=$(tput setaf 240) # Gray
+    Color[Bld]=$(tput bold)
+    Color[Rst]=$(tput sgr0)
+
+    # Icons
+    Icon[OK]="${Color[G]}${Color[Rst]}"
+    Icon[ERR]="${Color[R]}${Color[Rst]}"
+    Icon[WARN]="${Color[Y]}${Color[Rst]}"
+    Icon[Q]="${Color[P]}${Color[Rst]}"
+    Icon[INFO]="${Color[B]}${Color[Rst]}"
+    Icon[PKG]="${Color[C]}${Color[Rst]}"
+    Icon[GEAR]="${Color[W]}${Color[Rst]}"
 }
 
-print() {
-    printf "${BLD}$2[$1] $3${CNC}\n"
+
+# ........................[  2. Class: Config  ]........................ #
+# Holds the state and configuration constants.
+
+typeset -A Paths
+typeset -a Dependencies
+
+Config::init() {
+    Paths[REPO]="$HOME/.config/zsh-conf"
+    Paths[RC]="${ZDOTDIR:-$HOME}/.zshrc"
+    Paths[ENV]="${ZDOTDIR:-$HOME}/.zshenv"
+    
+    # Binary dependencies to ensure are present
+    Dependencies=(
+        "tmux" "ranger" "fd" "ripgrep" "lazygit"
+        "zoxide" "fzf" "lsd" "npm" "ffmpegthumbnailer"
+        "navi" "eza" "bat" "git-delta" "starship"
+        "atuin" "shellcheck"
+    )
 }
 
-header() {
+
+# ........................[  3. Class: Log  ]........................ #
+# Encapsulates all printing logic to ensure consistent formatting.
+
+Log::info() { 
+    printf "  %s  %s%s%s\n" "${Icon[INFO]}" "${Color[B]}" "$1" "${Color[Rst]}" 
+}
+
+Log::success() { 
+    printf "  %s  %s%s%s\n" "${Icon[OK]}" "${Color[G]}" "$1" "${Color[Rst]}" 
+}
+
+Log::warn() { 
+    printf "  %s  %s%s%s\n" "${Icon[WARN]}" "${Color[Y]}" "$1" "${Color[Rst]}" 
+}
+
+Log::error() { 
+    printf "  %s  %s%s%s\n" "${Icon[ERR]}" "${Color[R]}" "$1" "${Color[Rst]}" 
+}
+
+Log::pkg() {
+    printf "  %s  %s%s%s\n" "${Icon[PKG]}" "${Color[C]}" "$1" "${Color[Rst]}" 
+}
+
+
+# ........................[  4. Class: UI  ]........................ #
+# Handles user interaction widgets and animations.
+
+UI::separator() {
+    printf "${Color[K]}────────────────────────────────────────────────────────────${Color[Rst]}\n"
+}
+
+UI::typewriter() {
+    local text="$1"
+    local delay=0.01
+    for ((i = 0; i < ${#text}; i++)); do
+        printf "%s" "${text:$i:1}"
+        sleep $delay
+    done
+    echo ""
+}
+
+UI::confirm() {
+    printf "  %s  %s ${Color[K]}[y/N]${Color[Rst]} " "${Icon[Q]}" "$1"
+    read -k 1 -r response
+    echo "" 
+    [[ "$response" =~ ^[yY]$ ]]
+}
+
+UI::spinner() {
+    local pid=$!
+    local msg="$1"
+    local delay=0.1
+    local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?}
+        printf "  ${Color[C]}%c${Color[Rst]}  %s" "$spinstr" "$msg"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\r\033[K"
+    done
+}
+
+UI::header() {
     clear
-    echo "
-▒███████▒  ██████  ██░ ██  ▄████▄   ▒█████   ███▄    █   █████▒
-▒ ▒ ▒ ▄▀░▒██    ▒ ▓██░ ██▒▒██▀ ▀█  ▒██▒  ██▒ ██ ▀█   █ ▓██   ▒ 
-░ ▒ ▄▀▒░ ░ ▓██▄   ▒██▀▀██░▒▓█    ▄ ▒██░  ██▒▓██  ▀█ ██▒▒████ ░ 
-  ▄▀▒   ░  ▒   ██▒░▓█ ░██ ▒▓▓▄ ▄██▒▒██   ██ ▓██▒  ▐▌██▒ ▓█▒  ░ 
-▒███████▒▒██████▒▒░▓█▒░██▓▒ ▓███▀ ░░ ████▓▒ ▒██░   ▓██. ▒█░    
-░▒▒ ▓░▒░▒▒ ▒▓▒ ▒ ░ ▒ ░░▒░▒░ ░▒ ▒  ░░ ▒░▒░▒░ ░ ▒░   ▒ ▒  ▒ ░    
-░░▒ ▒ ░ ▒░ ░▒  ░ ░ ▒ ░▒░ ░  ░  ▒     ░ ▒ ▒░ ░ ░░   ░ ▒░ ░      
-░ ░ ░ ░ ░░  ░  ░   ░  ░░ ░░        ░ ░ ░ ▒     ░   ░ ░  ░ ░    
-  ░ ░          ░   ░  ░  ░░ ░          ░ ░           ░         
-░                         ░                                    
-"
+    echo "${Color[P]}"
+    echo "  ▒███████▒  ██████  ██░ ██  ▄████▄   ▒█████   ███▄    █   █████▒"
+    echo "  ▒ ▒ ▒ ▄▀░▒██    ▒ ▓██░ ██▒▒██▀ ▀█  ▒██▒  ██▒ ██ ▀█   █ ▓██   ▒ "
+    echo "  ░ ▒ ▄▀▒░ ░ ▓██▄   ▒██▀▀██░▒▓█    ▄ ▒██░  ██▒▓██  ▀█ ██▒▒████ ░ "
+    echo "    ▄▀▒   ░  ▒   ██▒░▓█ ░██ ▒▓▓▄ ▄██▒▒██   ██ ▓██▒  ▐▌██▒ ▓█▒  ░ "
+    echo "  ▒███████▒▒██████▒▒░▓█▒░██▓▒ ▓███▀ ░░ ████▓▒ ▒██░   ▓██. ▒█░   "
+    echo "  ░▒▒ ▓░▒░▒▒ ▒▓▒ ▒ ░ ▒ ░░▒░▒░ ░▒ ▒  ░░ ▒░▒░▒░ ░ ▒░   ▒ ▒  ▒ ░    "
+    echo "   ░░▒ ▒ ░ ▒░ ░▒  ░ ░ ▒ ░▒░ ░  ░  ▒     ░ ▒ ▒░ ░ ░░   ░ ▒░ ░      "
+    echo "   ░ ░ ░ ░ ░░  ░  ░   ░  ░░ ░░        ░ ░ ░ ▒     ░   ░ ░  ░ ░     "
+    echo "     ░ ░          ░   ░  ░  ░░ ░          ░ ░           ░           "
+    echo "${Color[Rst]}"
+    echo "              ${Color[K]}>> ZSH CONFIGURATION INSTALLER <<${Color[Rst]}"
+    echo ""
 }
 
-# Configuration variables
-ZSH_PATH="$HOME/.config/zsh-conf"
-ZSHRC="${ZDOTDIR:-$HOME}/.zshrc"
-ZENV="${ZDOTDIR:-$HOME}/.zshenv"
-DEPENDENCIES=("tmux" "ranger" "fd" "ripgrep" "lazygit" "zoxide" "fzf" "lsd" "npm" "ffmpegthumbnailer" "navi" "eza" "bat" "git-delta" "ripgrep" "fd" "starship" "zoxide" "atuin" "shellcheck")
 
-# Detect OS and package manager
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    PKG_MANAGER="brew"
-elif command -v pacman &>/dev/null; then
-    PKG_MANAGER="pacman"
-else
-    print "ERROR" $CRE "Unsupported OS or Package Manager not found!"
-    exit 1
-fi
+# ........................[  5. Class: System  ]........................ #
+# Abstraction layer for OS-specific commands (Package Managers).
 
-# Function to check if a package is installed
-is_installed() {
+typeset -A Sys
+
+Sys::detect() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        Sys[PKG_MANAGER]="brew"
+    elif command -v pacman &>/dev/null; then
+        Sys[PKG_MANAGER]="pacman"
+    else
+        Log::error "Unsupported OS or Package Manager not found!"
+        exit 1
+    fi
+}
+
+Sys::install() {
     local pkg="$1"
-    if [[ "$PKG_MANAGER" == "pacman" ]]; then
+    if [[ "${Sys[PKG_MANAGER]}" == "pacman" ]]; then
+        sudo pacman -S "$pkg" --noconfirm &>/dev/null &
+    elif [[ "${Sys[PKG_MANAGER]}" == "brew" ]]; then
+        brew install "$pkg" &>/dev/null &
+    fi
+}
+
+Sys::is_installed() {
+    local pkg="$1"
+    if [[ "${Sys[PKG_MANAGER]}" == "pacman" ]]; then
         pacman -Qi "$pkg" &>/dev/null
-    elif [[ "$PKG_MANAGER" == "brew" ]]; then
+    elif [[ "${Sys[PKG_MANAGER]}" == "brew" ]]; then
         brew list "$pkg" &>/dev/null
     fi
-    return $?
 }
 
-# Function to install packages
-install_packages() {
-    print "NOTE" $CBL "INSTALLING PACKAGES..."
-    sleep 2
 
-    for package in "${DEPENDENCIES[@]}"; do
-        header
-        print "NOTE" $CBL "INSTALLING PACKAGES..."
-        if ! is_installed "$package"; then
-            printf "Q. Would you like to install $package? [y/N]: "
-            read res
-            if [[ $res == "y" ]]; then
-                if [[ "$PKG_MANAGER" == "pacman" ]]; then
-                    sudo pacman -S "$package" --noconfirm
-                elif [[ "$PKG_MANAGER" == "brew" ]]; then
-                    brew install "$package"
-                fi
-                printf '%s✓ Done%s\n' "${CGR}" "${CNC}"
-                echo
-                print "DONE" $CGR "$package is installed."
-                sleep 2
-            fi
+# ........................[  6. Class: FileSystem  ]........................ #
+# Abstraction layer for File I/O operations.
+
+FileSys::patch() {
+    local find="$1"
+    local replace="$2"
+    local file="$3"
+    
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s|$find|$replace|g" "$file"
+    else
+        sed -i "s|$find|$replace|g" "$file"
+    fi
+}
+
+FileSys::backup() {
+    local file="$1"
+    local suffix="$2"
+    if [[ -f "$file" ]]; then
+        mv "$file" "${file}_${suffix}"
+        Log::success "Backed up $(basename "$file") -> $(basename "${file}_${suffix}")"
+    fi
+}
+
+FileSys::symlink() {
+    local src="$1"
+    local dest="$2"
+    ln -sf "$src" "$dest"
+    Log::success "Symlink created: $(basename "$dest")"
+}
+
+
+# ........................[  7. Class: Installer  ]........................ #
+# Main controller containing business logic.
+
+Installer::dependencies() {
+    UI::separator
+    Log::info "Analyzing Dependencies..."
+    
+    local to_install=()
+    local installed=()
+
+    for pkg in "${Dependencies[@]}"; do
+        if Sys::is_installed "$pkg"; then
+            installed+=("$pkg")
         else
-            printf '%s✓ %s is already installed on your system!%s\n' "${CGR}" "$package" "${CNC}"
-            sleep 1
+            to_install+=("$pkg")
         fi
     done
-    header
-    print "DONE" $CGR "All packages successfully installed as per your choice!"
-    sleep 2
-}
 
-# Function to set shell configuration options
-set_shell_config() {
-    header
-    print "NOTE" $CBL "SETTING SHELL-CONFIG..."
-    sleep 2
-    local options=(
-        "Tmux"
-        "Alias"
-        "Custom Functions"
-        "Themer"
-        "Multiple Neovim Setup"
-        "Custom Wallpapers"
-        "Temporary Sourcing File"
-    )
+    [[ ${#installed[@]} -gt 0 ]] && Log::info "Already installed: ${installed[*]}"
+    echo
+    
+    for package in "${to_install[@]}"; do
+        if UI::confirm "Install ${Color[Bld]}$package${Color[Rst]}?"; then
+            Log::pkg "Installing ${package}..."
+            
+            Sys::install "$package"
+            UI::spinner "Installing ${package}..."
+            wait $! 
 
-    local config_var=(
-        "USE_TMUX"
-        "USE_ALIAS"
-        "USE_FUNCTION"
-        "OPT_THEME"
-        "MULTI_NEOVIM"
-        "CUSTOM_WALL"
-        "TEMP_OFFLINE_ALIAS"
-    )
-
-    local total=${#options[@]} 
-    if [[ -f "$ZSH_PATH/.zshenv" ]]; then
-        for ((i=1; i<=total; i++)); do  # start at 1 (zsh arrays are 1-based)
-            header
-            print "NOTE" $CBL "SETTING SHELL-CONFIG..."
-            printf "    [$((i))/$total] Enable ${options[$i]}? [y/N]: "
-            read res
-
-            if [[ $res =~ ^[Yy]$ ]]; then
-                # sed -i "s/${config_var[$i]}=\"No\"/${config_var[$i]}=\"Yes\"/g" "$ZSH_PATH/.zshenv"
-                if sed --version >/dev/null 2>&1; then
-                    # GNU sed (Linux)
-                    sed -i "s|${config_var[$i]}=\"No\"|${config_var[$i]}=\"Yes\"|g" "$ZSH_PATH/.zshenv"
-                else
-                    # BSD sed (macOS)
-                    sed -i '' "s|${config_var[$i]}=\"No\"|${config_var[$i]}=\"Yes\"|g" "$ZSH_PATH/.zshenv"
-                fi
-                printf "    ${CGR}✓ Enabled: %s${CNC}" "${options[$i]}"
+            if Sys::is_installed "$package"; then
+                Log::success "Installed $package"
             else
-                printf "    ${CRE}X Skipped: %s${CNC}" "${options[$i]}"
+                Log::error "Failed to install $package"
             fi
-            sleep 2
-        done
-    else
-        print "ERROR" $CRE "$ZSH_PATH/.zshenv not found."
-
-    fi
+        else
+            Log::warn "Skipped $package"
+        fi
+    done
 }
 
-
-check_and_install_zsh() {
+Installer::ensure_zsh() {
     if ! command -v zsh &>/dev/null; then
-        print "QUESTION" $CYE "Zsh is not installed. Would you like to install it? [y/N]"
-        read res
-        if [[ $res == "y" ]]; then
-            if [[ "$PKG_MANAGER" == "pacman" ]]; then
-                sudo pacman -S zsh --noconfirm
-            elif [[ "$PKG_MANAGER" == "brew" ]]; then
-                brew install zsh
-            fi
-            print "DONE" $CGR "Zsh has been installed successfully!"
-
+        if UI::confirm "Zsh is not installed. Install it?"; then
+            Sys::install "zsh"
+            wait $!
+            Log::success "Zsh installed!"
         else
-            print "NOTE" $CYE "Installation of Zsh is skipped."
-
+            Log::warn "Skipping Zsh installation."
         fi
     else
-        print "NOTE" $CGR "Zsh is already installed."
+        Log::success "Zsh is present."
     fi
-    sleep 2
 }
 
-# Main function
-main() {
+Installer::configure_features() {
+    UI::separator
+    Log::info "Feature Configuration"
+    echo ""
+
+    local options=(
+        "Tmux Integration" "Alias Expansion" "Custom Functions" 
+        "Theme Engine" "Multi-Neovim Setup" "Custom Wallpapers" 
+        "Temp Offline config"
+    )
+    local config_var=(
+        "USE_TMUX" "USE_ALIAS" "USE_FUNCTION" 
+        "OPT_THEME" "MULTI_NEOVIM" "CUSTOM_WALL" 
+        "TEMP_OFFLINE_CONFIG"
+    )
+
+    if [[ -f "${Paths[ENV]}" ]]; then
+        # Note: Arrays are 1-indexed in Zsh, but we iterate to align logic
+        for ((i = 1; i <= ${#options[@]}; i++)); do
+            if UI::confirm "Enable ${Color[Bld]}${options[$i]}${Color[Rst]}?"; then
+                # Abstracted patch
+                FileSys::patch "${config_var[$i]}=\"No\"" "${config_var[$i]}=\"Yes\"" "${Paths[REPO]}/.zshenv"
+                printf "      %s Enabled %s\n" "${Icon[GEAR]}" "${options[$i]}"
+            else
+                printf "      ${Color[K]}· Disabled %s${Color[Rst]}\n" "${options[$i]}"
+            fi
+        done
+    else
+        Log::error "${Paths[ENV]} (source) not found."
+    fi
+}
+
+Installer::run() {
     local DATE=$(date +%Y-%m-%d)
     local ID=$(date +%s)
+    local BACKUP_ID="${DATE}_${ID}"
 
-    header
-    print "INFO" $CYE "INSTALLING ZSH..."
-    sleep 2
-    check_and_install_zsh
-    header
+    # 1. Init System
+    Theme::init
+    Config::init
+    Sys::detect
 
-    # Check if the current .zshrc and .zshenv config files exist and move them if they do
-    print "NOTE" $CYE "Backing up the previous config files, ${CRE}IF FOUND!!"
+    # 2. UI Intro
+    UI::header
+    sleep 1
+    UI::typewriter "  :: Initializing setup environment..."
     sleep 2
-    [ -f "$ZSHRC" ] && mv "$ZSHRC" "$HOME/.zshrc_${DATE}_${ID}" \
-        && printf "${CBL}    Moved .zshrc --> $HOME/.zshrc_${DATE}_${ID}\n${CNC}" \
-        || printf "${CBL}    No .zshrc found!\n${CNC}"
-    sleep 2
-    [ -f "$ZENV" ] && mv "$ZENV" "$HOME/.zshenv_${DATE}_${ID}" \
-        && printf "${CBL}    Moved .zshenv --> $HOME/.zshenv_${DATE}_${ID}\n\n${CNC}" \
-        || printf "${CBL}    No .zshenv found!\n${CNC}"
-    sleep 2
+    printf "\n"
 
-    # Clone the Git repository containing Zsh configuration files
-    [ -d "$ZSH_PATH" ] && mv "$ZSH_PATH" "${ZSH_PATH}_${DATE}_${ID}"  # Backup existing config if it exists
-    git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" "$ZSH_PATH"
-    print "NOTE" $CYE "New ZSH Config downloaded to \"$ZSH_PATH\"!"
-    sleep 2
+    # 3. Zsh Check
+    Installer::ensure_zsh
 
-    # Create symbolic links to the configuration files in the user's home directory
-    ln -sf "$ZSH_PATH/.zshrc" "$ZSHRC" \
-        && printf "${CBL}    Linked new .zshrc!\n${CNC}" 
-    sleep 2
-    ln -sf "$ZSH_PATH/.zshenv" "$ZENV" \
-        && printf "${CBL}    Linked new .zshenv!\n${CNC}"
-    sleep 2
-    header
+    # 4. Backups
+    UI::separator
+    Log::info "Backup System"
+    FileSys::backup "${Paths[RC]}" "$BACKUP_ID"
+    FileSys::backup "${Paths[ENV]}" "$BACKUP_ID"
 
-    # Changing shell to Zsh
-    print "INFO" $CYE "Setting up Z-Shell!\n"
-    sleep 5
-    header
+    # 5. Clone
+    UI::separator
+    Log::info "Downloading Configurations..."
+    
+    # Handle collision
+    [[ -d "${Paths[REPO]}" ]] && mv "${Paths[REPO]}" "${Paths[REPO]}_${BACKUP_ID}"
+    
+    git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" "${Paths[REPO]}" &
+    UI::spinner "Cloning repository..."
+    wait $!
+    
+    printf "\r\033[K"
+    Log::success "Config downloaded to ${Paths[REPO]}"
 
-    # Change the user's shell to Zsh if it's not already
-    if [[ $SHELL != "/usr/bin/zsh" ]]; then
-        print "NOTE" $CYE "Changing shell to Zsh.\nYour root password is needed to make the change.\n\nAfter that, it is important for you to reboot.\n\n"
-        chsh -s /usr/bin/zsh
-        sleep 2
-        print "DONE" $CGR "Shell changed to ZSH!"
-        sleep 5
-    else
-        print "NOTE" $CYE "Your shell is already ZSH"
-        sleep 5
+    # 6. Symlinks
+    FileSys::symlink "${Paths[REPO]}/.zshrc" "${Paths[RC]}"
+    FileSys::symlink "${Paths[REPO]}/.zshenv" "${Paths[ENV]}"
+
+    # 7. Default Shell
+    UI::separator
+    if [[ $SHELL != "/usr/bin/zsh" ]] && [[ $SHELL != "/bin/zsh" ]]; then
+        Log::warn "Changing shell to Zsh (Requires Root). Reboot required."
+        if UI::confirm "Change default shell to Zsh?"; then
+            chsh -s $(which zsh)
+            sleep 1
+            Log::success "Shell changed!"
+        fi
     fi
 
-    # Install necessary packages
-    header
-    install_packages
+    # 8. Dependencies
+    Installer::dependencies
 
-    # Set shell configuration options
-    set_shell_config
+    # 9. Features
+    Installer::configure_features
 
-    if command -v zsh &> /dev/null; then
-        header
-        print "NOTE" $CYE "Compiling Zsh configuration files..."
-        sleep 2
-        zsh -c "autoload -U zrecompile && zrecompile -p $ZSH_PATH/.zshrc" 2>/dev/null || true
-        sleep 2 
+    # 10. Finalize
+    UI::separator
+    Log::info "Finalizing..."
+    
+    if command -v zsh &>/dev/null; then
+        zsh -c "autoload -U zrecompile && zrecompile -p ${Paths[REPO]}/.zshrc" 2>/dev/null || true
     fi
+    
+    Log::warn "Removing Installer Scripts..."
+    [[ -e "${Paths[REPO]}/install.zsh" ]] && rm -rf "${Paths[REPO]}/install.zsh"
+    sleep 2
+    
+    Log::success "Cleanup complete."
+    echo ""
+    sleep 2
 
-    header
-    print "NOTE" $CYE "REMOVING INSTALLER SCRIPTS..."
-    sleep 2
-    [ -e "$ZSH_PATH/install.zsh" ] && rm -rf "$ZSH_PATH/install.zsh" \
-        && printf "${CBL}REMOVED.${CNC}"
-    sleep 2
-    return 0
+    # Exit Summary
+    printf "\n${Color[G]}  Installation Finished Successfully! ${Color[Rst]}\n"
+    printf "  ${Color[K]}Restarting your terminal or run 'zsh' to see changes.${Color[Rst]}\n\n"
+    
+    sleep 4
+    
+    # Switch context
+    [[ $? -eq 0 ]] && SHOW_CONFIG_WARNING=1 exec zsh || return
 }
 
-# Clear the terminal and run the main function
-header
-spinner "Setting Up Pre-requisites & Starting the Installation..." &
-SPIN_PID=$!
-sleep 5
-kill $SPIN_PID 2>/dev/null
-printf "${CNC}"
-main "$@"
-header
-print "DONE" $CGR "INSTALLATION FINISHED."
 
-[[ $? -eq 0 ]] && SHOW_CONFIG_WARNING=1 exec zsh || return
+# ........................[  8. Entry Point  ]........................ #
+# Invoke the static main method of the Installer class.
+
+Installer::run "$@"
