@@ -21,29 +21,43 @@
 <img alt="Last Updated" src="https://img.shields.io/github/last-commit/adityastomar67/zsh-conf?style=flat&color=e06c75&label="> </a>
 
 </div>
+<br>
 
-#### Before we proceed
+## 🧩 Configuration Modules
 
-Brief info about the configuration modules.
+Brief info about the configuration structure.
 
-```zsh
-:: alias.zsh     -    various easy to use aliases for smoother workflow
-:: env.zsh       -    environment variables
-:: function.zsh  -    functions that add more options to various commands
-:: fzf.zsh       -    fzf functions
-:: icons.zsh     -    Custom icons
-:: keys.zsh      -    ZSH keybindings
-:: nvim.zsh      -    multiple neovim setup for easy allowing of different configs
-:: opts.zsh      -    ZSH options and ZSH plugin options
-:: plugs.zsh     -    plugins and plugin manager setup
-:: prompt.zsh    -    ZSH prompt custom made
-:: theme.zsh     -    ZSH LC_COLORS colors and FZF opt colors
-:: tmux.zsh      -    tmux setup, WIP!!
-```
+| File | Description |
+| :--- | :--- |
+| `alias.zsh` | Various easy-to-use aliases for a smoother workflow |
+| `env.zsh` | Environment variables setup |
+| `function.zsh` | Functions that extend command capabilities |
+| `fzf.zsh` | FZF (Fuzzy Finder) functions and integration |
+| `icons.zsh` | Custom icon configurations |
+| `keys.zsh` | Zsh keybindings |
+| `nvim.zsh` | Multiple Neovim setup (allows easy config switching) |
+| `opts.zsh` | Zsh options and plugin settings |
+| `plugs.zsh` | Plugins and plugin manager setup |
+| `prompt.zsh` | Custom-made Zsh prompt |
+| `theme.zsh` | Zsh `LC_COLORS` and FZF option colors |
+| `tmux.zsh` | Tmux setup (**WIP**) |
 
-#### Installation
+---
 
-Noting really, if you have ZSH installed then you can just copy the `zsh` folder to `$HOME/.config` and `.zshrc` to your `$HOME` directory, and run `source $HOME/.zshrc`. All of the plugins will be downloaded automatically including oh-my-zsh(optional) as it is completely bootstrapped.<br>Or you can just clone the repo and run `./install.sh`
+## ✨ Features
+
+- **Fully Bootstrapped:** Automatically downloads plugins and oh-my-zsh (optional) upon sourcing.
+- **Modular Design:** Clean separation of concerns (aliases, functions, keys, etc.).
+- **Neovim Profile Switcher:** Built-in support for managing multiple Neovim configurations.
+- **Enhanced Navigation:** Deep integration with FZF and custom keybindings.
+- **Custom UI:** Unique prompt and color themes.
+
+---
+
+## 🚀 Installation
+
+### Recommended Way
+Noting really, if you have ZSH installed then you can just copy the `zsh-conf` folder to `$HOME/.config/` and `.zshrc, .zshenv` to your `$HOME` directory, and run `source $HOME/.zshrc`. All of the plugins will be downloaded automatically including oh-my-zsh(optional) as it is completely bootstrapped.<br>Or you can just clone the repo and run `./install.sh`
 
 *RECOMMENDED WAY*
 ```bash

@@ -53,7 +53,8 @@ Config::init() {
     Paths[REPO]="$HOME/.config/zsh-conf"
     Paths[RC]="${ZDOTDIR:-$HOME}/.zshrc"
     Paths[ENV]="${ZDOTDIR:-$HOME}/.zshenv"
-    
+    Paths[BACKUP]="$HOME/.zsh_backups/$(date +%Y-%m-%d)"
+
     # Binary dependencies to ensure are present
     Dependencies=(
         "tmux" "ranger" "fd" "ripgrep" "lazygit"
@@ -67,24 +68,24 @@ Config::init() {
 # ........................[  3. Class: Log  ]........................ #
 # Encapsulates all printing logic to ensure consistent formatting.
 
-Log::info() { 
-    printf "  %s  %s%s%s\n" "${Icon[INFO]}" "${Color[B]}" "$1" "${Color[Rst]}" 
+Log::info() {
+    printf "  %s  %s%s%s\n" "${Icon[INFO]}" "${Color[B]}" "$1" "${Color[Rst]}"
 }
 
-Log::success() { 
-    printf "  %s  %s%s%s\n" "${Icon[OK]}" "${Color[G]}" "$1" "${Color[Rst]}" 
+Log::success() {
+    printf "  %s  %s%s%s\n" "${Icon[OK]}" "${Color[G]}" "$1" "${Color[Rst]}"
 }
 
-Log::warn() { 
-    printf "  %s  %s%s%s\n" "${Icon[WARN]}" "${Color[Y]}" "$1" "${Color[Rst]}" 
+Log::warn() {
+    printf "  %s  %s%s%s\n" "${Icon[WARN]}" "${Color[Y]}" "$1" "${Color[Rst]}"
 }
 
-Log::error() { 
-    printf "  %s  %s%s%s\n" "${Icon[ERR]}" "${Color[R]}" "$1" "${Color[Rst]}" 
+Log::error() {
+    printf "  %s  %s%s%s\n" "${Icon[ERR]}" "${Color[R]}" "$1" "${Color[Rst]}"
 }
 
 Log::pkg() {
-    printf "  %s  %s%s%s\n" "${Icon[PKG]}" "${Color[C]}" "$1" "${Color[Rst]}" 
+    printf "  %s  %s%s%s\n" "${Icon[PKG]}" "${Color[C]}" "$1" "${Color[Rst]}"
 }
 
 
@@ -108,22 +109,23 @@ UI::typewriter() {
 UI::confirm() {
     printf "  %s  %s ${Color[K]}[y/N]${Color[Rst]} " "${Icon[Q]}" "$1"
     read -k 1 -r response
-    echo "" 
+    echo ""
     [[ "$response" =~ ^[yY]$ ]]
 }
 
 UI::spinner() {
-    local pid=$!
-    local msg="$1"
+    local pid=$1 msg="$2"
     local delay=0.1
     local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
-        local temp=${spinstr#?}
-        printf "  ${Color[C]}%c${Color[Rst]}  %s" "$spinstr" "$msg"
-        local spinstr=$temp${spinstr%"$temp"}
+
+    tput civis # Hide cursor for smooth animation
+    while kill -0 "$pid" 2>/dev/null; do
+        printf "\r  ${Color[C]}%c${Color[Rst]}  %s" "$spinstr" "$msg"
+        spinstr=${spinstr:1}${spinstr:0:1}
         sleep $delay
-        printf "\r\033[K"
     done
+    tput cnorm # Restore cursor
+    printf "\r\033[K" # Clear line
 }
 
 UI::header() {
@@ -170,12 +172,8 @@ Sys::install() {
 }
 
 Sys::is_installed() {
-    local pkg="$1"
-    if [[ "${Sys[PKG_MANAGER]}" == "pacman" ]]; then
-        pacman -Qi "$pkg" &>/dev/null
-    elif [[ "${Sys[PKG_MANAGER]}" == "brew" ]]; then
-        brew list "$pkg" &>/dev/null
-    fi
+    # Returns 0 (true) if found, 1 (false) if not
+    command -v "$1" >/dev/null 2>&1
 }
 
 
@@ -186,7 +184,7 @@ FileSys::patch() {
     local find="$1"
     local replace="$2"
     local file="$3"
-    
+
     if [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i '' "s|$find|$replace|g" "$file"
     else
@@ -196,11 +194,13 @@ FileSys::patch() {
 
 FileSys::backup() {
     local file="$1"
-    local suffix="$2"
-    if [[ -f "$file" ]]; then
-        mv "$file" "${file}_${suffix}"
-        Log::success "Backed up $(basename "$file") -> $(basename "${file}_${suffix}")"
-    fi
+    [[ ! -f "$file" ]] && return
+
+    mkdir -p "${Paths[BACKUP]}"
+    local ts=$(date +%H%M%S)
+    # Atomic copy before any modification
+    cp -a "$file" "${Paths[BACKUP]}/$(basename "$file")_$ts"
+    Log::success "Atomic backup: $(basename "$file") -> ${Paths[BACKUP]}"
 }
 
 FileSys::symlink() {
@@ -217,7 +217,7 @@ FileSys::symlink() {
 Installer::dependencies() {
     UI::separator
     Log::info "Analyzing Dependencies..."
-    
+
     local to_install=()
     local installed=()
 
@@ -231,14 +231,14 @@ Installer::dependencies() {
 
     [[ ${#installed[@]} -gt 0 ]] && Log::info "Already installed: ${installed[*]}"
     echo
-    
+
     for package in "${to_install[@]}"; do
         if UI::confirm "Install ${Color[Bld]}$package${Color[Rst]}?"; then
             Log::pkg "Installing ${package}..."
-            
+
             Sys::install "$package"
             UI::spinner "Installing ${package}..."
-            wait $! 
+            wait $!
 
             if Sys::is_installed "$package"; then
                 Log::success "Installed $package"
@@ -271,13 +271,13 @@ Installer::configure_features() {
     echo ""
 
     local options=(
-        "Tmux Integration" "Alias Expansion" "Custom Functions" 
-        "Theme Engine" "Multi-Neovim Setup" "Custom Wallpapers" 
+        "Tmux Integration" "Alias Expansion" "Custom Functions"
+        "Theme Engine" "Multi-Neovim Setup" "Custom Wallpapers"
         "Temp Offline config"
     )
     local config_var=(
-        "USE_TMUX" "USE_ALIAS" "USE_FUNCTION" 
-        "OPT_THEME" "MULTI_NEOVIM" "CUSTOM_WALL" 
+        "USE_TMUX" "USE_ALIAS" "USE_FUNCTION"
+        "OPT_THEME" "MULTI_NEOVIM" "CUSTOM_WALL"
         "TEMP_OFFLINE_CONFIG"
     )
 
@@ -300,7 +300,6 @@ Installer::configure_features() {
 Installer::run() {
     local DATE=$(date +%Y-%m-%d)
     local ID=$(date +%s)
-    local BACKUP_ID="${DATE}_${ID}"
 
     # 1. Init System
     Theme::init
@@ -320,20 +319,20 @@ Installer::run() {
     # 4. Backups
     UI::separator
     Log::info "Backup System"
-    FileSys::backup "${Paths[RC]}" "$BACKUP_ID"
-    FileSys::backup "${Paths[ENV]}" "$BACKUP_ID"
+    FileSys::backup "${Paths[RC]}"
+    FileSys::backup "${Paths[ENV]}"
 
     # 5. Clone
     UI::separator
     Log::info "Downloading Configurations..."
-    
+
     # Handle collision
-    [[ -d "${Paths[REPO]}" ]] && mv "${Paths[REPO]}" "${Paths[REPO]}_${BACKUP_ID}"
-    
+    [[ -d "${Paths[REPO]}" ]] && mv "${Paths[REPO]}" "${Paths[REPO]}_${DATE}_${ID}"
+
     git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" "${Paths[REPO]}" &
     UI::spinner "Cloning repository..."
     wait $!
-    
+
     printf "\r\033[K"
     Log::success "Config downloaded to ${Paths[REPO]}"
 
@@ -361,15 +360,15 @@ Installer::run() {
     # 10. Finalize
     UI::separator
     Log::info "Finalizing..."
-    
+
     if command -v zsh &>/dev/null; then
         zsh -c "autoload -U zrecompile && zrecompile -p ${Paths[REPO]}/.zshrc" 2>/dev/null || true
     fi
-    
+
     Log::warn "Removing Installer Scripts..."
     [[ -e "${Paths[REPO]}/install.zsh" ]] && rm -rf "${Paths[REPO]}/install.zsh"
     sleep 2
-    
+
     Log::success "Cleanup complete."
     echo ""
     sleep 2
@@ -377,9 +376,9 @@ Installer::run() {
     # Exit Summary
     printf "\n${Color[G]}  Installation Finished Successfully! ${Color[Rst]}\n"
     printf "  ${Color[K]}Restarting your terminal or run 'zsh' to see changes.${Color[Rst]}\n\n"
-    
+
     sleep 4
-    
+
     # Switch context
     [[ $? -eq 0 ]] && SHOW_CONFIG_WARNING=1 exec zsh || return
 }
