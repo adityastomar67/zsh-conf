@@ -7,12 +7,12 @@
 # ........................[  1. Initialization  ]........................ #
 
 # Helper: Check if a program is installed (Arch Linux specific check)
+typeset -gA _installed_cache
 is_installed() {
-    if command -v pacman &>/dev/null; then
-        pacman -Qi "$1" &>/dev/null
-    else
-        command -v "$1" &>/dev/null
-    fi
+    local cmd=$1
+    [[ -n ${_installed_cache[$cmd]} ]] && return ${_installed_cache[$cmd]}
+    command -v "$cmd" &>/dev/null
+    _installed_cache[$cmd]=$?
     return $?
 }
 
