@@ -186,6 +186,7 @@ Cleaner::remove_cache() {
     find "${Paths[CACHE]}" -name "zsh-*-init.zsh" -delete 2>/dev/null
     find "${Paths[CACHE]}" -name "zsh-*-init.zsh.zwc" -delete 2>/dev/null
     find "$HOME" -name ".zcompdump*" -delete 2>/dev/null
+    find "$HOME" -name "*.zwc" -delete 2>/dev/null
 
     Log::delete "Cleared Zsh caches and compdumps"
 }
