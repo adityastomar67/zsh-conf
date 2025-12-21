@@ -376,9 +376,9 @@ Installer::run() {
     if command -v zsh &>/dev/null; then
         zsh -c "autoload -U zrecompile && zrecompile -p ${Paths[REPO]}/.zshrc" &>/dev/null \
             && Log::success "Autoload -u zrecompile: RECOMPILED!!" || true
+        sleep 2
     fi
 
-    sleep 2
     echo
     Log::warn "Removing Installer Scripts..."
     [[ -e "${Paths[REPO]}/install.zsh" ]] && rm -rf "${Paths[REPO]}/install.zsh"
@@ -391,7 +391,6 @@ Installer::run() {
     # Exit Summary
     printf "\n${Color[G]}  Installation Finished Successfully! ${Color[Rst]}\n"
     printf "  ${Color[K]}Restarting your terminal or run 'zsh' to see changes.${Color[Rst]}\n\n"
-
     sleep 4
 
     # Switch context
@@ -402,4 +401,8 @@ Installer::run() {
 # ........................[  8. Entry Point  ]........................ #
 # Invoke the static main method of the Installer class.
 
-Installer::run "$@"
+# Only run if this file is the main script being executed
+if [[ "$0" == "${(%):-%x}" ]]; then
+    Installer::run "$@"
+fi
+
