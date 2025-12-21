@@ -92,13 +92,9 @@ Log::pkg() {
 # ........................[  4. Class: UI  ]........................ #
 # Handles user interaction widgets and animations.
 
-UI::separator() {
-    printf "${Color[K]}────────────────────────────────────────────────────────────${Color[Rst]}\n"
-}
-
 UI::typewriter() {
     local text="$1"
-    local delay=0.01
+    local delay=0.02
     for ((i = 0; i < ${#text}; i++)); do
         printf "%s" "${text:$i:1}"
         sleep $delay
@@ -129,6 +125,7 @@ UI::spinner() {
 }
 
 UI::header() {
+    sleep 2
     clear
     echo "${Color[P]}"
     echo "  ▒███████▒  ██████  ██░ ██  ▄████▄   ▒█████   ███▄    █   █████▒"
@@ -205,6 +202,7 @@ FileSys::backup() {
     # Atomic copy before any modification
     cp -a "$file" "${Paths[BACKUP]}/$(basename "$file")_$ts"
     Log::success "Atomic backup: $(basename "$file") -> ${Paths[BACKUP]}"
+    sleep 2
 }
 
 FileSys::symlink() {
@@ -212,6 +210,7 @@ FileSys::symlink() {
     local dest="$2"
     ln -sf "$src" "$dest"
     Log::success "Symlink created: $(basename "$dest")"
+    sleep 2
 }
 
 
@@ -219,8 +218,9 @@ FileSys::symlink() {
 # Main controller containing business logic.
 
 Installer::dependencies() {
-    UI::separator
+    UI::header
     Log::info "Analyzing Dependencies..."
+    sleep 2
 
     local to_install=()
     local installed=()
@@ -233,15 +233,16 @@ Installer::dependencies() {
         fi
     done
 
-    [[ ${#installed[@]} -gt 0 ]] && Log::info "Already installed: ${installed[*]}"
-    echo
-
     for package in "${to_install[@]}"; do
+        UI::header
+        Log::info "Analyzing Dependencies..."
+        [[ ${#installed[@]} -gt 0 ]] && Log::info "Already installed: ${installed[*]}"
+        echo
         if UI::confirm "Install ${Color[Bld]}$package${Color[Rst]}?"; then
             Log::pkg "Installing ${package}..."
 
             Sys::install "$package"
-            UI::spinner "Installing ${package}..."
+            UI::spinner $! "Installing ${package}..."
             wait $!
 
             if Sys::is_installed "$package"; then
@@ -270,9 +271,9 @@ Installer::ensure_zsh() {
 }
 
 Installer::configure_features() {
-    UI::separator
+    UI::header
     Log::info "Feature Configuration"
-    echo ""
+    sleep 2
 
     local options=(
         "Tmux Integration" "Alias Expansion" "Custom Functions"
@@ -288,6 +289,9 @@ Installer::configure_features() {
     if [[ -f "${Paths[ENV]}" ]]; then
         # Note: Arrays are 1-indexed in Zsh, but we iterate to align logic
         for ((i = 1; i <= ${#options[@]}; i++)); do
+            UI::header
+            Log::info "Feature Configuration"
+            echo
             if UI::confirm "Enable ${Color[Bld]}${options[$i]}${Color[Rst]}?"; then
                 # Abstracted patch
                 FileSys::patch "${config_var[$i]}=\"No\"" "${config_var[$i]}=\"Yes\"" "${Paths[REPO]}/.zshenv"
@@ -321,32 +325,35 @@ Installer::run() {
     Installer::ensure_zsh
 
     # 4. Backups
-    UI::separator
+    UI::header
     Log::info "Backup System"
+    sleep 1
     FileSys::backup "${Paths[RC]}"
     FileSys::backup "${Paths[ENV]}"
 
     # 5. Clone
-    UI::separator
+    UI::header
     Log::info "Downloading Configurations..."
+    sleep 1
 
     # Handle collision
     [[ -d "${Paths[REPO]}" ]] && mv "${Paths[REPO]}" "${Paths[REPO]}_${DATE}_${ID}"
 
     git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" "${Paths[REPO]}" &
-    UI::spinner "Cloning repository..."
+    UI::spinner $! "Cloning repository..."
     wait $!
 
     printf "\r\033[K"
     Log::success "Config downloaded to ${Paths[REPO]}"
+    sleep 2
 
     # 6. Symlinks
     FileSys::symlink "${Paths[REPO]}/.zshrc" "${Paths[RC]}"
     FileSys::symlink "${Paths[REPO]}/.zshenv" "${Paths[ENV]}"
 
     # 7. Default Shell
-    UI::separator
     if [[ $SHELL != "/usr/bin/zsh" ]] && [[ $SHELL != "/bin/zsh" ]]; then
+        UI::header
         Log::warn "Changing shell to Zsh (Requires Root). Reboot required."
         if UI::confirm "Change default shell to Zsh?"; then
             chsh -s $(which zsh)
@@ -362,19 +369,23 @@ Installer::run() {
     Installer::configure_features
 
     # 10. Finalize
-    UI::separator
+    UI::header
     Log::info "Finalizing..."
+    sleep 2
 
     if command -v zsh &>/dev/null; then
-        zsh -c "autoload -U zrecompile && zrecompile -p ${Paths[REPO]}/.zshrc" 2>/dev/null || true
+        zsh -c "autoload -U zrecompile && zrecompile -p ${Paths[REPO]}/.zshrc" &>/dev/null \
+            && Log::success "Autoload -u zrecompile: RECOMPILED!!" || true
     fi
 
+    sleep 2
+    echo
     Log::warn "Removing Installer Scripts..."
     [[ -e "${Paths[REPO]}/install.zsh" ]] && rm -rf "${Paths[REPO]}/install.zsh"
     sleep 2
 
     Log::success "Cleanup complete."
-    echo ""
+    echo
     sleep 2
 
     # Exit Summary
