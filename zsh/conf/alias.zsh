@@ -26,10 +26,10 @@ unalias -a
 # ........................[  2. System & Privileges  ]........................ #
 
 # Auto-sudo for common system commands
-for command in mount umount sv pacman updatedb su shutdown poweroff reboot; do
-    alias -g "$command"="sudo $command"
+for cmd in mount umount sv pacman updatedb su shutdown poweroff reboot; do
+    alias -g "$cmd"="sudo $cmd"
 done
-unset command
+unset cmd
 
 # Safety & Verbosity
 alias mv="mv -i"
