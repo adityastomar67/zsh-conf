@@ -4,12 +4,12 @@
 # This script removes the custom Zsh configuration, symlinks, and plugins.
 #
 # ARCHITECTURE (Object-Based):
-#   1. Theme::      -> Colors, Icons, and visual constants.
-#   2. Config::     -> Paths to target for deletion.
-#   3. UI::         -> Visual components (Spinner, Header, Confirm).
-#   4. Log::        -> Standardized output wrappers.
-#   5. Cleaner::    -> Removal logic (The "Business Logic").
-#   6. Uninstaller::-> Main orchestration.
+#   1. Theme::        -> Colors, Icons, and visual constants.
+#   2. Config::       -> Paths to target for deletion.
+#   3. UI::           -> Visual components (Spinner, Header, Confirm).
+#   4. Log::          -> Standardized output wrappers.
+#   5. Cleaner::      -> Removal logic (The "Business Logic").
+#   6. Uninstaller::  -> Main orchestration.
 
 
 # ........................[  1. Class: Theme  ]........................ #
@@ -52,7 +52,7 @@ Config::init() {
     Paths[RC]="${ZDOTDIR:-$HOME}/.zshrc"
     Paths[ENV]="${ZDOTDIR:-$HOME}/.zshenv"
     Paths[CACHE]="${XDG_CACHE_HOME:-$HOME/.cache}"
-    
+
     # Plugin Managers installed by plugs.zsh
     PluginDirs=(
         "$HOME/.zinit"
@@ -65,37 +65,36 @@ Config::init() {
 # ........................[  3. Class: Log  ]........................ #
 # Encapsulates all printing logic.
 
-Log::info() { 
-    printf "  %s  %s%s%s\n" "${Icon[INFO]}" "${Color[B]}" "$1" "${Color[Rst]}" 
+Log::info() {
+    printf "  %s  %s%s%s\n" "${Icon[INFO]}" "${Color[B]}" "$1" "${Color[Rst]}"
 }
 
-Log::success() { 
-    printf "  %s  %s%s%s\n" "${Icon[OK]}" "${Color[G]}" "$1" "${Color[Rst]}" 
+Log::success() {
+    printf "  %s  %s%s%s\n" "${Icon[OK]}" "${Color[G]}" "$1" "${Color[Rst]}"
 }
 
-Log::warn() { 
-    printf "  %s  %s%s%s\n" "${Icon[WARN]}" "${Color[Y]}" "$1" "${Color[Rst]}" 
+Log::warn() {
+    printf "  %s  %s%s%s\n" "${Icon[WARN]}" "${Color[Y]}" "$1" "${Color[Rst]}"
 }
 
-Log::error() { 
-    printf "  %s  %s%s%s\n" "${Icon[ERR]}" "${Color[R]}" "$1" "${Color[Rst]}" 
+Log::error() {
+    printf "  %s  %s%s%s\n" "${Icon[ERR]}" "${Color[R]}" "$1" "${Color[Rst]}"
 }
 
 Log::delete() {
-    printf "  %s  %s%s%s\n" "${Icon[TRASH]}" "${Color[R]}" "$1" "${Color[Rst]}" 
+    printf "  %s  %s%s%s\n" "${Icon[TRASH]}" "${Color[R]}" "$1" "${Color[Rst]}"
 }
 
+Log::backup() {
+    printf "  %s  %s%s%s\n" "${Icon[OK]}" "${Color[C]}" "$1" "${Color[Rst]}"
+}
 
 # ........................[  4. Class: UI  ]........................ #
 # Handles user interaction widgets.
 
-UI::separator() {
-    printf "${Color[K]}────────────────────────────────────────────────────────────${Color[Rst]}\n"
-}
-
 UI::typewriter() {
     local text="$1"
-    local delay=0.01
+    local delay=0.02
     for ((i = 0; i < ${#text}; i++)); do
         printf "%s" "${text:$i:1}"
         sleep $delay
@@ -106,7 +105,7 @@ UI::typewriter() {
 UI::confirm() {
     printf "  %s  %s ${Color[K]}[y/N]${Color[Rst]} " "${Icon[Q]}" "$1"
     read -k 1 -r response
-    echo "" 
+    echo ""
     [[ "$response" =~ ^[yY]$ ]]
 }
 
@@ -125,6 +124,7 @@ UI::spinner() {
 }
 
 UI::header() {
+    sleep 2
     clear
     echo "${Color[R]}"
     echo "  ▒███████▒  ██████  ██░ ██  ▄████▄   ▒█████   ███▄    █   █████▒"
@@ -137,7 +137,7 @@ UI::header() {
     echo "   ░ ░ ░ ░ ░░  ░  ░   ░  ░░ ░░        ░ ░ ░ ▒     ░   ░ ░  ░ ░     "
     echo "     ░ ░          ░   ░  ░  ░░ ░          ░ ░           ░           "
     echo "${Color[Rst]}"
-    echo "               ${Color[K]}>> ZSH CONFIGURATION CLEANUP <<${Color[Rst]}"
+    echo "                 ${Color[K]}>> ZSH CONFIGURATION CLEANUP <<${Color[Rst]}"
     echo ""
 }
 
@@ -155,11 +155,21 @@ Cleaner::remove_symlinks() {
             rm "$link"
             Log::delete "Removed Symlink: $link"
         else
-            Log::warn "Skipping $link (Points to $target, not our repo)"
+            Log::warn "Skipping $link (Points to $target. Remove it manually!)"
         fi
+    # 2. Check if it is a Real File (Backup it)
     elif [[ -f "$link" ]]; then
-        Log::warn "Skipping $link (It is a real file, not a symlink)"
+        local timestamp=$(date +%Y%m%d_%H%M%S)
+        local backup_name="${link}.bak_${timestamp}"
+
+        mv "$link" "$backup_name"
+        Log::backup "Regular file found. Backed up to: $(basename "$backup_name")"
+
+    # 3. Not found
+    else
+        Log::info "File not found: $link (Already clean)"
     fi
+    sleep 3
 }
 
 Cleaner::remove_dir() {
@@ -168,6 +178,7 @@ Cleaner::remove_dir() {
         rm -rf "$dir"
         Log::delete "Removed Directory: $dir"
     fi
+    sleep 2
 }
 
 Cleaner::remove_cache() {
@@ -175,7 +186,7 @@ Cleaner::remove_cache() {
     find "${Paths[CACHE]}" -name "zsh-*-init.zsh" -delete 2>/dev/null
     find "${Paths[CACHE]}" -name "zsh-*-init.zsh.zwc" -delete 2>/dev/null
     find "$HOME" -name ".zcompdump*" -delete 2>/dev/null
-    
+
     Log::delete "Cleared Zsh caches and compdumps"
 }
 
@@ -201,7 +212,7 @@ Uninstaller::run() {
     Theme::init
     Config::init
     UI::header
-    
+
     UI::typewriter "  :: Initializing cleanup sequence..." "${Color[R]}"
     sleep 1
     printf "\n"
@@ -209,21 +220,25 @@ Uninstaller::run() {
     Log::warn "This will remove your Zsh configuration and plugins."
     Log::warn "It will NOT uninstall system packages (tmux, fzf, etc)."
     echo
-    
+    sleep 1
+
     if ! UI::confirm "Are you sure you want to proceed?"; then
         Log::info "Aborted by user."
+        echo
         exit 0
     fi
 
     # 2. Remove Symlinks
-    UI::separator
+    UI::header
     Log::info "Removing Configuration Links..."
+    sleep 1
     Cleaner::remove_symlinks "${Paths[RC]}"
     Cleaner::remove_symlinks "${Paths[ENV]}"
 
     # 3. Remove Repository
-    UI::separator
+    UI::header
     Log::info "Removing Configuration Repository..."
+    sleep 2
     if [[ -d "${Paths[REPO]}" ]]; then
         Cleaner::remove_dir "${Paths[REPO]}"
     else
@@ -231,8 +246,9 @@ Uninstaller::run() {
     fi
 
     # 4. Remove Plugin Managers
-    UI::separator
+    UI::header
     Log::info "Removing Plugin Managers..."
+    sleep 2
     local plugins_found=0
     for dir in "${PluginDirs[@]}"; do
         if [[ -d "$dir" ]]; then
@@ -245,33 +261,43 @@ Uninstaller::run() {
         fi
     done
     [[ $plugins_found -eq 0 ]] && Log::info "No active plugin managers found."
+    sleep 2
 
     # 5. Clear Cache
-    UI::separator
+    UI::header
     Log::info "Cleaning Cache..."
     Cleaner::remove_cache
 
     # 6. Restore Shell
-    UI::separator
+    UI::header
     Cleaner::restore_shell
 
     # 7. Finalize
-    UI::separator
+    UI::header
     Log::success "Uninstallation complete."
     echo
-    
+    sleep 2
+
     # Check for backups to remind user
     local backup_count=$(ls -1 "$HOME" | grep ".zshrc_" | wc -l)
     if [[ $backup_count -gt 0 ]]; then
         Log::info "Note: You have $backup_count backup(s) of .zshrc in $HOME."
         Log::info "You may want to manually restore one: 'mv .zshrc_DATE .zshrc'"
+        sleep 2
     fi
-    
-    echo ""
+
     Log::info "Please restart your terminal."
+    echo
+    sleep 2
+
+    # FORCE EXIT to prevent any re-execution loop
+    exit 0
 }
 
 
 # ........................[  7. Entry Point  ]........................ #
 
-Uninstaller::run "$@"
+# Only run if this file is the main script being executed
+if [[ "$0" == "${(%):-%x}" ]]; then
+    Uninstaller::run "$@"
+fi
