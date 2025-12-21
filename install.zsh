@@ -156,8 +156,12 @@ Sys::detect() {
         Sys[PKG_MANAGER]="brew"
     elif command -v pacman &>/dev/null; then
         Sys[PKG_MANAGER]="pacman"
+    elif command -v apt-get &>/dev/null; then
+        Sys[PKG_MANAGER]="apt"
+    elif command -v dnf &>/dev/null; then
+        Sys[PKG_MANAGER]="dnf"
     else
-        Log::error "Unsupported OS or Package Manager not found!"
+        Log::error "Unsupported OS/Distro."
         exit 1
     fi
 }

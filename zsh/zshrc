@@ -52,6 +52,11 @@ done
 # Zsh automatically prefers the .zwc file if it is newer than the source.
 
 function _zsh_maintain_bytecode() {
+    local lockfile="/tmp/zsh_compiling.lock"
+    # Return if locked (another shell is already compiling)
+    if [[ -f "$lockfile" ]]; then return; fi
+    touch "$lockfile"
+
     local dir="$ZSH_PATH/zsh/conf"
     local file
 
@@ -70,6 +75,7 @@ function _zsh_maintain_bytecode() {
     if [[ -f "$main_rc" && ( ! -f "${main_rc}.zwc" || "$main_rc" -nt "${main_rc}.zwc" ) ]]; then
         zcompile "$main_rc"
     fi
+    rm -f "$lockfile"
 }
 
 # Run maintenance in background immediately

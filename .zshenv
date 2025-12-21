@@ -8,11 +8,17 @@
 # Path where the main configuration resides
 export ZSH_PATH="$HOME/.config/zsh-conf"
 
+# Path where the main dotfiles resides
+export DOT_PATH="$HOME/.config/b001-dots"
+
 # Package Manager Selection (Options: "zap", "zinit", "omz")
 export PLUG_MANAGER="zap"
 
 # Prompt Theme (Options: "gh0st", "z", "10k", etc.)
 export PROMPT_THEME="gh0st"
+
+# Minimal ZSH settings for "Not So Advanced" User. ("1" to enable, "0" to disable)
+export MINIMALIST="0"
 
 
 # ........................[  Feature Toggles  ]........................ #

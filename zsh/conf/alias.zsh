@@ -40,7 +40,7 @@ alias chown="chown --preserve-root"
 alias chmod="chmod --preserve-root"
 alias chgrp="chgrp --preserve-root"
 alias md="mkdir -p"
-alias _="sudo"
+alias _="sudo "
 alias please='sudo $(fc -ln -1)'  # Re-run last command with sudo
 
 
@@ -63,11 +63,11 @@ alias .4="cd -4"
 alias .5="cd -5"
 
 # Directory Shortcuts (Dynamic)
-[ -d ~/dotfiles ]   && alias dt="cd ~/dotfiles"
-[ -d ~/.dotfiles ]  && alias dt="cd ~/.dotfiles"
+[ -d $DOT_PATH ]    && alias dt="cd $DOT_PATH"
 [ -d ~/Projects ]   && alias pj="cd ~/Projects"
 [ -d ~/Documents ]  && alias dc="cd ~/Documents"
 [ -d ~/Downloads ]  && alias dl="cd ~/Downloads"
+[ -d ~/Developer ]  && alias dv="cd ~/Developer"
 [ -d ~/Workspace ]  && alias wk="cd ~/Workspace"
 
 
@@ -212,11 +212,11 @@ fi
 # Global aliases allow you to put them anywhere in the command
 # Example: cat file.txt G pattern  ->  cat file.txt | grep pattern
 
-alias -g G="| grep"
-alias -g L="| less"
-alias -g H="| head"
-alias -g T="| tail"
-alias -g S="| sed"
+alias -g '|G'="| grep"
+alias -g '|L'="| less"
+alias -g '|H'="| head"
+alias -g '|T'="| tail"
+alias -g '|S'="| sed"
 alias -g NE="2> /dev/null"
 alias -g NUL="> /dev/null 2>&1"
 alias -g LL="2>&1 | less"
@@ -229,6 +229,8 @@ alias h="history"
 alias x="chmod +x"
 alias weather='curl -s wttr.in'
 alias myip="curl ipinfo.io/ip"
+alias ':q'='[ -n "$TMUX" ] && tmux kill-session -t $(tmux display-message -p "#S") || exit'
+alias pass-gen='openssl rand -base64'
 
 # Time & Date
 alias dday='date +"%Y.%m.%d - " | xclip -select clipboard ; date +"%Y.%m.%d"'

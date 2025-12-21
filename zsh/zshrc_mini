@@ -1,0 +1,86 @@
+# ==============================================================================
+# INTERACTIVE SHELL GUARD
+# ==============================================================================
+# Stop here if not running interactively (improves scp/sftp speed)
+[[ $- != *i* ]] && return
+
+# ==============================================================================
+# PATH & ENVIRONMENT
+# ==============================================================================
+export PATH=$PATH:/Users/singhhhx/.spicetify
+
+# Custom Sudo Prompt
+export SUDO_PROMPT="Deploying root access for %u. Password pls: "
+
+# ==============================================================================
+# HISTORY CONFIGURATION
+# ==============================================================================
+# Note: Zsh needs a file location to save history across sessions
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=10000
+SAVEHIST=10000
+
+# Ignore specific commands (Regex style)
+export HISTORY_IGNORE="(ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
+
+setopt HIST_IGNORE_DUPS         # Do not record an event that was just recorded again
+setopt HIST_IGNORE_SPACE        # Do not record an event starting with a space
+setopt HIST_REDUCE_BLANKS       # Remove superfluous blanks before recording entry
+setopt SHARE_HISTORY            # Share history between all sessions
+
+# ==============================================================================
+# COMPLETION & PLUGINS
+# ==============================================================================
+autoload -Uz compinit && compinit
+
+# Case insensitive tab completion
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+
+# Load Autosuggestions
+if [ -f "$HOME/.config/mac-dots/zsh-autosuggestions/zsh-autosuggestions.zsh" ]; then
+    source "$HOME/.config/mac-dots/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
+
+# ==============================================================================
+# PROMPT
+# ==============================================================================
+# Breakdown: User(Blue) / Host(Yellow) [Dir](Grey) Status_Arrow(Green/Red)
+PS1=$'%B%F{blue}%n %B%F{red}/ %B%F{yellow}%m%f%b %{\e[3m%}%B%F{grey}[%~]%f%b%{\e[23m%}%(?.%B%F{green} .%F{red} )%f%b '
+
+# ==============================================================================
+# ALIASES
+# ==============================================================================
+
+# -- Core Replacements --
+alias cat="bat --theme=TwoDark"
+alias ls='eza --icons=always --color=always -a'
+alias ll='eza --icons=always --color=always -la'
+alias v='nvim'
+alias py="python3"
+
+# -- Navigation --
+alias dots="cd ~/.config/mac-dots/"
+alias dev="cd ~/Developer/"
+
+# -- Utilities --
+alias ai='gemini'
+alias pass-gen='openssl rand -base64'
+
+# -- Tmux Utilities --
+alias tkill='tmux kill-session -t'
+
+# Improved :q to only run if inside TMUX (kills session or exits shell)
+alias ':q'='[ -n "$TMUX" ] && tmux kill-session -t $(tmux display-message -p "#S") || exit'
+
+####--------------------------------------------------
+####  Tmux auto-start / auto-attach (Safe Version)
+####--------------------------------------------------
+# 1. Check if tmux exists
+# 2. Check if we are NOT already in tmux
+# 3. Check if we are in an interactive terminal (-t 0)
+if command -v tmux >/dev/null 2>&1 && [[ -z "$TMUX" && -t 0 ]]; then
+    # Try to attach. If it fails, create new.
+    # We remove 'exec' here during troubleshooting so the window stays open if tmux fails.
+    tmux attach-session -t b001 2>/dev/null || tmux new-session -s b001
+fi
+
