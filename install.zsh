@@ -395,7 +395,7 @@ Installer::run() {
     sleep 4
 
     # Switch context
-    [[ $? -eq 0 ]] && SHOW_CONFIG_WARNING=1 exec zsh || return
+    [[ $? -eq 0 ]] && clear && SHOW_CONFIG_WARNING=1 exec zsh || return
 }
 
 
