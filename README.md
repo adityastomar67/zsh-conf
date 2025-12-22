@@ -56,11 +56,15 @@ Brief info about the configuration structure.
 
 ## 🚀 Installation
 
-### Recommended Way
+### Recommended Way (coming soon...)
 
 Noting really, if you have ZSH installed then you can just copy the `zsh-conf` folder to `$HOME/.config/` and `.zshrc, .zshenv` to your `$HOME` directory, and run `source $HOME/.zshrc`. All of the plugins will be downloaded automatically including oh-my-zsh(optional) as it is completely bootstrapped.<br>Or you can just clone the repo and run `./install.sh`
 
 _RECOMMENDED WAY_
+
+```bash
+curl -sL https://bit.ly/Fresh-Install | bash -s -- --zsh
+```
 
 #### For Manual Installation
 
