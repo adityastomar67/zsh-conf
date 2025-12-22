@@ -398,15 +398,27 @@ Installer::run() {
 
     Log::success "Cleanup complete."
     echo
-    sleep 2
 
-    # Exit Summary
+    UI::header
+
+    # Exit Summary & Warning
     printf "\n${Color[G]}  Installation Finished Successfully! ${Color[Rst]}\n"
-    printf "  ${Color[K]}Restarting your terminal or run 'zsh' to see changes.${Color[Rst]}\n\n"
-    sleep 4
 
-    # Switch context
-    [[ $? -eq 0 ]] && clear && SHOW_CONFIG_WARNING=1 exec zsh || return
+    printf "\n"
+    printf \
+    "  ${Color[R]}[IMPORTANT]${Color[Rst]} ${Color[B]}Do not edit the main config file directly:${Color[Rst]}${Color[U]} ${Paths[REPO]}/zshrc${Color[Rst]}\n"
+    printf \
+    "              ${Color[B]}Instead, add custom settings in:${Color[Rst]}${Color[U]} ${Paths[RC]}${Color[Rst]}\n\n"
+
+    # --- ASK TO LAUNCH ---
+    if UI::confirm "Launch new shell now?"; then
+        clear
+        exec zsh
+    else
+        echo
+        Log::info "Please restart your terminal manually to see changes."
+        exit 0
+    fi
 }
 
 
@@ -415,6 +427,6 @@ Installer::run() {
 
 # Only run if this file is the main script being executed
 if [[ "$0" == "${(%):-%x}" ]]; then
-    Installer::run "$@"
+    # Installer::run "$@"
 fi
 

@@ -47,20 +47,8 @@ fi
 
 # ------------------------[  4. TERMINAL DECORATIONS  ]------------------------ #
 
-# A. Installation Warning (Runs only once after install)
-if [[ -n "$SHOW_CONFIG_WARNING" ]]; then
-    # Define temporary color variables for readability
-    local R=$'\e[1;31m'  # Red
-    local B=$'\e[34m'    # Blue
-    local U=$'\e[4m'     # Underline
-    local N=$'\e[0m'     # Reset
-
-    printf "\n"
-    printf "${R}[#IMP] ${B}Do not edit the main config file directly ${N}${U}~/.config/zsh-conf/zshrc${N}\n"
-    printf "       ${B}Instead, add any setting overrides in this file ${N}${U}~/.zshrc${N}\n\n"
-
-# B. Random Visuals (Run on every shell start)
-elif [[ -x "$HOME/.local/bin/colorscript" ]]; then
+#  Random Visuals (Run on every shell start)
+if [[ -x "$HOME/.local/bin/colorscript" ]]; then
     # Run random ASCII art script (distro-tube/dt-colorscripts)
     "$HOME/.local/bin/colorscript" -r
 elif command -v motivate >/dev/null; then
