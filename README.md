@@ -27,20 +27,20 @@
 
 Brief info about the configuration structure.
 
-| File | Description |
-| :--- | :--- |
-| `alias.zsh` | Various easy-to-use aliases for a smoother workflow |
-| `env.zsh` | Environment variables setup |
-| `function.zsh` | Functions that extend command capabilities |
-| `fzf.zsh` | FZF (Fuzzy Finder) functions and integration |
-| `icons.zsh` | Custom icon configurations |
-| `keys.zsh` | Zsh keybindings |
-| `nvim.zsh` | Multiple Neovim setup (allows easy config switching) |
-| `opts.zsh` | Zsh options and plugin settings |
-| `plugs.zsh` | Plugins and plugin manager setup |
-| `prompt.zsh` | Custom-made Zsh prompt |
-| `theme.zsh` | Zsh `LC_COLORS` and FZF option colors |
-| `tmux.zsh` | Tmux setup (**WIP**) |
+| File           | Description                                          |
+| :------------- | :--------------------------------------------------- |
+| `alias.zsh`    | Various easy-to-use aliases for a smoother workflow  |
+| `env.zsh`      | Environment variables setup                          |
+| `function.zsh` | Functions that extend command capabilities           |
+| `fzf.zsh`      | FZF (Fuzzy Finder) functions and integration         |
+| `icons.zsh`    | Custom icon configurations                           |
+| `keys.zsh`     | Zsh keybindings                                      |
+| `nvim.zsh`     | Multiple Neovim setup (allows easy config switching) |
+| `opts.zsh`     | Zsh options and plugin settings                      |
+| `plugs.zsh`    | Plugins and plugin manager setup                     |
+| `prompt.zsh`   | Custom-made Zsh prompt                               |
+| `theme.zsh`    | Zsh `LC_COLORS` and FZF option colors                |
+| `tmux.zsh`     | Tmux setup (**WIP**)                                 |
 
 ---
 
@@ -57,20 +57,20 @@ Brief info about the configuration structure.
 ## 🚀 Installation
 
 ### Recommended Way
+
 Noting really, if you have ZSH installed then you can just copy the `zsh-conf` folder to `$HOME/.config/` and `.zshrc, .zshenv` to your `$HOME` directory, and run `source $HOME/.zshrc`. All of the plugins will be downloaded automatically including oh-my-zsh(optional) as it is completely bootstrapped.<br>Or you can just clone the repo and run `./install.sh`
 
-*RECOMMENDED WAY*
-```bash
-curl -sL https://bit.ly/Fresh-Install | sh -s -- --zsh
-```
+_RECOMMENDED WAY_
 
 #### For Manual Installation
+
 > Make sure you have zsh installed and setup.
+
 ```bash
-git clone https://github.com/adityastomar67/zsh-conf.git /tmp/dots
-cp -r /tmp/dots/zsh $HOME/.config/
-cp -r /tmp/dots/.zshrc $HOME
-source $HOME/.zshrc
+cd /tmp
+curl -Lo install.zsh https://raw.githubusercontent.com/adityastomar67/zsh-conf/refs/heads/main/install.zsh
+chmod +x install.zsh
+./install.zsh
 ```
 
 ## ✨ Features
@@ -84,7 +84,6 @@ source $HOME/.zshrc
 - [x] Setup repo
 - [ ] Think real hard
 - [ ] Start typing
-
 
 ### 🧰 Tooling
 
