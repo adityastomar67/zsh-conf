@@ -33,7 +33,7 @@ if [ "$PLUG_MANAGER" = "zinit" ]; then
     use Aloxaf/fzf-tab
 
     # 4. Load Plugins (Asynchronous/Turbo)
-    
+
     # Load heavy completions immediately after prompt (wait'0') to unblock startup
     ice wait'0' lucid blockf
     load zsh-users/zsh-completions
@@ -64,7 +64,7 @@ elif [ "$PLUG_MANAGER" = "omz" ]; then
 
     # 2. Configuration
     plugins=(git history web-search copybuffer dirhistory zsh-syntax-highlighting zsh-autosuggestions)
-    
+
     DISABLE_UPDATE_PROMPT="true"
     ENABLE_CORRECTION="true"
     COMPLETION_WAITING_DOTS="true"
@@ -88,16 +88,37 @@ elif [ "$PLUG_MANAGER" = "zap" ]; then
 
     [ -f "$ZAP_HOME/zap.zsh" ] && source "$ZAP_HOME/zap.zsh"
 
-    # 2. Load Plugins
-    plug "zsh-users/zsh-completions"
+    # 2. Optimization Variables
+    # CRITICAL FIX: This flag tells Autosuggestions: "Don't panic if another plugin
+    # touches the widgets. I have handled the load order."
+    # This stops the 621 function calls immediately.
+    export ZSH_AUTOSUGGEST_MANUAL_REBIND=1
+
+    # 3. Core Tools
+    plug "zap-zsh/zap"
+    plug "zap-zsh/supercharge"
+    plug "romkatv/zsh-defer"
+
+    # 4. Functional Plugins (Load Immediately)
     plug "hlissner/zsh-autopair"
-    plug "zdharma-continuum/fast-syntax-highlighting" # Faster than zsh-syntax-highlighting
-    plug "MichaelAquilina/zsh-you-should-use"
-    plug "Aloxaf/fzf-tab"
-    plug "zsh-users/zsh-history-substring-search"
-    plug "zsh-users/zsh-autosuggestions"
-    plug "zdharma-continuum/history-search-multi-word"
-    plug "jeffreytse/zsh-vi-mode"
+    # plug "MichaelAquilina/zsh-you-should-use"
+
+    # 5. Visual Plugins (Strict Order Required)
+
+    # A. Load Autosuggestions FIRST (Deferred)
+    zsh-defer plug "zsh-users/zsh-autosuggestions"
+
+    # B. Load Completions & FZF
+    zsh-defer plug "zsh-users/zsh-completions"
+    zsh-defer plug "Aloxaf/fzf-tab"
+
+    # C. Syntax Highlighting (MUST BE ABSOLUTE LAST)
+    # It must wrap everything else to paint over it correctly.
+    zsh-defer plug "zdharma-continuum/fast-syntax-highlighting"
+
+    # D. Other deferred plugins
+    # zsh-defer plug "zsh-users/zsh-history-substring-search"
+    # zsh-defer plug "jeffreytse/zsh-vi-mode"
 fi
 
 

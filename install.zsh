@@ -252,9 +252,8 @@ Installer::dependencies() {
         Log::info "Analyzing Dependencies..."
         [[ ${#installed[@]} -gt 0 ]] && Log::info "Already installed: ${installed[*]}"
         echo
-        if UI::confirm "Install ${Color[Bld]}$package${Color[Rst]}?"; then
-            Log::pkg "Installing ${package}..."
 
+        if UI::confirm "Install ${Color[Bld]}$package${Color[Rst]}?"; then
             Sys::install "$package"
             UI::spinner $! "Installing ${package}..."
             wait $!

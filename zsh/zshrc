@@ -72,6 +72,16 @@ function _zsh_maintain_bytecode() {
         fi
     done
 
+    # Compile plugin files
+    for file in "$HOME/.local/share/zap/plugins/**/*.zsh"; do
+        if [[ -f "$file" ]]; then
+            # Compile if .zwc doesn't exist OR source is newer than .zwc
+            if [[ ! -f "${file}.zwc" || "$file" -nt "${file}.zwc" ]]; then
+                zcompile "$file"
+            fi
+        fi
+    done
+
     # Compile main entry points
     local main_rc="$HOME/.zshrc"
     if [[ -f "$main_rc" && ( ! -f "${main_rc}.zwc" || "$main_rc" -nt "${main_rc}.zwc" ) ]]; then

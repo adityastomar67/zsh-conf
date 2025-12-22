@@ -128,15 +128,6 @@ zle -N _toggle-left-prompt
 
 # ........................[  5. Completion System  ]........................ #
 
-# Initialize Completion System
-if [[ -n "$ZSH_PATH/zsh/zcompdump"(#qN.mh+24) ]]; then
-    compinit -d "$ZSH_PATH/zsh/zcompdump"
-else
-    compinit -C -d "$ZSH_PATH/zsh/zcompdump"
-fi
-
-_comp_options+=(globdots)
-
 # On-demand Rehash (Pacman cache check)
 zshcache_time="$(date +%s%N)"
 rehash_precmd() {
