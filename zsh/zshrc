@@ -50,7 +50,6 @@ done
 
 # Compiles .zsh files to .zwc in the background to speed up FUTURE shell starts.
 # Zsh automatically prefers the .zwc file if it is newer than the source.
-
 function _zsh_maintain_bytecode() {
     setopt LOCAL_OPTIONS NO_ALIASES  # 🔒 Critical
 

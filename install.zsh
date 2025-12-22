@@ -137,7 +137,6 @@ UI::spinner() {
     trap - SIGINT SIGTERM # Reset trap
 }
 
-
 UI::header() {
     sleep 2
     clear
