@@ -110,19 +110,33 @@ UI::confirm() {
 }
 
 UI::spinner() {
-    local pid=$1 msg="$2"
+    local pid=$1
+    local msg="$2"
+    # MacOS/BSD 'sleep' does not support fractional seconds in older versions,
+    # but modern macOS does. If issues arise, use 1 (though animation will be slow).
     local delay=0.1
     local spinstr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
 
-    tput civis # Hide cursor for smooth animation
+    # Ensure cursor is visible on exit (even if crashed)
+    trap "tput cnorm; exit" SIGINT SIGTERM
+
+    tput civis # Hide cursor
     while kill -0 "$pid" 2>/dev/null; do
-        printf "\r  ${Color[C]}%c${Color[Rst]}  %s" "$spinstr" "$msg"
+        # Extract the first character of spinstr
+        local temp=${spinstr:0:1}
+        # Print: Cyan spinner + standard text
+        printf "\r  ${Color[C]}%s${Color[Rst]}  %s" "$temp" "$msg"
+        # Rotate string
         spinstr=${spinstr:1}${spinstr:0:1}
         sleep $delay
     done
-    tput cnorm # Restore cursor
+
+    # Final cleanup
     printf "\r\033[K" # Clear line
+    tput cnorm # Restore cursor
+    trap - SIGINT SIGTERM # Reset trap
 }
+
 
 UI::header() {
     sleep 2
