@@ -8,7 +8,7 @@
 # Exit if disabled or if git is missing (Git is strictly required for installation)
 [[ "$MULTI_NEOVIM" != "Yes" ]] && return
 
-if ! command -v git >/dev/null; then
+if ! is_installed git; then
     printf "\n\033[0;33m[WARN] MULTI_NEOVIM='Yes' but 'git' is not installed.\033[0m\n"
     return
 fi
@@ -66,7 +66,7 @@ function nvims() {
         # Interactive Menu via FZF
         else
             # We check for fzf here, only when it's actually needed
-            if ! command -v fzf >/dev/null; then
+            if ! is_installed fzf; then
                 echo "Error: fzf is required for the interactive menu."
                 echo "Use 'nvims -h' or install fzf."
                 return 1

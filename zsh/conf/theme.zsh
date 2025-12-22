@@ -19,8 +19,8 @@ setup_theme_sh() {
     [[ ":$PATH:" != *":$bin_dir:"* ]] && export PATH="$bin_dir:$PATH"
 
     # Guard: Install if missing (Requires curl)
-    if ! command -v theme.sh >/dev/null; then
-        if command -v curl >/dev/null; then
+    if ! is_installed theme.sh; then
+        if is_installed curl; then
             echo "Installing theme.sh..."
             mkdir -p "$bin_dir"
             curl -fsSL 'https://raw.githubusercontent.com/adityastomar67/theme.sh/master/bin/theme.sh' -o "$theme_bin"
@@ -32,7 +32,7 @@ setup_theme_sh() {
     fi
 
     # Guard: Abort if installation failed
-    command -v theme.sh >/dev/null || return 1
+    is_installed theme.sh || return 1
 
     # Load history
     if [[ -r "$HOME/.theme_history" ]]; then
@@ -67,13 +67,13 @@ setup_wallpapers() {
     [[ -d "$wall_dir" ]] && return
 
     # Guard: Exit if git is missing
-    if ! command -v git >/dev/null; then
+    if ! is_installed git; then
         echo "Error: 'git' is required to download wallpapers." >&2
         return 1
     fi
 
     # Notify User
-    if command -v dunstify >/dev/null; then
+    if is_installed dunstify; then
         dunstify -u low -i ~/.config/bspwm/assets/reload.svg 'Custom Walls' "Downloading wallpapers..."
     else
         echo ":: Downloading wallpapers..."
@@ -85,7 +85,7 @@ setup_wallpapers() {
     # Post-Processing
     (
         cd "$wall_dir" || exit
-        
+
         # Flatten directory structure
         [[ -d "Static" ]] && mv Static/* .
 
@@ -99,12 +99,12 @@ setup_wallpapers() {
     )
 
     # Success Notification
-    if command -v dunstify >/dev/null; then
+    if is_installed dunstify; then
         dunstify -u low -i ~/.config/bspwm/assets/reload.svg 'Custom Walls' "Setup complete."
     fi
 
     # Apply Wallpaper
-    if command -v RandomWall >/dev/null; then
+    if is_installed RandomWall; then
         RandomWall
     fi
 }

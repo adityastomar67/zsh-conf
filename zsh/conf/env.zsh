@@ -2,6 +2,25 @@
 # This file sets global variables, paths, and application defaults.
 
 
+# ........................[  0. Helpers  ]........................ #
+
+# Helper: Check if a program is installed (Arch Linux specific check)
+typeset -gA _installed_cache
+is_installed() {
+    local cmd="$1"
+    # Return from cache if set
+    [[ -n "${_installed_cache[$cmd]}" ]] && return "${_installed_cache[$cmd]}"
+
+    # Check system
+    command -v "$cmd" &>/dev/null
+    local ret=$?
+
+    # Update cache and return original status
+    _installed_cache[$cmd]=$ret
+    return $ret
+}
+
+
 # ........................[  1. System & Locale  ]........................ #
 
 export TERM="xterm-256color"

@@ -36,7 +36,7 @@ z_prompt() {
     # --[ VCS Configuration ]--
     zstyle ':vcs_info:*' enable git
     zstyle ':vcs_info:*' check-for-changes true
-    
+
     # Format: (branch) in magenta/blue
     zstyle ':vcs_info:git:*' formats " %{$fg[blue]%}(%{$fg[red]%}%m%u%c%{$fg[yellow]%}%{$fg[magenta]%} %b%{$fg[blue]%}) "
 
@@ -66,7 +66,7 @@ z_prompt() {
 10k_prompt() {
     # --[ P10K Toggles ]--
     function _toggle-prompt() {
-        if command -v p10k >/dev/null; then
+        if is_installed p10k; then
             p10k display "*/$1"=hide,show
         fi
     }
@@ -84,7 +84,7 @@ z_prompt() {
     zstyle ':vcs_info:git+set-message:*' hooks git-untracked
     zstyle ':vcs_info:git*:*' formats '[%b%m%c%u] '
     zstyle ':vcs_info:git*:*' actionformats '[%b|%a%m%c%u] '
-    
+
     zstyle ':vcs_info:hg*:*' formats '[%m%b] '
     zstyle ':vcs_info:hg*:*' actionformats '[%b|%a%m] '
     zstyle ':vcs_info:hg*+gen-hg-bookmark-string:*' hooks hg-bookmarks
@@ -101,7 +101,7 @@ z_prompt() {
     function -update-window-title() {
         emulate -L zsh
         local title_content
-        
+
         # Determine content based on context (tmux vs normal)
         if [[ $1 == "precmd" ]]; then
             if [[ HISTCMD_LOCAL -eq 0 ]]; then
@@ -116,10 +116,10 @@ z_prompt() {
             local trimmed_cmd="${2[(wr)^(*=*|mosh|ssh|sudo)]}"
             title_content="$([ -z "$TMUX" ] && echo "$(basename "$PWD") > ")$trimmed_cmd"
         fi
-        
+
         -set-window-title "$title_content"
     }
-    
+
     add-zsh-hook precmd  -update-window-title
     add-zsh-hook preexec -update-window-title
 
@@ -132,7 +132,7 @@ z_prompt() {
         if [ $ZSH_START_TIME ]; then
             local delta=$(($SECONDS - $ZSH_START_TIME))
             local elapsed=""
-            
+
             # Calc time
             local d=$((delta / 86400))
             local h=$(((delta - d * 86400) / 3600))
@@ -142,7 +142,7 @@ z_prompt() {
             [ "$d" != "0" ] && elapsed="${d}d"
             [ "$h" != "0" ] && elapsed="${elapsed}${h}h"
             [ "$m" != "0" ] && elapsed="${elapsed}${m}m"
-            
+
             if [ -z "$elapsed" ]; then
                 s="$(print -f "%.2f" $s)s"
             else
@@ -161,8 +161,8 @@ z_prompt() {
     # --[ Utilities ]--
     function -auto-ls-after-cd() {
         if [ "$ZSH_EVAL_CONTEXT" = "toplevel:shfunc" ]; then
-            if command -v eza &>/dev/null; then eza --icons -a
-            elif command -v exa &>/dev/null; then exa --icons -a
+            if is_installed eza; then eza --icons -a
+            elif is_installed exa; then exa --icons -a
             else ls -a; fi
         fi
     }
@@ -210,14 +210,14 @@ z_prompt() {
         [[ "$TERM" =~ "tmux" ]] && [[ -n "$TMUX" ]] && in_tmux='tmux'
 
         local lvl=1
-        if command -v pstree >/dev/null; then
+        if is_installed pstree; then
             lvl="$(($(pstree -s $$ | grep -wo 'zsh' | wc -l)-1))"
         fi
         [[ $USER == "root" ]] && lvl="$(($lvl-1))"
-        
+
         local suffix='%(!.%F{yellow}%n%f.)%(!.%F{yellow}.%F{red})'$(printf '\u276f%.0s' {1..$lvl})'%f'
         export PS1="%F{green}${SSH_TTY:+%n@%m}%f%B${SSH_TTY:+:}%b%F{blue}%B%1~%b%F{yellow}%B%(1j.*.)%(?..!)%b%f %B%F{yellow}${in_tmux}%f${suffix}%b "
-        
+
         # Fix TLE indentation glitch in TMUX
         [[ -n "$in_tmux" ]] && export ZLE_RPROMPT_INDENT=0
     }
@@ -233,10 +233,10 @@ z_prompt() {
 gh0st_prompt() {
     # Helper: Git Branch
     git_prompt() {
-        command -v git >/dev/null 2>&1 || return
+        is_installed git || return
         local branch="$(git symbolic-ref HEAD 2> /dev/null | cut -d'/' -f3-)"
         [ -z "$branch" ] && return
-        
+
         # Truncate long branch names
         local branch_truncated="${branch:0:30}"
         (( ${#branch} > ${#branch_truncated} )) && branch="${branch_truncated}..."

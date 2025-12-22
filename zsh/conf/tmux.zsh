@@ -8,7 +8,7 @@
 [[ "$USE_TMUX" != "Yes" ]] && return
 
 # Exit with a warning if enabled but tmux binary is missing
-if ! command -v tmux &>/dev/null; then
+if ! is_installed tmux; then
     printf "\n\033[0;33m[WARN] USE_TMUX='Yes' but 'tmux' is not installed.\033[0m\n"
     return
 fi
@@ -39,9 +39,9 @@ function _tmux_launch() {
 
 
     # --- Logic: Check Sessions ---
-    
+
     if tmux has-session 2>/dev/null; then
-        
+
         # Count detached vs total sessions
         local detached_count=$(tmux list-sessions -F "#{session_attached}" | grep "^0$" | wc -l)
         local total_count=$(tmux list-sessions | wc -l)
@@ -58,7 +58,7 @@ function _tmux_launch() {
         clear
         print -P "%F{green}== Existing Tmux Sessions ==%f"
         echo ""
-        
+
         # Pretty print sessions
         tmux list-sessions -F "#{?session_attached,#[fg=green],#[fg=red]}● #[fg=default] #S #[fg=grey](Created: #{session_created_string})#{?session_attached, #[fg=yellow][Attached],}"
         echo ""

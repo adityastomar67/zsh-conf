@@ -1,5 +1,6 @@
 # ------------------------[  ZSH FUNCTIONS CONFIGURATION  ]------------------------ #
 # This file defines custom shell functions and utilities.
+# Works on: Arch Linux & macOS
 #
 # NOTE: To disable functions, set USE_FUNCTION="No" in ~/.zshenv
 
@@ -12,316 +13,590 @@
 # Load FZF integration if available
 [ -f "$ZSH_PATH/zsh/conf/fzf.zsh" ] && source "$ZSH_PATH/zsh/conf/fzf.zsh" &> /dev/null
 
+# ---------------------------------------------------------
+#  HELPER: Global Installation Check (Cached)
+#  Usage: is_installed <program_name>
+#  Coming from env.zsh
+# ---------------------------------------------------------
 
 # ........................[  2. Core Overrides & Wrappers  ]........................ #
 
-# Safer rm: Removes directories with -rf automatically
-rm() {
+safe_rm() {
+    local flags=""
+    local -a targets
+
+    # Separate actual files/dirs from flags
     for arg in "$@"; do
-        if [ -d "$arg" ]; then
-            command rm -rf "$arg"
-            continue
+        if [[ "$arg" == -* ]]; then
+            flags="$flags $arg"
+        else
+            targets+=("$arg")
         fi
-        command rm "$arg"
+    done
+
+    if [[ ${#targets[@]} -eq 0 ]]; then
+        command rm $flags
+        return
+    fi
+
+    for target in "${targets[@]}"; do
+        if [[ "$target" == "/" || "$target" == "$HOME" ]]; then
+            echo "Error: Protected path '$target'. Operation aborted." >&2
+            return 1
+        fi
+
+        if [[ -d "$target" ]]; then
+            echo -n ":: Directory detected: '$target'. Remove recursively? [y/N] "
+            local confirm
+            if [ -n "$ZSH_VERSION" ]; then
+                read -k 1 confirm; echo
+            else
+                read -n 1 confirm; echo
+            fi
+
+            if [[ "$confirm" =~ ^[yY]$ ]]; then
+                command rm -rf $flags "$target"
+                echo "   Deleted '$target'."
+            else
+                echo "   Skipped."
+            fi
+        else
+            command rm $flags "$target"
+        fi
     done
 }
 
-# Advanced Editor Launcher (Supports Multi-Config Neovim)
 v() {
-    if [ "$MULTI_NEOVIM" = "Yes" ] && [ $# -gt 1 ] && [ ! -f "$1" ] && [ ! -d "$1" ]; then
+    local app_name=""
+    local use_sudo="no"
+    local file="${1:-.}"
+
+    if [[ "$MULTI_NEOVIM" == "Yes" ]]; then
         case "$1" in
-            -a | --astro)  NVIM_APPNAME=AstroNvim nvim "$2" ;;
-            -l | --lazy)   NVIM_APPNAME=LazyVim nvim "$2"   ;;
-            -c | --chad)   NVIM_APPNAME=NvChad nvim "$2"    ;;
-            -n | --nv)     NVIM_APPNAME=LazyNV nvim "$2"    ;;
-            *)             echo "No config found for the choice!" >&2 ;;
+            -a | --astro)  app_name="AstroNvim" ;;
+            -l | --lazy)   app_name="LazyVim"   ;;
+            -c | --chad)   app_name="NvChad"    ;;
+            -n | --nv)     app_name="LazyNV"    ;;
         esac
-    else
-        local file="${1:-.}"
-        if [[ -e "$file" && ! -w "$file" ]]; then
-            sudoedit "$file"
-        else
-            nvim "$file"
+
+        if [[ -n "$app_name" ]]; then
+            shift
+            file="${1:-.}"
         fi
     fi
-}
 
-# Use Git’s colored diff when available
-if command -v git &>/dev/null; then
-    diff() {
-        git diff --no-index --color-words "$@"
-    }
-fi
+    if [[ -e "$file" && ! -w "$file" ]]; then
+        use_sudo="yes"
+    elif [[ ! -e "$file" ]]; then
+        local parent=$(dirname "$file")
+        [[ -d "$parent" && ! -w "$parent" ]] && use_sudo="yes"
+    fi
+
+    if [[ "$use_sudo" == "yes" ]]; then
+        if [[ -n "$app_name" ]]; then
+            echo ":: Opening with sudo ($app_name)..."
+            sudo -E env NVIM_APPNAME="$app_name" nvim "$@"
+        else
+            echo ":: Opening with sudo..."
+            sudoedit "$@"
+        fi
+    else
+        [[ -n "$app_name" ]] && export NVIM_APPNAME="$app_name"
+        nvim "$@"
+    fi
+}
 
 
 # ........................[  3. File & Directory Operations  ]........................ #
 
-# Smart Directory Creation: mkdir -p then touch file
-touchdir() { mkdir -p "$(dirname "$1")" && touch "$1"; }
+mkfile() {
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: mkfile <path/to/file>" >&2
+        return 1
+    fi
 
-# Create dir and enter it
-takedir() { mkdir -p "$@" && cd "${@:$#}"; }
+    for file in "$@"; do
+        mkdir -p "$(dirname "$file")"
+        if touch "$file"; then
+            echo ":: Created: $file"
+        else
+            echo "Error: Failed to create '$file'" >&2
+        fi
+    done
+}
 
-# Smart 'Take': Clones git repo or creates dir
-take() {
-    if [[ $1 =~ ^([A-Za-z0-9]\+@|https?|git|ssh|ftps?|rsync).*\.git/?$ ]]; then
-        git clone "$1"
-        cd "$(basename "${1%%.git}")"
+mkcd() {
+    local dir="$1"
+    if [[ -z "$dir" ]]; then
+        echo "Usage: mkcd <directory>" >&2
+        return 1
+    fi
+
+    if mkdir -p "$dir" && cd "$dir"; then
+        echo ":: Created and entered: $(pwd)"
     else
-        takedir "$1"
+        echo "Error: Could not create directory '$dir'" >&2
+        return 1
     fi
 }
 
-# Go Up Multiple Directories (e.g., up 3)
+take() {
+    local source="$1"
+    local target="$2"
+    local protocol_regex='^(https?|git|ssh|ftps?|rsync)://|^[a-zA-Z0-9]+@'
+
+    if [[ "$source" =~ $protocol_regex ]]; then
+        if [[ -z "$target" ]]; then
+            target=$(basename "${source%%.git}")
+        fi
+        git clone "$source" "$target" && cd "$target"
+    else
+        target="$source"
+        mkdir -p "$target" && cd "$target"
+    fi
+}
+
 up() {
-    local limit="${1:-1}"
+    local levels="${1:-1}"
+    if [[ ! "$levels" =~ ^[0-9]+$ ]]; then
+        echo "Error: Argument must be a number." >&2
+        return 1
+    fi
+
     local d=""
-    for ((i = 1; i <= limit; i++)); do
+    for ((i = 1; i <= levels; i++)); do
         d="../$d"
     done
-    cd "$d" || echo "Couldn't go up $limit dirs."
-}
 
-# Smart Extraction
-ex() {
-    if [ -f "$1" ]; then
-        case "$1" in
-            *.tar.bz2) tar xjf "$1" ;;
-            *.tar.gz)  tar xzf "$1" ;;
-            *.bz2)     bunzip2 "$1" ;;
-            *.rar)     unrar x "$1" ;;
-            *.gz)      gunzip "$1" ;;
-            *.tar)     tar xf "$1" ;;
-            *.tbz2)    tar xjf "$1" ;;
-            *.tgz)     tar xzf "$1" ;;
-            *.zip)     unzip "$1" ;;
-            *.Z)       uncompress "$1" ;;
-            *.7z)      7z x "$1" ;;
-            *.deb)     ar x "$1" ;;
-            *.tar.xz)  tar xf "$1" ;;
-            *.tar.zst) unzstd "$1" ;;
-            *)         echo "'$1' cannot be extracted via extract()" ;;
-        esac
+    if cd "$d"; then
+        echo ":: Now at $(pwd)"
     else
-        echo "'$1' is not a valid file"
+        echo "Error: Could not go up $levels directories." >&2
+        return 1
     fi
 }
 
-# Calculate Size (File or Directory)
-fs() {
-    if du -b /dev/null >/dev/null 2>&1; then
-        local arg=-sbh
-    else
-        local arg=-sh
+extract() {
+    local file="$1"
+    if [[ -z "$file" ]] || [[ ! -f "$file" ]]; then
+        echo "Error: '$file' is not a valid file." >&2
+        return 1
     fi
+
+    echo ":: Extracting '$file'..."
+
+    case "$file" in
+        *.tar.bz2|*.tbz2)   tar xjf "$file"    ;;
+        *.tar.gz|*.tgz)     tar xzf "$file"    ;;
+        *.tar.xz|*.txz)     tar xf  "$file"    ;;
+        *.tar.zst)          tar --zstd -xf "$file" 2>/dev/null || tar -I zstd -xf "$file" ;;
+        *.tar)              tar xf  "$file"    ;;
+        *.rar)              unrar x "$file"    ;;
+        *.zip)              unzip   "$file"    ;;
+        *.7z)               7z x    "$file"    ;;
+        *.bz2)              bunzip2 "$file"    ;;
+        *.gz)               gunzip  "$file"    ;;
+        *.xz)               unxz    "$file"    ;;
+        *.Z)                uncompress "$file" ;;
+        *)
+            echo "Error: '$file' cannot be extracted." >&2
+            return 1
+            ;;
+    esac
+}
+
+dir_usage() {
+    # Optimized: We store the preferred flags in a global variable so we don't
+    # check `du` capabilities every time the function runs.
+    if [[ -z "$_DU_OPTS" ]]; then
+        if du -b /dev/null >/dev/null 2>&1; then
+            _DU_OPTS="-sbh" # GNU/Linux
+        else
+            _DU_OPTS="-sh"  # macOS/BSD
+        fi
+    fi
+
     if [[ -n "$@" ]]; then
-        du $arg -- "$@"
+        du $_DU_OPTS -- "$@" | sort -rh
     else
-        du $arg .[^.]* ./*
+        du $_DU_OPTS .[^.]* ./* 2>/dev/null | sort -rh
     fi
 }
 
-# Sort File Content Unique
-srt() {
-    mv "$1" "$1.bak"
-    sort "$1.bak" | uniq > "$1"
-    rm "$1.bak"
+sort_uniq() {
+    local file="$1"
+    if [[ ! -f "$file" ]]; then
+        echo "Error: File '$file' not found." >&2
+        return 1
+    fi
+
+    mv "$file" "$file.bak" && \
+    sort "$file.bak" | uniq > "$file" && \
+    rm "$file.bak" && \
+
+    echo ":: Sorted and removed duplicates from '$file'."
 }
 
-# Delete files recursively by name
-del() {
-    find . -type f -name "$1" -ls -delete
+rm_pattern() {
+    local pattern="$1"
+    if [[ -z "$pattern" ]]; then
+        echo "Usage: rm_pattern <filename_pattern>" >&2
+        return 1
+    fi
+
+    echo ":: Searching for files named '$pattern'..."
+    local files_found=$(find . -type f -name "$pattern" -print)
+
+    if [[ -z "$files_found" ]]; then
+        echo "No files found matching '$pattern'."
+        return 0
+    fi
+
+    echo "$files_found"
+    echo ""
+    echo -n ":: Delete these files? [y/N] "
+
+    local confirm
+    if [ -n "$ZSH_VERSION" ]; then
+        read -q confirm; echo ""
+    else
+        read -n 1 confirm; echo ""
+    fi
+
+    if [[ "$confirm" =~ ^[yY]$ ]]; then
+        find . -type f -name "$pattern" -delete
+        echo ":: Deleted."
+    else
+        echo ":: Aborted."
+    fi
 }
 
-# Empty Trash
 empty_trash() {
-    [ ! -d "$HOME/.Trash/files" ] && return
-    printf "%s\n" "EMPTYING TRASH"
-    sudo command rm -rf "$HOME/.Trash/files/*"
+    local trash_dir=""
+
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        trash_dir="$HOME/.Trash"
+    else
+        trash_dir="${XDG_DATA_HOME:-$HOME/.local/share}/Trash"
+    fi
+
+    if [[ ! -d "$trash_dir" ]]; then
+        echo ":: Trash directory not found at: $trash_dir"
+        return 0
+    fi
+
+    if [[ -z "$(ls -A "$trash_dir" 2>/dev/null)" ]]; then
+        echo ":: Trash is already empty."
+        return 0
+    fi
+
+    echo ":: Inspecting trash..."
+    local size=$(du -sh "$trash_dir" 2>/dev/null | awk '{print $1}')
+
+    echo -n ":: Empty trash and reclaim $size? [y/N] "
+
+    local confirm
+    if [ -n "$ZSH_VERSION" ]; then
+        read -q confirm; echo ""
+    else
+        read -n 1 confirm; echo ""
+    fi
+
+    if [[ "$confirm" =~ ^[yY]$ ]]; then
+        if [[ "$OSTYPE" != "darwin"* ]]; then
+            rm -rf "${trash_dir}/files/"* "${trash_dir}/info/"* 2>/dev/null
+        else
+            rm -rf "${trash_dir}/"* 2>/dev/null
+        fi
+        echo ":: Trash emptied. Reclaimed $size."
+    else
+        echo ":: Aborted."
+    fi
 }
 
 
 # ........................[  4. Developer Tools  ]........................ #
 
-# Universal Code Runner
-prog() {
-    if [ -f "$1" ]; then
-        case "$1" in
-            *.cpp)  g++ -std=c++20 "$1" && ./a.out && rm -f a.out ;;
-            *.c)    gcc "$1" && ./a.out && rm -f a.out ;;
-            *.java) javac "$1" && java "$(basename -s .java "$1")" && rm -f *.class ;;
-            *.py)   python "$1" ;;
-            *.sh)   bash "$1" ;;
-            *.pl)   perl "$1" ;;
-            *.rb)   ruby "$1" ;;
-            *.go)   go run "$1" ;;
-            *.js)   node "$1" ;;
-            *.php)  php "$1" ;;
-            *)      echo "'$1' is not a supported file type." ;;
-        esac
+run_code() {
+    local file="$1"
+    if [[ -z "$file" ]] || [[ ! -f "$file" ]]; then
+        echo "Error: File '$file' not found." >&2
+        return 1
+    fi
+
+    shift
+    local base="${file%.*}"
+    local tmp_bin="./.tmp_exec_${base}"
+
+    echo ":: Running '$file'..."
+
+    case "$file" in
+        *.cpp)  g++ -std=c++20 "$file" -o "$tmp_bin" && "$tmp_bin" "$@" && rm -f "$tmp_bin" ;;
+        *.c)    gcc "$file" -o "$tmp_bin" && "$tmp_bin" "$@" && rm -f "$tmp_bin" ;;
+        *.rs)   rustc "$file" -o "$tmp_bin" && "$tmp_bin" "$@" && rm -f "$tmp_bin" ;;
+        *.go)   go run "$file" "$@" ;;
+        *.java) javac "$file" && java "$base" "$@" && rm -f "${base}.class" ;;
+        *.py)   python3 "$file" "$@" ;;
+        *.sh)   bash    "$file" "$@" ;;
+        *.pl)   perl    "$file" "$@" ;;
+        *.rb)   ruby    "$file" "$@" ;;
+        *.js)   node    "$file" "$@" ;;
+        *.ts)   ts-node "$file" "$@" ;;
+        *.php)  php     "$file" "$@" ;;
+        *.lua)  lua     "$file" "$@" ;;
+        *.md)   glow    "$file" ;;
+        *)
+            echo "Error: '$file' format not supported by run_code()." >&2
+            return 1
+            ;;
+    esac
+}
+
+mkrepo() {
+    local remote_url="$1"
+
+    if [[ -d ".git" ]]; then
+        echo "Error: This directory is already a git repository." >&2
+        return 1
+    fi
+
+    echo ":: Initializing Git repository..."
+    git init --quiet
+
+    if [[ ! -f "README.md" ]]; then
+        echo "# $(basename "$PWD")" > README.md
+    fi
+
+    if [[ ! -f ".gitignore" ]]; then
+        printf ".DS_Store\n.vscode/\n*.log\nnode_modules/\n__pycache__/\n" > .gitignore
+    fi
+
+    git branch -m main 2>/dev/null || git checkout -b main 2>/dev/null
+    git add .
+    git commit -m "Initial Commit" --quiet
+    echo ":: Committed files."
+
+    if [[ -n "$remote_url" ]]; then
+        echo ":: Linking to remote: $remote_url"
+        git remote add origin "$remote_url"
+        if git push -u origin main; then
+            echo ":: 🚀 Repository is live!"
+        else
+            echo "Error: Failed to push to remote. Check URL or Authentication." >&2
+            return 1
+        fi
     else
-        echo "'$1' is not a valid file"
+        echo ":: Repo initialized locally. (Add remote later via 'git remote add origin <url>')"
     fi
 }
 
-# Initialize Git Repository
-repo() {
-    git init
-    [ ! -e "./README.md" ] && touch README.md
-    [ ! -e "./.gitignore" ] && touch .gitignore
-    git branch -m main
-    git remote add origin "$1"
-    git add .
-    git commit -m "First Commit"
-    git push origin HEAD
-}
+glog() {
+    if ! is_installed fzf; then echo "Error: 'fzf' is not installed." >&2; return 1; fi
+    if ! git rev-parse --is-inside-work-tree &>/dev/null; then echo "Error: Not a git repository." >&2; return 1; fi
 
-# Git Log Browser (Requires fzf)
-git_log() {
-    git log --graph --color=always --format="%C(auto)%h%d %s %C(black)%C(bold)%cr" "$@" |
-    fzf --ansi --no-sort --reverse --tiebreak=index --toggle-sort=\` \
-        --bind "ctrl-m:execute:echo '{}' | grep -o '[a-f0-9]\{7\}' | head -1 | xargs -I % sh -c 'git show --color=always % | less -R'"
-}
+    local fmt="%C(auto)%h%d %C(blue)%an %C(reset)%s %C(black)%C(bold)%cr"
+    local get_hash="grep -o '[a-f0-9]\{7,\}' | head -1"
 
-# Lazygit Integration (Changes dir on exit)
-if command -v lazygit &>/dev/null; then
-    lz() {
-        export LAZYGIT_NEW_DIR_FILE=~/.lazygit/newdir
-        lazygit "$@"
-        if [ -f "$LAZYGIT_NEW_DIR_FILE" ]; then
-            cd "$(cat "$LAZYGIT_NEW_DIR_FILE")"
-            rm -f "$LAZYGIT_NEW_DIR_FILE" >/dev/null
+    # --- Cached Clipboard Detection ---
+    local copy_cmd=""
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        copy_cmd="pbcopy"
+    else
+        if is_installed wl-copy; then copy_cmd="wl-copy"
+        elif is_installed xclip; then copy_cmd="xclip -sel c"
+        elif is_installed xsel; then copy_cmd="xsel -ib"
         fi
-    }
-fi
+    fi
 
-# Simple Python HTTP Server
-server() {
-    local port="${1:-8000}"
-    sleep 1 && open "http://localhost:${port}/" &
-    python -c $'import SimpleHTTPServer;\nmap = SimpleHTTPServer.SimpleHTTPRequestHandler.extensions_map;\nmap[""] = "text/plain";\nfor key, value in map.items():\n\tmap[key] = value + ";charset=UTF-8";\nSimpleHTTPServer.test();' "$port"
+    git log --graph --color=always --format="$fmt" "$@" | \
+    fzf --ansi --no-sort --reverse --tiebreak=index \
+        --preview "echo {} | $get_hash | xargs -I % git show --color=always %" \
+        --preview-window=right:60%:wrap \
+        --bind "enter:execute(echo {} | $get_hash | xargs -I % sh -c 'git show --color=always % | less -R')" \
+        --bind "ctrl-y:execute-silent(echo {} | $get_hash | tr -d '\n' | $copy_cmd)+abort" \
+        --header "Enter: View | Ctrl-Y: Copy Hash"
 }
 
-# Cheat Sheet Lookup
-cht() {
-    local options=${2:-Q}
-    curl cht.sh/"$1"?"$options"
+# --- Lazygit Wrapper (Startup Optimized) ---
+# Removed the top-level 'if command -v lazygit' check to save load time.
+# The check now happens only when you run 'lg'.
+lg() {
+    if ! is_installed lazygit; then
+        echo "Error: 'lazygit' is not installed." >&2
+        return 1
+    fi
+
+    local lg_config_file="${TMPDIR:-/tmp}/lazygit-chdir"
+    LAZYGIT_NEW_DIR_FILE="$lg_config_file" command lazygit "$@"
+
+    if [[ -f "$lg_config_file" ]]; then
+        local target_dir=$(cat "$lg_config_file")
+        if [[ -d "$target_dir" && "$target_dir" != "$PWD" ]]; then
+            cd "$target_dir"
+            echo ":: Switched to: $target_dir"
+        fi
+        rm -f "$lg_config_file"
+    fi
 }
 
 
 # ........................[  5. Utilities & Stats  ]........................ #
 
-# Stopwatch
 stopwatch() {
-    local date1=$(date +%s)
+    local start=$(date +%s)
+    printf "\e[?25l"
+    trap 'printf "\e[?25h\n"; return' INT
+
     while true; do
-        echo -ne "$(date -u --date @$(($(date +%s) - date1)) +%H:%M:%S)\r"
+        local now=$(date +%s)
+        local diff=$((now - start))
+
+        local h=$((diff / 3600))
+        local m=$(( (diff % 3600) / 60 ))
+        local s=$((diff % 60))
+
+        printf "\r\e[K  %02d:%02d:%02d" $h $m $s
         sleep 0.1
     done
 }
 
-# Countdown (Usage: countdown 60)
+
 countdown() {
-    local date1=$(($(date +%s) + $1))
-    while [ "$date1" -ge $(date +%s) ]; do
-        echo -ne "$(date -u --date @$(($date1 - $(date +%s))) +%H:%M:%S)\r"
+    local total_seconds=0
+
+    if [[ $# -eq 0 ]]; then
+        total_seconds=60
+    else
+        for arg in "$@"; do
+            case "$arg" in
+                *h) total_seconds=$((total_seconds + ${arg%h} * 3600)) ;;
+                *m) total_seconds=$((total_seconds + ${arg%m} * 60)) ;;
+                *s) total_seconds=$((total_seconds + ${arg%s})) ;;
+                *[0-9]*) total_seconds=$((total_seconds + arg)) ;;
+                *) echo "Error: Unknown format '$arg'." >&2; return 1 ;;
+            esac
+        done
+    fi
+
+    if (( total_seconds <= 0 )); then echo "Error: Time must be > 0." >&2; return 1; fi
+
+    local start=$(date +%s)
+    local end=$((start + total_seconds))
+
+    printf "\e[?25l"
+    trap 'printf "\e[?25h\n"; return' INT
+    echo ":: Timer started for ${total_seconds} seconds..."
+
+    while (( $(date +%s) < end )); do
+        local now=$(date +%s)
+        local left=$((end - now))
+        local h=$((left / 3600))
+        local m=$(( (left % 3600) / 60 ))
+        local s=$((left % 60))
+
+        printf "\r\e[K  %02d:%02d:%02d" $h $m $s
         sleep 0.1
     done
+
+    printf "\r\e[K  00:00:00\n"
+    printf "\e[?25h\a"
+    echo ":: Time is up!"
 }
 
-# Weather Check
-get_temperature() {
-    local response
-    response=$(curl --silent 'https://api.openweathermap.org/data/2.5/weather?id=5110253&units=imperial&appid=<your_api_key>')
-    local status=$(echo "$response" | jq -r '.cod')
-    case $status in
-        200)
-            printf "Location: %s %s\n" "$(echo "$response" | jq '.name') $(echo "$response" | jq '.sys.country')"
-            printf "Forecast: %s\n" "$(echo "$response" | jq '.weather[].description')"
-            printf "Temperature: %.1f°F\n" "$(echo "$response" | jq '.main.temp')"
-            ;;
-        *) echo "Error: $status" ;;
-    esac
+weather() {
+    curl -s "wttr.in/${1:-}?mQ"
 }
 
-# Most Used Commands Stats
-hstat() {
-    fc -l 1 | awk '{ CMD[$2]++; count++; } END { for (a in CMD) print CMD[a] " " CMD[a]*100/count "% " a }' | grep -v "./" | sort -nr | head -20 | column -c3 -s " " -t | nl
-}
-
-# Currency Rate (USD -> RUB default)
-rate() {
-    local from=${1:-usd}
-    local to=${2:-rub}
-    local erapi_key="71afe1269a1f5f7206152de2b43a9819"
-    local rate=$(curl -s "http://api.exchangeratesapi.io/v1/latest?access_key=${erapi_key}" | jq .rates.${(U)to})
-    echo "1 ${(U)from} is ${rate} ${(U)to}"
-}
-
-# Crypto Rate (Bitcoin -> USD default)
-crate() {
-    local coin=${1:-bitcoin}
-    local currency=${2:-usd}
-    local crate=$(curl -s "https://api.coingecko.com/api/v3/simple/price?ids=${coin}&vs_currencies=${currency}" | jq .${coin}.${currency})
-    echo "1 ${coin} is ${crate} $currency"
+hist_stats() {
+    fc -l 1 | awk '{
+        cmd = $2
+        if (cmd == "sudo") cmd = $3
+        if (cmd !~ /^(\.\/|[A-Z]+=)/ && cmd != "") {
+            CMD[cmd]++
+            count++
+        }
+    }
+    END {
+        for (a in CMD) print CMD[a] " " a " " count
+    }' | \
+    sort -nr | head -15 | \
+    awk '{
+        count = $1; cmd = $2; total = $3
+        percent = (count / total) * 100
+        bar_len = int(percent / 2)
+        bar = ""; for (i=0; i<bar_len; i++) bar = bar "▇"
+        printf "%4d  %5.1f%%  %-12s  %s\n", count, percent, cmd, bar
+    }'
 }
 
 
 # ........................[  6. Miscellaneous  ]........................ #
 
-# Default Greeter (Color Bars)
-_default_greeter() {
-    local c1="\033[1;30m" c2="\033[1;31m" c3="\033[1;32m" c4="\033[1;33m"
-    local c5="\033[1;34m" c6="\033[1;35m" c7="\033[1;36m" c8="\033[1;37m"
-    local reset="\033[1;0m"
-    printf "\n $c1▇▇ $c2▇▇ $c3▇▇ $c4▇▇ $c5▇▇ $c6▇▇ $c7▇▇ $c8▇▇ $reset\n\n"
-}
+zconf() {
+    local config_file="${ZDOTDIR:-$HOME}/.zshrc"
+    local editor="${EDITOR:-${VISUAL:-vim}}"
 
-# Edit & Source Zshrc
-editZsh() {
-    [ ! -f ~/.zshrc ] && return
-    nvim ~/.zshrc
-    source ~/.zshrc
-    echo "New .zshrc sourced."
-}
-
-# Conda Initialization
-cond() {
-    __conda_setup="$('/opt/miniconda3/bin/conda' 'shell.bash' 'hook' 2>/dev/null)"
-    if [ $? -eq 0 ]; then
-        eval "$__conda_setup"
-    else
-        if [ -f "/opt/miniconda3/etc/profile.d/conda.sh" ]; then
-            . "/opt/miniconda3/etc/profile.d/conda.sh"
-        else
-            export PATH="/opt/miniconda3/bin:$PATH"
-        fi
+    if [[ ! -f "$config_file" ]]; then
+        echo "Error: Configuration file not found at $config_file" >&2
+        return 1
     fi
-    unset __conda_setup
+
+    echo ":: Opening config with $(basename "$editor")..."
+    if "$editor" "$config_file"; then
+        echo ":: Reloading Zsh configuration..."
+        source "$config_file" && echo ":: 🚀 Configuration updated successfully."
+    else
+        echo ":: Edit aborted."
+    fi
 }
 
-# Matrix Effect
 matrix() {
-    local lines=$(tput lines)
-    local cols=$(tput cols)
-    echo -e "\e[1;40m"
+    trap 'printf "\e[?25h\e[0m"; clear; return' INT
+    printf "\e[?25l"
     clear
+
     while :; do
-        echo $lines $cols $(( $RANDOM % $cols)) $(( $RANDOM % 72 ))
-        sleep 0.05
-    done | awk '
-    {
-        letters="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()"
-        lines=$1; random_col=$3; c=$4
-        letter=substr(letters,c,1)
-        cols[random_col]=0;
-        for (col in cols) {
-            line=cols[col]; cols[col]=cols[col]+1;
-            printf "\033[%s;%sH\033[2;32m%s", line, col, letter;
-            printf "\033[%s;%sH\033[1;37m%s\033[0;0H", cols[col], col, letter;
-            if (cols[col] >= lines) { cols[col]=0; }
+        read -s -k 1 -t 0.05 key < /dev/tty 2>/dev/null
+        if [[ "$key" == "q" ]]; then break; fi
+        echo
+    done | awk -v lines="$(tput lines)" -v cols="$(tput cols)" '
+    BEGIN {
+        srand();
+        chars = "ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ0123456789:・.=*+-<>";
+        len_chars = length(chars);
+        for (c = 1; c <= cols; c++) {
+            y[c] = -1 * int(rand() * 50);
+            l[c] = int(rand() * 15) + 5;
         }
+    }
+    {
+        for (c = 1; c <= cols; c++) {
+            if (y[c] > lines + l[c] || (y[c] < 0 && rand() < 0.02)) {
+                y[c] = 0;
+                l[c] = int(rand() * 15) + 5;
+            }
+            if (y[c] >= 0) {
+                if (y[c] - l[c] > 0 && y[c] - l[c] <= lines) {
+                    printf "\033[%d;%dH ", y[c] - l[c], c;
+                }
+                if (y[c] > 0 && y[c] <= lines) {
+                    r_char = substr(chars, int(rand() * len_chars) + 1, 1);
+                    printf "\033[%d;%dH\033[32m%s", y[c], c, r_char;
+                }
+                if (y[c] + 1 > 0 && y[c] + 1 <= lines) {
+                    r_char_head = substr(chars, int(rand() * len_chars) + 1, 1);
+                    printf "\033[%d;%dH\033[1;37m%s", y[c] + 1, c, r_char_head;
+                }
+                y[c]++;
+            } else {
+                y[c]++;
+            }
+        }
+        fflush();
     }'
+
+    printf "\e[?25h\e[0m"
+    clear
 }
 
 # vim:filetype=zsh
