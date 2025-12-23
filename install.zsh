@@ -462,6 +462,6 @@ Installer::run() {
 
 # Only run if this file is the main script being executed
 if [[ "$0" == "${(%):-%x}" ]]; then
-    # Installer::run "$@"
+    Installer::run "$@"
 fi
 
