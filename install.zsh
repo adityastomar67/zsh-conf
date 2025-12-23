@@ -321,10 +321,20 @@ Installer::run() {
     local DATE=$(date +%Y-%m-%d)
     local ID=$(date +%s)
 
+    # 0. Capture Source Directory (Where the script is running from)
+    # ${(%):-%x} = current script path
+    # :A = resolve to absolute path
+    # :h = head (dirname)
+    local SCRIPT_PATH="${(%):-%x}"
+    local SOURCE_DIR="${SCRIPT_PATH:A:h}"
+
     # 1. Init System
     Theme::init
     Config::init
     Sys::detect
+
+    # Expand destination to absolute path for comparison
+    local DEST_DIR="${Paths[REPO]:A}"
 
     # 2. UI Intro
     UI::header
@@ -391,9 +401,33 @@ Installer::run() {
         sleep 2
     fi
 
+    # 11. Cleanup Logic
     echo
-    Log::warn "Removing Installer Scripts..."
+    Log::info "Cleaning up..."
+
+    # Remove the 'install.zsh' inside the ACTUAL configuration folder (the destination)
+    # We don't need the installer sitting in ~/.config/zsh-conf/install.zsh
     [[ -e "${Paths[REPO]}/install.zsh" ]] && rm -rf "${Paths[REPO]}/install.zsh"
+
+    # --- [ NEW LOGIC: REMOVE SOURCE REPO ] ---
+    # Check if we are running from a directory DIFFERENT from where we installed to.
+    if [[ "$SOURCE_DIR" != "$DEST_DIR" ]]; then
+        Log::warn "Installer ran from temporary location: $SOURCE_DIR"
+
+        # Safety Check: Ensure we don't accidentally delete Home or Root
+        if [[ "$SOURCE_DIR" == "$HOME" || "$SOURCE_DIR" == "/" ]]; then
+            Log::error "Unsafe source directory detected. Skipping cleanup."
+        else
+            if UI::confirm "Delete this source directory to save space?"; then
+                # Move out of the directory if we are currently inside it to avoid shell errors
+                cd "$HOME"
+                rm -rf "$SOURCE_DIR"
+                Log::success "Source repository removed."
+            else
+                Log::info "Source repository kept."
+            fi
+        fi
+    fi
     sleep 2
 
     Log::success "Cleanup complete."
@@ -420,6 +454,7 @@ Installer::run() {
         exit 0
     fi
 }
+
 
 
 # ........................[  8. Entry Point  ]........................ #
