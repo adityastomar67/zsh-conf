@@ -92,7 +92,7 @@ chmod +x install.zsh
 ### 🧰 Tooling
 
 - [Dotfiles](https://github.com/adityastomar67/.dotfiles) — Dev Environment
-- [NvStar](https://github.com/adityastomar67/NvStar) — Personalized Editor
+- [NvDots](https://github.com/adityastomar67/NvDots-2.0) — Personalized Editor
 
 <hr>
 
