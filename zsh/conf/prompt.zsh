@@ -23,7 +23,7 @@ get_ignition_symbol() {
 # Helper: Git Untracked Check (Shared Logic)
 # Returns true (0) if there are untracked files, false (1) otherwise.
 has_untracked_files() {
-    command -v git >/dev/null 2>&1 || return 1
+    is_installed git || return 1
     [[ $(git rev-parse --is-inside-work-tree 2>/dev/null) == 'true' ]] && \
     git status --porcelain | grep '??' &>/dev/null
 }

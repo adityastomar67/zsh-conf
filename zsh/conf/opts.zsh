@@ -190,7 +190,7 @@ zstyle ':completion:alias-expension:*' completer _expand_alias
 # SSH/Remote Hosts
 zstyle -e ':completion:*:(pssh|ssh|scp|sftp|rsh|rsync):hosts' hosts 'reply=(${=${${(f)"$(cat {/etc/ssh_,~/.ssh/known_}hosts(|2)(N) /dev/null)"}%%[# ]*}//,/ })'
 # Zoxide
-if command -v z >/dev/null; then
+if is_installed z; then
     compdef _dirs z
 fi
 

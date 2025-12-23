@@ -65,11 +65,11 @@ export BROWSER="google-chrome-stable"
 export SUDO_PROMPT="Gimme Pass :"
 
 # Manpager Selection (Priority: Nvim > Vim > Bat > Less)
-if command -v nvim >/dev/null; then
+if is_installed nvim; then
     export MANPAGER='nvim +Man! +"set nocul" +"set noshowcmd" +"set noruler" +"set noshowmode" +"set laststatus=0" +"set showtabline=0" +"set nonumber"'
-elif command -v vim >/dev/null; then
+elif is_installed vim; then
     export MANPAGER='/bin/bash -c "vim -MRn -c \"set buftype=nofile showtabline=0 ft=man ts=8 nomod nolist norelativenumber nonu noma\" -c \"normal L\" -c \"nmap q :qa<CR>\"</dev/tty <(col -b)"'
-elif command -v bat >/dev/null; then
+elif is_installed bat; then
     export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 else
     export MANPAGER="less -s +M +Gg"
@@ -94,7 +94,7 @@ export XDG_NVIM="$HOME/.config/nvim"
 export RANGER_DEVICONS_SEPARATOR=" "
 
 # YTFZF
-if command -v ytfzf >/dev/null; then
+if is_installed ytfzf; then
     export YTFZF_CONFIG_DIR="$XDG_CONFIG_HOME/ytfzf"
     export YTFZF_CONFIG_FILE="$YTFZF_CONFIG_DIR/conf.sh"
 fi
@@ -127,8 +127,8 @@ EOF
 if [[ -n $SSH_CONNECTION ]]; then
     export EDITOR='vim'
     # Display system info on login
-    if command -v neofetch &>/dev/null; then
-        command -v lolcat &>/dev/null && neofetch | lolcat -S 10 -F 0.05 || neofetch
+    if is_installed neofetch; then
+        is_installed lolcat && neofetch | lolcat -S 10 -F 0.05 || neofetch
     fi
 fi
 

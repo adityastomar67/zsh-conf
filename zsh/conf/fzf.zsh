@@ -287,9 +287,9 @@ _fzf_compgen_unalias() {
 }
 
 _fzf_comprun() {
-    local command=$1
+    local cmd=$1
     shift
-    case "$command" in
+    case "$cmd" in
         cd)           fzf "$@" --preview 'tree -C {} | head -200' ;;
         export|unset) fzf "$@" --preview "eval 'echo \$'{}" ;;
         ssh|telnet)   fzf "$@" --preview 'echo {}' ;;
