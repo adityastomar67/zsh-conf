@@ -550,6 +550,26 @@ zconf() {
     fi
 }
 
+genpass() {
+    # 1. Set length to the first argument, or default to 16 if not provided
+    local length="${1:-16}"
+
+    # 2. Check if the input is a valid integer
+    if ! [[ "$length" =~ ^[0-9]+$ ]]; then
+        echo "Error: Please provide a valid number for the password length."
+        return 1
+    fi
+
+    # 3. Generate the password
+    # LC_ALL=C ensures standard ASCII characters
+    # tr -dc defines the allowed character set
+    # /dev/urandom provides the random data
+    LC_ALL=C tr -dc 'A-Za-z0-9!@#$%^&*()_+{}|:<>?=' < /dev/urandom | head -c "$length"
+
+    # 4. Print a newline at the end for clean formatting
+    echo ""
+}
+
 matrix() {
     trap 'printf "\e[?25h\e[0m"; clear; return' INT
     printf "\e[?25l"
