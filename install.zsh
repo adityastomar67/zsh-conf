@@ -1,5 +1,6 @@
 #!/usr/bin/env zsh
 
+
 # ------------------------[  ZSH CONFIGURATION INSTALLER  ]------------------------ #
 # This script automates the setup of a custom Zsh environment.
 #
@@ -164,11 +165,11 @@ typeset -A Sys
 Sys::detect() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
         Sys[PKG_MANAGER]="brew"
-    elif command -v pacman &>/dev/null; then
+    elif Sys::is_installed pacman; then
         Sys[PKG_MANAGER]="pacman"
-    elif command -v apt-get &>/dev/null; then
+    elif Sys::is_installed apt-get; then
         Sys[PKG_MANAGER]="apt"
-    elif command -v dnf &>/dev/null; then
+    elif Sys::is_installed dnf; then
         Sys[PKG_MANAGER]="dnf"
     else
         Log::error "Unsupported OS/Distro."
@@ -186,6 +187,16 @@ Sys::install() {
 }
 
 Sys::cleanup() {
+    # 0. Capture Source Directory (Where the script is running from)
+    # ${(%):-%x} = current script path
+    # :A = resolve to absolute path
+    # :h = head (dirname)
+    local SCRIPT_PATH="${(%):-%x}"
+    local SOURCE_DIR="${SCRIPT_PATH:A:h}"
+
+    # Expand destination to absolute path for comparison
+    local DEST_DIR="${Paths[REPO]:A}"
+
     Log::info "Cleaning up..."
 
     # Remove the 'install.zsh' $ git related stuff inside the ACTUAL configuration folder (the destination)
@@ -306,7 +317,7 @@ Installer::dependencies() {
 }
 
 Installer::ensure_zsh() {
-    if ! command -v zsh &>/dev/null; then
+    if ! Sys::is_installed zsh; then
         if UI::confirm "Zsh is not installed. Install it?"; then
             Sys::install "zsh"
             wait $!
@@ -316,6 +327,16 @@ Installer::ensure_zsh() {
         fi
     else
         Log::success "Zsh is present."
+    fi
+
+    if [[ $SHELL != "/usr/bin/zsh" ]] && [[ $SHELL != "/bin/zsh" ]]; then
+        UI::header
+        Log::warn "Changing shell to Zsh (Requires Root). Reboot required."
+        if UI::confirm "Change default shell to Zsh?"; then
+            chsh -s $(which zsh)
+            sleep 1
+            Log::success "Shell changed!"
+        fi
     fi
 }
 
@@ -358,20 +379,10 @@ Installer::run() {
     local DATE=$(date +%Y-%m-%d)
     local ID=$(date +%s)
 
-    # 0. Capture Source Directory (Where the script is running from)
-    # ${(%):-%x} = current script path
-    # :A = resolve to absolute path
-    # :h = head (dirname)
-    local SCRIPT_PATH="${(%):-%x}"
-    local SOURCE_DIR="${SCRIPT_PATH:A:h}"
-
     # 1. Init System
     Theme::init
     Config::init
     Sys::detect
-
-    # Expand destination to absolute path for comparison
-    local DEST_DIR="${Paths[REPO]:A}"
 
     # 2. UI Intro
     UI::header
@@ -410,33 +421,21 @@ Installer::run() {
     FileSys::symlink "${Paths[REPO]}/.zshrc" "${Paths[RC]}"
     FileSys::symlink "${Paths[REPO]}/.zshenv" "${Paths[ENV]}"
 
-    # 7. Default Shell
-    if [[ $SHELL != "/usr/bin/zsh" ]] && [[ $SHELL != "/bin/zsh" ]]; then
-        UI::header
-        Log::warn "Changing shell to Zsh (Requires Root). Reboot required."
-        if UI::confirm "Change default shell to Zsh?"; then
-            chsh -s $(which zsh)
-            sleep 1
-            Log::success "Shell changed!"
-        fi
-    fi
-
-    # 8. Dependencies
+    # 7. Dependencies
     Installer::dependencies
 
-    # 9. Features
+    # 8. Features
     Installer::configure_features
 
-    # 10. Finalize
+    # 9. Finalize
     UI::header
     Log::info "Finalizing..."
     sleep 2
 
-    if command -v zsh &>/dev/null; then
-        zsh -c "autoload -U zrecompile && zrecompile -p ${Paths[REPO]}/.zshrc" &>/dev/null \
-            && Log::success "Autoload -u zrecompile: RECOMPILED!!" || true
-        sleep 2
-    fi
+    # 10. Caching
+    zsh -c "autoload -U zrecompile && zrecompile -p ${Paths[REPO]}/.zshrc" &>/dev/null \
+        && Log::success "Autoload -u zrecompile: RECOMPILED!!" || true
+    sleep 2
 
     # 11. Cleanup Logic
     echo
@@ -468,10 +467,9 @@ Installer::run() {
 }
 
 
-
 # ........................[  8. Entry Point  ]........................ #
 # Invoke the static main method of the Installer class.
-
+#
 # Only run if this file is the main script being executed
 if [[ "$0" == "${(%):-%x}" ]]; then
     Installer::run "$@"
