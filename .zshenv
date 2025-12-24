@@ -47,6 +47,9 @@ export CUSTOM_WALL="No"
 # Load private/offline aliases (Not meant for git tracking)
 export TEMP_OFFLINE_CONFIG="No"
 
+# Want vi mode in Shell?
+export VI_MODE="Yes"
+
 
 # ........................[  Secrets & Debugging  ]........................ #
 

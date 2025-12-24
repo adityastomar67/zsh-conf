@@ -65,7 +65,7 @@ fi
 
 ## EXAMPLE: Environment ##
 # export PATH="$PATH:$HOME/my-custom-bin"
-export PATH=$PATH:/Users/singhhhx/.spicetify
+# export PATH=$PATH:/Users/singhhhx/.spicetify
 
 
 # ------------------------[  End of User Overrides  ]------------------------ #

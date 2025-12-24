@@ -7,7 +7,6 @@
 # ==============================================================================
 # PATH & ENVIRONMENT
 # ==============================================================================
-export PATH=$PATH:/Users/singhhhx/.spicetify
 
 # Custom Sudo Prompt
 export SUDO_PROMPT="Deploying root access for %u. Password pls: "
@@ -35,11 +34,6 @@ autoload -Uz compinit && compinit
 
 # Case insensitive tab completion
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
-
-# Load Autosuggestions
-if [ -f "$HOME/.config/mac-dots/zsh-autosuggestions/zsh-autosuggestions.zsh" ]; then
-    source "$HOME/.config/mac-dots/zsh-autosuggestions/zsh-autosuggestions.zsh"
-fi
 
 # ==============================================================================
 # PROMPT

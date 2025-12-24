@@ -99,7 +99,7 @@ _zsh_maintain_bytecode &!
 echo -en "\x1b[2J\x1b[1;1H" ; echo
 
 # Enable Vi-mode for command line editing
-set -o vi
+[[ "$VI_MODE" == "Yes" ]] && set -o vi
 
 
 # vim:filetype=zsh
