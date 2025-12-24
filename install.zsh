@@ -185,6 +185,43 @@ Sys::install() {
     fi
 }
 
+Sys::cleanup() {
+    Log::info "Cleaning up..."
+
+    # Remove the 'install.zsh' $ git related stuff inside the ACTUAL configuration folder (the destination)
+    # We don't need the installer sitting in ~/.config/zsh-conf/install.zsh
+    local cleanup_items=("install.zsh" ".git" ".gitignore" "README.md" "LICENSE")
+
+    for item in "${cleanup_items[@]}"; do
+        local target="${Paths[REPO]}/$item"
+        # Check if file or directory (-e) exists
+        if [[ -e "$target" ]]; then
+            rm -rf "$target"
+        fi
+    done
+
+    # --- [ NEW LOGIC: REMOVE SOURCE REPO ] ---
+    # Check if we are running from a directory DIFFERENT from where we installed to.
+    if [[ "$SOURCE_DIR" != "$DEST_DIR" ]]; then
+        Log::warn "Installer ran from temporary location: $SOURCE_DIR"
+
+        # Safety Check: Ensure we don't accidentally delete Home or Root
+        if [[ "$SOURCE_DIR" == "$HOME" || "$SOURCE_DIR" == "/" ]]; then
+            Log::error "Unsafe source directory detected. Skipping cleanup."
+        else
+            if UI::confirm "Delete this source directory to save space?"; then
+                # Move out of the directory if we are currently inside it to avoid shell errors
+                cd "$HOME"
+                rm -rf "$SOURCE_DIR"
+                Log::success "Source repository removed."
+            else
+                Log::info "Source repository kept."
+            fi
+        fi
+    fi
+    sleep 2
+}
+
 Sys::is_installed() {
     # Returns 0 (true) if found, 1 (false) if not
     command -v "$1" >/dev/null 2>&1
@@ -403,32 +440,7 @@ Installer::run() {
 
     # 11. Cleanup Logic
     echo
-    Log::info "Cleaning up..."
-
-    # Remove the 'install.zsh' inside the ACTUAL configuration folder (the destination)
-    # We don't need the installer sitting in ~/.config/zsh-conf/install.zsh
-    [[ -e "${Paths[REPO]}/install.zsh" ]] && rm -rf "${Paths[REPO]}/install.zsh"
-
-    # --- [ NEW LOGIC: REMOVE SOURCE REPO ] ---
-    # Check if we are running from a directory DIFFERENT from where we installed to.
-    if [[ "$SOURCE_DIR" != "$DEST_DIR" ]]; then
-        Log::warn "Installer ran from temporary location: $SOURCE_DIR"
-
-        # Safety Check: Ensure we don't accidentally delete Home or Root
-        if [[ "$SOURCE_DIR" == "$HOME" || "$SOURCE_DIR" == "/" ]]; then
-            Log::error "Unsafe source directory detected. Skipping cleanup."
-        else
-            if UI::confirm "Delete this source directory to save space?"; then
-                # Move out of the directory if we are currently inside it to avoid shell errors
-                cd "$HOME"
-                rm -rf "$SOURCE_DIR"
-                Log::success "Source repository removed."
-            else
-                Log::info "Source repository kept."
-            fi
-        fi
-    fi
-    sleep 2
+    Sys::cleanup
 
     Log::success "Cleanup complete."
     echo
