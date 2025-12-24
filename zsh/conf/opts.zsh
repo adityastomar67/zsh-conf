@@ -189,6 +189,19 @@ zstyle ':completion:alias-expension:*' completer _expand_alias
 
 # SSH/Remote Hosts
 zstyle -e ':completion:*:(pssh|ssh|scp|sftp|rsh|rsync):hosts' hosts 'reply=(${=${${(f)"$(cat {/etc/ssh_,~/.ssh/known_}hosts(|2)(N) /dev/null)"}%%[# ]*}//,/ })'
+
+# 6. Fzf-tab styling
+zstyle ':fzf-tab:*' fzf-flags --style=full --height=90% --pointer '>' \
+                --color 'pointer:green:bold,bg+:-1:,fg+:green:bold,info:blue:bold,marker:yellow:bold,hl:gray:bold,hl+:yellow:bold' \
+                --input-label ' Search ' --color 'input-border:blue,input-label:blue:bold' \
+                --list-label ' Results ' --color 'list-border:green,list-label:green:bold' \
+                --preview-label ' Preview ' --color 'preview-border:magenta,preview-label:magenta:bold'
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --icons=always --color=always -a $realpath'
+zstyle ':fzf-tab:complete:eza:*' fzf-preview 'eza -1 --icons=always --color=always -a $realpath'
+zstyle ':fzf-tab:complete:bat:*' fzf-preview 'bat --color=always --theme=base16 $realpath'
+zstyle ':fzf-tab:*' fzf-bindings 'space:accept'
+zstyle ':fzf-tab:*' accept-line enter
+
 # Zoxide
 if is_installed z; then
     compdef _dirs z
