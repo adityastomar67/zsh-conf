@@ -474,7 +474,5 @@ Installer::run() {
 # Invoke the static main method of the Installer class.
 #
 # Only run if this file is the main script being executed
-if [[ "$0" == "${(%):-%x}" ]]; then
-    Installer::run "$@"
-fi
+[[ "$0" == "${(%):-%x}" ]] && Installer::run "$@"
 

@@ -314,6 +314,4 @@ Uninstaller::run() {
 # ........................[  7. Entry Point  ]........................ #
 
 # Only run if this file is the main script being executed
-if [[ "$0" == "${(%):-%x}" ]]; then
-    Uninstaller::run "$@"
-fi
+[[ "$0" == "${(%):-%x}" ]] && Uninstaller::run "$@"
