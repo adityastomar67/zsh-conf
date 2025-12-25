@@ -202,7 +202,6 @@ zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --icons=always --color=alway
 zstyle ':fzf-tab:complete:eza:*' fzf-preview 'eza -1 --icons=always --color=always -a $realpath'
 zstyle ':fzf-tab:complete:bat:*' fzf-preview 'bat --color=always --theme=base16 $realpath'
 zstyle ':fzf-tab:*' fzf-bindings 'space:accept'
-zstyle ':fzf-tab:*' accept-line enter
 
 # Zoxide
 if is_installed z; then
