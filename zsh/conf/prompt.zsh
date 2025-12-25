@@ -5,11 +5,6 @@
 
 # ........................[  1. Shared Utilities  ]........................ #
 
-# Initialize core modules once
-autoload -Uz vcs_info
-autoload -Uz add-zsh-hook
-autoload -U colors && colors
-
 # Enable dynamic prompt expansion
 setopt PROMPT_SUBST
 

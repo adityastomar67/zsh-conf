@@ -23,6 +23,8 @@
 </div>
 <br>
 
+### NOTE: This config is tested on M4 mac, where the startup times are under ~55ms.
+
 ## 🧩 Configuration Modules
 
 Brief info about the configuration structure.

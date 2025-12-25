@@ -4,6 +4,8 @@
 
 # ........................[  1. Initialization & Modules  ]........................ #
 
+# Initialize core modules once
+autoload -Uz vcs_info
 autoload -Uz add-zsh-hook
 autoload -U colors && colors
 autoload -Uz compinit

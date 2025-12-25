@@ -21,9 +21,9 @@ core_modules=(
     plugs     # Plugin Manager
     keys      # Keybindings
     prompt    # Theme/Prompt
+    theme     # Theme Switcher (Optional)
+    nvim      # Neovim Switcher (Optional)
     # icons     # Icons & Glyphs (Optional)
-    # theme     # Theme Switcher (Optional)
-    # nvim      # Neovim Switcher (Optional)
 )
 
 typeset -a aux_modules
@@ -96,7 +96,7 @@ _zsh_maintain_bytecode &!
 # ........................[  4. Finalization  ]........................ #
 
 # Instant terminal clear (Removes initialization artifacts)
-echo -en "\x1b[2J\x1b[1;1H" ; echo
+echo -en "\x1b[2J\x1b[1;1H"
 
 # Enable Vi-mode for command line editing
 [[ "$VI_MODE" == "Yes" ]] && set -o vi

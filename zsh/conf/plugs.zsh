@@ -63,7 +63,7 @@ elif [ "$PLUG_MANAGER" = "omz" ]; then
     fi
 
     # 2. Configuration
-    plugins=(git history web-search copybuffer dirhistory zsh-syntax-highlighting zsh-autosuggestions)
+    plugins=(git history web-search copybuffer dirhistory zsh-autosuggestions zsh-syntax-highlighting)
 
     DISABLE_UPDATE_PROMPT="true"
     ENABLE_CORRECTION="true"
@@ -105,11 +105,11 @@ elif [ "$PLUG_MANAGER" = "zap" ]; then
 
     # 5. Visual Plugins (Strict Order Required)
 
+    zsh-defer plug "zsh-users/zsh-completions"
     # A. Load Autosuggestions FIRST (Deferred)
     zsh-defer plug "zsh-users/zsh-autosuggestions"
 
     # B. Load Completions & FZF
-    zsh-defer plug "zsh-users/zsh-completions"
     zsh-defer plug "Aloxaf/fzf-tab"
 
     # C. Syntax Highlighting (MUST BE ABSOLUTE LAST)
@@ -119,6 +119,9 @@ elif [ "$PLUG_MANAGER" = "zap" ]; then
     # D. Other deferred plugins
     # zsh-defer plug "zsh-users/zsh-history-substring-search"
     # zsh-defer plug "jeffreytse/zsh-vi-mode"
+
+    # E. Final Safety Net (REQUIRED because of MANUAL_REBIND)
+    bindkey '^I' complete-word
 fi
 
 
@@ -160,14 +163,19 @@ _eval_cache "atuin" "atuin init zsh"
 # Only loads the completer when you actually type 'aws <TAB>'
 if (( $+commands[aws] )); then
     function _aws_completer_lazy() {
-        # Define the real completion
-        complete -C aws_completer aws
-        # Unregister this lazy function so it doesn't run again
-        unset -f _aws_completer_lazy
-        # Re-trigger the completion immediately
+        # Check if we can use the Zsh native completer first
+        if [[ -f /usr/local/bin/aws_completer ]]; then
+            # Standard AWS completer path
+            local AWS_COMPLETER=/usr/local/bin/aws_completer
+            bashcompinit 2>/dev/null || autoload -U +X bashcompinit && bashcompinit
+            complete -C $AWS_COMPLETER aws
+        else
+            # Fallback or just re-source completion
+            unset -f _aws_completer_lazy
+            # Triggers default completion
+        fi
         zle complete-word
     }
-    # Hook the lazy function to the 'aws' command
     compdef _aws_completer_lazy aws
 fi
 

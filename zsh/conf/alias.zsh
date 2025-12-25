@@ -12,12 +12,11 @@
 #  Coming from env.zsh
 # ---------------------------------------------------------
 
-# Start clean
-unalias -a
-
 # Exit if aliases are disabled in config
 [[ "$USE_ALIAS" != "Yes" ]] && return
 
+# Start clean
+unalias -a
 
 # ........................[  2. System & Privileges  ]........................ #
 

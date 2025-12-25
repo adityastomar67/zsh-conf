@@ -9,8 +9,6 @@
 # ........................[  1. Theme Logic  ]........................ #
 
 setup_theme_sh() {
-    # Guard: Exit immediately if themes are disabled
-    [[ "$OPT_THEME" != "Yes" ]] && return
 
     local bin_dir="$HOME/.local/bin"
     local theme_bin="$bin_dir/theme.sh"
@@ -58,8 +56,6 @@ setup_theme_sh() {
 # ........................[  2. Wallpaper Logic  ]........................ #
 
 setup_wallpapers() {
-    # Guard: Exit immediately if wallpapers are disabled
-    [[ "$CUSTOM_WALL" != "Yes" ]] && return
 
     local wall_dir="$HOME/.config/wall"
 
@@ -113,8 +109,8 @@ setup_wallpapers() {
 # ........................[  3. Execution  ]........................ #
 
 # Run the setup functions
-setup_theme_sh
-setup_wallpapers
+[[ "$OPT_THEME" == "Yes" ]] && setup_theme_sh
+[[ "$CUSTOM_WALL" == "Yes" ]] && setup_wallpapers
 
 # Cleanup functions from global namespace
 unfunction setup_theme_sh
