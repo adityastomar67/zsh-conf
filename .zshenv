@@ -6,17 +6,16 @@
 # ........................[  Core Paths & Settings  ]........................ #
 
 # Path where the main configuration resides
-export ZSH_PATH="$HOME/.config/zsh-conf"
+export ZSH_PATH="${ZSH_PATH:-$HOME/.config/zsh-conf}"
 
 # Path where the main dotfiles resides
-if [[ $(uname) == "Darwin" ]]; then
+if [[ "$OSTYPE" == "darwin"* ]]; then
     # Values for macOS
     export DOT_PATH="$HOME/.config/mac-dots"
 else
     # Values for Linux or other systems
     export DOT_PATH="$HOME/.config/b001-dots"
 fi
-
 
 # Package Manager Selection (Options: "zap", "zinit", "omz")
 export PLUG_MANAGER="zap"
