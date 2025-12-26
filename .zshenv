@@ -20,6 +20,15 @@ export PROMPT_THEME="gh0st"
 # Minimal ZSH settings for "Not So Advanced" User. ("1" to enable, "0" to disable)
 export MINIMALIST="0"
 
+# Define a list of paths you want to add.
+## You can mix absolute paths (starting with /) and relative paths (relative to $HOME).
+typeset -a USER_PATHS
+USER_PATHS=(
+    "/usr/local/go/bin"                      # Absolute Path
+    ".scripts"                               # Relative to $HOME
+    ".spicetify"
+)
+
 
 # ........................[  Feature Toggles  ]........................ #
 

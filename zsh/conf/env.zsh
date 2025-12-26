@@ -106,20 +106,30 @@ export HISTORY_IGNORE="(ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
 # ........................[  5. PATH Configuration  ]........................ #
 
 # Standard Paths
-[ -d "/usr/local/go/bin" ] && export PATH="$PATH:/usr/local/go/bin"
+export PATH="$PATH:$ZSH_PATH/zsh/bin"
 
 # Dynamic Path Loader
-while read directory; do
-    [ -d "$HOME/$directory" ] && export PATH="$PATH:$HOME/$directory"
-done <<-EOF
-    .scripts
-    .bin/util
-    .spicetify
-    .local/bin
-    .bin/regen/bin
-    .local/share/gem/ruby/3.0.0/bin
-    .config/adb-fastboot/platform-tools
-EOF
+## 1. Ensure the system 'path' array does not contain duplicates
+typeset -U path
+
+## 2. Iterate through the array defined in .zshenv
+for entry in "${USER_PATHS[@]}"; do
+    # Resolve the path:
+    # If it DOES NOT start with '/', prepend $HOME/
+    # If it DOES start with '/', keep it as is
+    if [[ "$entry" != /* ]]; then
+        entry="$HOME/$entry"
+    fi
+
+    ## 3. Check if directory exists (-d)
+    if [[ -d "$entry" ]]; then
+        # Add to the Zsh 'path' array (which automatically updates $PATH)
+        path+=("$entry")
+    fi
+done
+
+## 4. Clean up the variable
+unset entry
 
 
 # ........................[  6. SSH & Remote  ]........................ #
