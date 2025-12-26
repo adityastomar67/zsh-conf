@@ -44,6 +44,9 @@ export MULTI_NEOVIM="No"
 # Load personal wallpapers and source zsh on change
 export CUSTOM_WALL="No"
 
+# Location for wallpapers
+export WALL_DIR="$HOME/Backdrops"
+
 # Load private/offline aliases (Not meant for git tracking)
 export TEMP_OFFLINE_CONFIG="No"
 

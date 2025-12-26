@@ -53,67 +53,18 @@ setup_theme_sh() {
 }
 
 
-# ........................[  2. Wallpaper Logic  ]........................ #
-
-setup_wallpapers() {
-
-    local wall_dir="$HOME/.config/wall"
-
-    # Guard: Exit if directory already exists (prevent re-cloning)
-    [[ -d "$wall_dir" ]] && return
-
-    # Guard: Exit if git is missing
-    if ! is_installed git; then
-        echo "Error: 'git' is required to download wallpapers." >&2
-        return 1
-    fi
-
-    # Notify User
-    if is_installed dunstify; then
-        dunstify -u low -i ~/.config/bspwm/assets/reload.svg 'Custom Walls' "Downloading wallpapers..."
-    else
-        echo ":: Downloading wallpapers..."
-    fi
-
-    # Clone (Optimized: Shallow clone, no blobs)
-    git clone --quiet --depth 1 --filter=blob:none https://github.com/adityastomar67/Wallpapers "$wall_dir" || return 1
-
-    # Post-Processing
-    (
-        cd "$wall_dir" || exit
-
-        # Flatten directory structure
-        [[ -d "Static" ]] && mv Static/* .
-
-        # Rename .png to .jpg (without converting format) using Zsh modifiers
-        for file in *.png(N); do
-            mv -- "$file" "${file:r}.jpg"
-        done
-
-        # Cleanup artifacts
-        rm -rf .git README.md Static Live list.txt
-    )
-
-    # Success Notification
-    if is_installed dunstify; then
-        dunstify -u low -i ~/.config/bspwm/assets/reload.svg 'Custom Walls' "Setup complete."
-    fi
-
-    # Apply Wallpaper
-    if is_installed RandomWall; then
-        RandomWall
-    fi
-}
-
-
 # ........................[  3. Execution  ]........................ #
 
-# Run the setup functions
+# Run the setup function
 [[ "$OPT_THEME" == "Yes" ]] && setup_theme_sh
-[[ "$CUSTOM_WALL" == "Yes" ]] && setup_wallpapers
 
+if [[ "$CUSTOM_WALL" == "Yes" ]]; then
+    # Guard: Only execute if 'randwall' is found in PATH or defined as a function
+    if command -v randwall >/dev/null 2>&1; then
+        randwall
+    fi
+fi
 # Cleanup functions from global namespace
 unfunction setup_theme_sh
-unfunction setup_wallpapers
 
 # vim:filetype=zsh
