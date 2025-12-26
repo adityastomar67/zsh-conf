@@ -60,7 +60,7 @@ export WALL_DIR="$HOME/Backdrops"
 export TEMP_OFFLINE_CONFIG="No"
 
 # Want vi mode in Shell?
-export VI_MODE="Yes"
+export VI_MODE="No"
 
 
 # ........................[  Secrets & Debugging  ]........................ #

@@ -9,9 +9,9 @@
 #  :: Supports: Linux (Feh/Nitrogen) & macOS.
 #
 #  USAGE:
-#      1. Make executable: chmod +x randwall
-#      2. Run:             ./randwall           (Sets random wallpaper)
-#      3. Update:          ./randwall --update  (Re-downloads collection)
+#      1. Make executable: chmod +x RandomWall
+#      2. Run:             ./RandomWall           (Sets random wallpaper)
+#      3. Update:          ./RandomWall --update  (Re-downloads collection)
 
 # ==============================================================================
 # [1] CONFIGURATION
@@ -67,7 +67,7 @@ setup_wallpapers() {
         return 1
     fi
 
-    notify_user "RandWall" "Downloading wallpapers..."
+    notify_user "RandomWall" "Downloading wallpapers..."
 
     # Ensure target directory exists
     mkdir -p "$BG_DIR"
@@ -109,7 +109,7 @@ setup_wallpapers() {
 
     # Remove the temporary download folder
     rm -rf "$temp_dir"
-    notify_user "RandWall" "Wallpaper setup complete."
+    notify_user "RandomWall" "Wallpaper setup complete."
 }
 
 # ------------------------------------------------------------------------------
@@ -150,7 +150,7 @@ apply_wallpaper() {
 
 main() {
     # 1. Update Flag Check
-    # If user runs './randwall --update', delete old folder and re-download.
+    # If user runs './RandomWall --update', delete old folder and re-download.
     if [[ "$1" == "--update" || "$1" == "-u" ]]; then
         print ":: Force updating wallpapers..."
         rm -rf "$BG_DIR"
