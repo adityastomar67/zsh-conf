@@ -42,6 +42,7 @@ else
     else
         printf "\n\033[0;31m[ERROR] Critical: Main config not found at %s/zsh/zshrc\033[0m\n" "$ZSH_PATH"
         printf "Please try reinstalling the configuration.\n\n"
+        return
     fi
 fi
 
@@ -51,7 +52,7 @@ fi
 if [[ -x "$HOME/.local/bin/colorscript" ]]; then
     # Run random ASCII art script (distro-tube/dt-colorscripts)
     "$HOME/.local/bin/colorscript" -r
-elif command -v motivate >/dev/null; then
+elif is_installed motivate; then
     # Run motivational quotes if installed
     motivate && echo
 fi
@@ -73,6 +74,7 @@ fi
 
 # ........................[  6. Benchmarking (Report)  ]........................ #
 # Print profile report if benchmarking was enabled
+## This .zshrc is defined in such a way that it will not load this function for minimal zshrc
 if [[ "$ZSH_BENCHMARK" == "1" ]]; then
     # Calculate total time in milliseconds
     integer time_end=$(date +%s%N)
@@ -81,11 +83,7 @@ if [[ "$ZSH_BENCHMARK" == "1" ]]; then
     printf "\n\033[1;33m--- ⏱️  Startup Benchmark ---\033[0m\n"
     printf "Total Wall-Clock Time: \033[1;32m%.2f ms\033[0m\n" $total_ms
 
-    if [[ "$MINIMALIST" == "1" ]]; then
-        echo "(Running in Minimal Mode - zprof may be empty if no functions were called)"
-    else
-        printf "\nTop 20 Slowest Functions:\n"
-        zprof | head -20
-    fi
+    printf "\nTop 20 Slowest Functions:\n"
+    zprof | head -20
     echo "-----------------------------------------------------------------------------------"
 fi
