@@ -65,8 +65,20 @@ export VI_MODE="Yes"
 
 # ........................[  Secrets & Debugging  ]........................ #
 
-# OpenAI API Key for CLI tools (Leave empty if using env.zsh or source from there)
-export OPENAI_API_KEY=""
-
 # Enable startup profiling ("1" to enable, "0" to disable)
 export ZSH_BENCHMARK="0"
+
+# Path to your env file
+ENV_FILE="$ZSH_PATH/.env"
+
+if [[ -f "$ENV_FILE" ]]; then
+    # 1. Turn on 'allexport' (Automatically export all defined variables)
+    set -a
+
+    # 2. Source the file (Load the variables)
+    source "$ENV_FILE"
+
+    # 3. Turn off 'allexport' (Back to normal safety)
+    set +a
+fi
+
