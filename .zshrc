@@ -7,17 +7,21 @@
 
 
 # ........................[  1. Interactive Guard  ]........................ #
+
 # Stop here if not running interactively (improves SCP/SFTP speeds)
 [[ $- != *i* ]] && return
 
 
 # ........................[  2. Benchmarking (Start)  ]........................ #
+
 # Enable startup timing if ZSH_BENCHMARK=1 in ~/.zshenv
 
 ## Start a wall-clock timer (nanoseconds) for total load time precision
 ## zprof only measures functions; this measures actual file sourcing time.
-integer time_start=$(date +%s%N)
-[[ "$ZSH_BENCHMARK" == "1" ]] && zmodload zsh/zprof
+zmodload zsh/datetime
+local time_start=$EPOCHREALTIME
+
+[[ "$ZSH_BENCHMARK" == "1" ]] && zmodload zsh/zprof 2>/dev/null
 
 
 # ------------------------[  3. CORE CONFIGURATION  ]------------------------ #
@@ -25,26 +29,18 @@ integer time_start=$(date +%s%N)
 # Ensure ZSH_PATH is set (fallback to default if missing)
 : ${ZSH_PATH:=$HOME/.config/zsh-conf}
 
-# Minimal Config Test
-if [[ "$MINIMALIST" == "1" ]]; then
-    if [[ -r "$ZSH_PATH/zsh/zshrc_mini" ]]; then
-        source "$ZSH_PATH/zsh/zshrc_mini"
-    else
-        printf "\n\033[0;31m[ERROR] Critical: Minimal config not found at %s/zsh/zshrc_mini\033[0m\n" "$ZSH_PATH"
-        printf "Please try reinstalling the configuration.\n\n"
-    fi
-    return
-else
+local RC="$ZSH_PATH/zsh/zshrc"
+[[ "$MINIMALIST" == "1" ]] && RC="$ZSH_PATH/zsh/zshrc_mini"  # Minimal config test
 
-    # Source the main configuration engine
-    if [[ -r "$ZSH_PATH/zsh/zshrc" ]]; then
-        source "$ZSH_PATH/zsh/zshrc"
-    else
-        printf "\n\033[0;31m[ERROR] Critical: Main config not found at %s/zsh/zshrc\033[0m\n" "$ZSH_PATH"
-        printf "Please try reinstalling the configuration.\n\n"
-        return
-    fi
+# Loading the actual config file
+if [[ -r "$RC" ]]; then
+    source "$RC"
+else
+    printf "\n\033[0;31m[ERROR] Critical: Config not found at %s\033[0m\n" "$RC"
+    printf "Please try Reinstalling the configuration.\n\n"
+    return
 fi
+
 
 # ------------------------[  4. TERMINAL DECORATIONS  ]------------------------ #
 
@@ -52,13 +48,14 @@ fi
 if [[ -x "$HOME/.local/bin/colorscript" ]]; then
     # Run random ASCII art script (distro-tube/dt-colorscripts)
     "$HOME/.local/bin/colorscript" -r
-elif is_installed motivate; then
+elif (( $+commands[motivate] )); then
     # Run motivational quotes if installed
     motivate && echo
 fi
 
 
 # ------------------------[  5. USER OVERRIDES  ]------------------------ #
+
 # Place your custom aliases, exports, and function overrides below.
 
 ## EXAMPLE: Custom Aliases ##
@@ -66,19 +63,18 @@ fi
 
 ## EXAMPLE: Environment ##
 # export PATH="$PATH:$HOME/my-custom-bin"
-# export PATH=$PATH:/Users/singhhhx/.spicetify
 
 
 # ------------------------[  End of User Overrides  ]------------------------ #
 
 
 # ........................[  6. Benchmarking (Report)  ]........................ #
+
 # Print profile report if benchmarking was enabled
-## This .zshrc is defined in such a way that it will not load this function for minimal zshrc
 if [[ "$ZSH_BENCHMARK" == "1" ]]; then
-    # Calculate total time in milliseconds
-    integer time_end=$(date +%s%N)
-    local total_ms=$(( (time_end - time_start) / 1000000.0 ))
+    local time_end=$EPOCHREALTIME
+    # Precision calculation in milliseconds
+    local total_ms=$(( (time_end - time_start) * 1000 ))
 
     printf "\n\033[1;33m--- ⏱️  Startup Benchmark ---\033[0m\n"
     printf "Total Wall-Clock Time: \033[1;32m%.2f ms\033[0m\n" $total_ms
@@ -87,3 +83,4 @@ if [[ "$ZSH_BENCHMARK" == "1" ]]; then
     zprof | head -20
     echo "-----------------------------------------------------------------------------------"
 fi
+
