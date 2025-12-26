@@ -61,7 +61,7 @@ setup_theme_sh() {
 if [[ "$CUSTOM_WALL" == "Yes" ]]; then
     # Guard: Only execute if 'randwall' is found in PATH or defined as a function
     if command -v randwall >/dev/null 2>&1; then
-        randwall
+        RandomWall
     fi
 fi
 # Cleanup functions from global namespace

@@ -62,7 +62,7 @@ export XDG_PUBLICSHARE_DIR="$HOME/Public"
 export EDITOR="nvim"
 export VISUAL="nvim"
 export BROWSER="google-chrome-stable"
-export SUDO_PROMPT="Gimme Pass :"
+export SUDO_PROMPT="Deploying root access for %u. Password pls: "
 
 # Manpager Selection (Priority: Nvim > Vim > Bat > Less)
 if is_installed nvim; then
