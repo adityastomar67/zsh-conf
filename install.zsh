@@ -201,7 +201,7 @@ Sys::cleanup() {
 
     # Remove the 'install.zsh' $ git related stuff inside the ACTUAL configuration folder (the destination)
     # We don't need the installer sitting in ~/.config/zsh-conf/install.zsh
-    local cleanup_items=("install.zsh" ".git" ".gitignore" "README.md" "LICENSE")
+    local cleanup_items=("install.zsh" ".gitignore" "README.md" "LICENSE")
 
     for item in "${cleanup_items[@]}"; do
         local target="${Paths[REPO]}/$item"
