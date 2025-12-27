@@ -18,26 +18,35 @@
 # Start clean
 unalias -a
 
+# OS Detection
+OS_TYPE=$(uname -s)
+
 # ........................[  2. System & Privileges  ]........................ #
 
-# Auto-sudo for common system commands
-for cmd in mount umount sv updatedb su shutdown poweroff reboot; do
-    alias -g "$cmd"="sudo $cmd"
-done
+# Auto-sudo for Linux only (macOS uses specific sudo handling often unnecessary for these or restricted)
+if [[ "$OS_TYPE" == "Linux" ]]; then
+    for cmd in mount umount sv updatedb su shutdown poweroff reboot; do
+        alias -g "$cmd"="sudo $cmd"
+    done
+fi
 unset cmd
 
 # Safety & Verbosity
 alias mv="mv -i"
 alias cp="cp -i"
 alias ln="ln -i"
-alias rm="rm -I"  # Prompt once before removing more than 3 files
-alias chown="chown --preserve-root"
-alias chmod="chmod --preserve-root"
-alias chgrp="chgrp --preserve-root"
+alias rm="rm -i"  # Prompt once before removing more than 3 files
 alias md="mkdir -p"
 alias _="sudo "
 alias please='sudo $(fc -ln -1)'  # Re-run last command with sudo
+alias which='type -a'
 
+# GNU/BSD Compatibility for "preserve root"
+if [[ "$OS_TYPE" == "Linux" ]]; then
+    alias chown="chown --preserve-root"
+    alias chmod="chmod --preserve-root"
+    alias chgrp="chgrp --preserve-root"
+fi
 
 # ........................[  3. Navigation & Directories  ]........................ #
 
@@ -102,14 +111,30 @@ elif is_installed lsd; then
     alias ls="lsd -a --group-directories-first"
     alias ll="lsd -la --group-directories-first"
 else
-    alias ls="ls --color=auto"
-    alias ll="ls -la --color=auto"
+    # Native Fallback
+    if [[ "$OS_TYPE" == "Darwin" ]]; then
+        alias ls="ls -G"        # macOS uses -G for color
+        alias ll="ls -laG"
+    else
+        alias ls="ls --color=auto" # Linux uses --color
+        alias ll="ls -la --color=auto"
+    fi
 fi
 
-# Clipboard
-alias copy='xsel --clipboard --input'
-alias paste='xsel --clipboard --output'
-alias xclip='xclip -selection clipboard'
+# CLIPBOARD (Cross-Platform Fix)
+if [[ "$OS_TYPE" == "Darwin" ]]; then
+    alias copy='pbcopy'
+    alias paste='pbpaste'
+else
+    # Linux (Try xsel, then xclip)
+    if is_installed xsel; then
+        alias copy='xsel --clipboard --input'
+        alias paste='xsel --clipboard --output'
+    elif is_installed xclip; then
+        alias copy='xclip -selection clipboard'
+        alias paste='xclip -selection clipboard -o'
+    fi
+fi
 
 # Networking
 alias ip="curl ipinfo.io/ip"
@@ -120,8 +145,14 @@ alias gping="ping -c 5 google.com"
 # Process Management
 alias p="ps -f"
 alias paux='ps aux | grep'
-alias psmem='ps auxf | sort -nr -k 4'
-alias pscpu='ps auxf | sort -nr -k 3'
+# macOS ps doesn't support 'f' (forest) flag well in auxf
+if [[ "$OS_TYPE" == "Linux" ]]; then
+    alias psmem='ps auxf | sort -nr -k 4'
+    alias pscpu='ps auxf | sort -nr -k 3'
+else
+    alias psmem='ps aux | sort -nr -k 4'
+    alias pscpu='ps aux | sort -nr -k 3'
+fi
 alias killl='killall -q'
 
 
@@ -220,12 +251,12 @@ alias -g LL="2>&1 | less"
 # ........................[  9. Miscellaneous  ]........................ #
 
 alias cls="clear"
+alias clean="clear"
 alias h="history"
 alias x="chmod +x"
 alias weather='curl -s wttr.in'
 alias myip="curl ipinfo.io/ip"
 alias ':q'='[ -n "$TMUX" ] && tmux kill-session -t $(tmux display-message -p "#S") || exit'
-alias pass-gen='openssl rand -base64'
 
 # Time & Date
 alias dday='date +"%Y.%m.%d - " | xclip -select clipboard ; date +"%Y.%m.%d"'
