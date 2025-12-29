@@ -58,6 +58,10 @@ Config::init() {
     Paths[ENV]="${ZDOTDIR:-$HOME}/.zshenv"
     Paths[BACKUP]="${ZDOTDIR:-$HOME}/.zsh_backups/$(date +%Y-%m-%d)"
 
+    BIN_DIR="${Paths[REPO]}/zsh/bin"
+    BIN_REPO="https://github.com/adityastomar67/uniq-scripts.git"
+    TEMP_DIR="/tmp/zsh_bin_temp"
+
     # Binary dependencies to ensure are present
     Dependencies=(
         "tmux" "ranger" "fd" "ripgrep" "lazygit"
@@ -411,7 +415,22 @@ Installer::run() {
     # Handle collision
     [[ -d "${Paths[REPO]}" ]] && mv "${Paths[REPO]}" "${Paths[REPO]}_${DATE}_${ID}"
 
-    git clone --quiet "https://github.com/adityastomar67/zsh-conf.git" "${Paths[REPO]}" &
+    {
+        git clone --depth=1 --quiet "https://github.com/adityastomar67/zsh-conf.git" "${Paths[REPO]}"
+
+        # Cloning of scripts
+        ## 1. Clone
+        git clone --depth=1 "$BIN_REPO" "$TEMP_DIR" &> /dev/null
+
+        ## 2. Copy
+        mkdir -p "$BIN_DIR" &> /dev/null
+
+        ## The * wildcard ignores hidden files by default
+        cp -r "$TEMP_DIR"/* "$BIN_DIR/" &> /dev/null
+
+        ## 3. Cleanup
+        rm -rf "$TEMP_DIR" &> /dev/null
+    } &
     UI::spinner $! "Cloning repository..."
     wait $!
 
