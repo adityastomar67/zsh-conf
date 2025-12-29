@@ -2,7 +2,34 @@
 # This file sets global variables, paths, and application defaults.
 
 
-# ........................[  0. Helpers  ]........................ #
+# ........................[  0. Helpers & Path configurations  ]........................ #
+
+# Standard Paths
+export PATH="$PATH:$ZSH_PATH/zsh/bin"
+
+# Dynamic Path Loader
+## 1. Ensure the system 'path' array does not contain duplicates
+typeset -U path
+
+## 2. Iterate through the array defined in .zshenv
+for entry in "${USER_PATHS[@]}"; do
+    # Resolve the path:
+    # If it DOES NOT start with '/', prepend $HOME/
+    # If it DOES start with '/', keep it as is
+    if [[ "$entry" != /* ]]; then
+        entry="$HOME/$entry"
+    fi
+
+    ## 3. Check if directory exists (-d)
+    if [[ -d "$entry" ]]; then
+        # Add to the Zsh 'path' array (which automatically updates $PATH)
+        path+=("$entry")
+    fi
+done
+
+## 4. Clean up the variable
+unset entry
+
 
 # Helper: Check if a program is installed (Arch Linux specific check)
 typeset -gA _installed_cache
@@ -103,36 +130,7 @@ fi
 export HISTORY_IGNORE="(ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
 
 
-# ........................[  5. PATH Configuration  ]........................ #
-
-# Standard Paths
-export PATH="$PATH:$ZSH_PATH/zsh/bin"
-
-# Dynamic Path Loader
-## 1. Ensure the system 'path' array does not contain duplicates
-typeset -U path
-
-## 2. Iterate through the array defined in .zshenv
-for entry in "${USER_PATHS[@]}"; do
-    # Resolve the path:
-    # If it DOES NOT start with '/', prepend $HOME/
-    # If it DOES start with '/', keep it as is
-    if [[ "$entry" != /* ]]; then
-        entry="$HOME/$entry"
-    fi
-
-    ## 3. Check if directory exists (-d)
-    if [[ -d "$entry" ]]; then
-        # Add to the Zsh 'path' array (which automatically updates $PATH)
-        path+=("$entry")
-    fi
-done
-
-## 4. Clean up the variable
-unset entry
-
-
-# ........................[  6. SSH & Remote  ]........................ #
+# ........................[  5. SSH & Remote  ]........................ #
 
 if [[ -n $SSH_CONNECTION ]]; then
     export EDITOR='vim'
@@ -143,7 +141,7 @@ if [[ -n $SSH_CONNECTION ]]; then
 fi
 
 
-# ........................[  7. Miscellaneous  ]........................ #
+# ........................[  6. Miscellaneous  ]........................ #
 
 # Temporary Offline Alias File
 if [ "$TEMP_OFFLINE_CONFIG" = "Yes" ]; then

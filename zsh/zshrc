@@ -96,7 +96,8 @@ _zsh_maintain_bytecode &!
 # ........................[  4. Finalization  ]........................ #
 
 # Instant terminal clear (Removes initialization artifacts)
-echo -en "\x1b[2J\x1b[1;1H"
+# Only runs if NOT in an SSH connection
+[[ -z "$SSH_CONNECTION" ]] && echo -en "\x1b[2J\x1b[1;1H"
 
 # Enable Vi-mode for command line editing
 [[ "$VI_MODE" == "Yes" ]] && set -o vi

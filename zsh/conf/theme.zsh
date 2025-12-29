@@ -2,8 +2,8 @@
 # Manages terminal color schemes (theme.sh) and wallpaper downloading.
 #
 # STRUCTURE:
-# 1. setup_theme_sh   -> Manages 'theme.sh' installation and bindings.
-# 2. setup_wallpapers -> Manages custom wallpaper repository cloning.
+# 1. setup_theme_sh                -> Manages 'theme.sh' installation and bindings.
+# 2. $ZSH_PATH/zsh/bin/RandomWall  -> Manages custom wallpaper repository cloning.
 
 
 # ........................[  1. Theme Logic  ]........................ #
@@ -58,13 +58,12 @@ setup_theme_sh() {
 # Run the setup function
 [[ "$OPT_THEME" == "Yes" ]] && setup_theme_sh
 
-if [[ "$CUSTOM_WALL" == "Yes" ]]; then
-    # Guard: Only execute if 'randwall' is found in PATH or defined as a function
-    if command -v randwall >/dev/null 2>&1; then
-        RandomWall
-    fi
-fi
 # Cleanup functions from global namespace
 unfunction setup_theme_sh
+
+# Guard: Only execute if 'RandomWall' is found in PATH or defined as a function
+if [[ "$CUSTOM_WALL" == "Yes" ]] && is_installed RandomWall; then
+    RandomWall
+fi
 
 # vim:filetype=zsh
