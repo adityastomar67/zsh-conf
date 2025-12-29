@@ -75,7 +75,7 @@ export VI_MODE="No"
 # ........................[  Secrets & Debugging  ]........................ #
 
 # Enable startup profiling ("1" to enable, "0" to disable)
-export ZSH_BENCHMARK="1"
+export ZSH_BENCHMARK="Yes"
 
 # Path to your env file
 ENV_FILE="$ZSH_PATH/.env"

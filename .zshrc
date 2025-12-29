@@ -21,7 +21,7 @@
 zmodload zsh/datetime
 local time_start=$EPOCHREALTIME
 
-[[ "$ZSH_BENCHMARK" == "1" ]] && zmodload zsh/zprof 2>/dev/null
+[[ "$ZSH_BENCHMARK" == "Yes" ]] && zmodload zsh/zprof 2>/dev/null
 
 
 # ------------------------[  3. CORE CONFIGURATION  ]------------------------ #
@@ -71,7 +71,7 @@ fi
 # ........................[  6. Benchmarking (Report)  ]........................ #
 
 # Print profile report if benchmarking was enabled
-if [[ "$ZSH_BENCHMARK" == "1" ]]; then
+if [[ "$ZSH_BENCHMARK" == "Yes" ]]; then
     local time_end=$EPOCHREALTIME
     # Precision calculation in milliseconds
     local total_ms=$(( (time_end - time_start) * 1000 ))
