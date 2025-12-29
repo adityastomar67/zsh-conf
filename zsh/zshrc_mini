@@ -54,7 +54,7 @@ alias v='nvim'
 alias py="python3"
 
 # -- Navigation --
-alias dev="cd ~/Developer/"
+alias dv="cd ~/Developer/"
 
 # -- Tmux Utilities --
 alias tkill='tmux kill-session -t'
@@ -69,8 +69,8 @@ alias ':q'='[ -n "$TMUX" ] && tmux kill-session -t $(tmux display-message -p "#S
 # 2. Check if we are NOT already in tmux
 # 3. Check if we are in an interactive terminal (-t 0)
 if [[ "$USE_TMUX" == "Yes" ]] && (( $+commands[tmux] )) && [[ -z "$TMUX" && -t 0 ]]; then
-    # Try to attach. If it fails, create new.
-    # We remove 'exec' here during troubleshooting so the window stays open if tmux fails.
-    exec tmux attach-session -t b001 2>/dev/null || exec tmux new-session -s b001
+    # -A = Attach to existing session if it exists, otherwise create a new one
+    # -s = Name of the session
+    exec tmux new-session -A -s b001
 fi
 
