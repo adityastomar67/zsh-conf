@@ -5,7 +5,7 @@
 # ........................[  0. Helpers & Path configurations  ]........................ #
 
 # Standard Paths
-export PATH="$PATH:$ZSH_PATH/zsh/bin"
+export PATH="$ZSH_PATH/zsh/bin:$PATH"
 
 # Dynamic Path Loader
 ## 1. Ensure the system 'path' array does not contain duplicates
@@ -13,21 +13,12 @@ typeset -U path
 
 ## 2. Iterate through the array defined in .zshenv
 for entry in "${USER_PATHS[@]}"; do
-    # Resolve the path:
-    # If it DOES NOT start with '/', prepend $HOME/
-    # If it DOES start with '/', keep it as is
-    if [[ "$entry" != /* ]]; then
-        entry="$HOME/$entry"
-    fi
+    # Fast string expansion: If not starting with /, prepend $HOME/
+    [[ "$entry" != /* ]] && entry="$HOME/$entry"
 
-    ## 3. Check if directory exists (-d)
-    if [[ -d "$entry" ]]; then
-        # Add to the Zsh 'path' array (which automatically updates $PATH)
-        path+=("$entry")
-    fi
+    # Only add to path if it actually exists
+    [[ -d "$entry" ]] && path+=("$entry")
 done
-
-## 4. Clean up the variable
 unset entry
 
 
@@ -50,16 +41,17 @@ is_installed() {
 
 # ........................[  1. System & Locale  ]........................ #
 
-export TERM="xterm-256color"
+export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
-export LC_CTYPE="en_US.UTF-8"
 export KEYTIMEOUT=1
-export GPG_TTY="$(tty)"
+export GPG_TTY=${TTY:-$(tty)} # Faster than calling subshell $(tty) if TTY is already set
 export ARCHFLAGS="-arch x86_64"
+
+# Zsh Completion Dump Location
 export ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump"
 
 # True Color Support
-if [[ $COLORTERM == "truecolor" || $TERM == *256* ]]; then
+if [[ "$COLORTERM" == "truecolor" || "$TERM" == *256* ]]; then
     export TERM="xterm-256color"
     export BAT_THEME="TwoDark"
 fi
@@ -94,10 +86,10 @@ export SUDO_PROMPT="Deploying root access for %u. Password pls: "
 # Manpager Selection (Priority: Nvim > Vim > Bat > Less)
 if is_installed nvim; then
     export MANPAGER='nvim +Man! +"set nocul" +"set noshowcmd" +"set noruler" +"set noshowmode" +"set laststatus=0" +"set showtabline=0" +"set nonumber"'
-elif is_installed vim; then
-    export MANPAGER='/bin/bash -c "vim -MRn -c \"set buftype=nofile showtabline=0 ft=man ts=8 nomod nolist norelativenumber nonu noma\" -c \"normal L\" -c \"nmap q :qa<CR>\"</dev/tty <(col -b)"'
 elif is_installed bat; then
     export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+elif is_installed vim; then
+    export MANPAGER='/bin/bash -c "vim -MRn -c \"set buftype=nofile showtabline=0 ft=man ts=8 nomod nolist norelativenumber nonu noma\" -c \"normal L\" -c \"nmap q :qa<CR>\"</dev/tty <(col -b)"'
 else
     export MANPAGER="less -s +M +Gg"
 fi
@@ -108,12 +100,13 @@ fi
 # Java / AWT
 export _JAVA_AWT_WM_NONREPARENTING=1
 export AWT_TOOLKIT="MToolkit"
+# Use single quotes to prevent shell expansion issues
 export JDK_JAVA_OPTIONS='-Dawt.useSystemAAFontSettings=on -Dswing.aatext=true -Dswing.defaultlaf=com.sun.java.swing.plaf.gtk.GTKLookAndFeel -Djdk.gtk.version=2.2 -Dsun.java2d.opengl=true'
 
 # Qt / KDE
 export QT_STYLE_OVERRIDE="kvantum"
 
-# Neovim / Dotfiles
+# Dotfiles
 export XDG_DOTS="$HOME/dotfiles"
 export XDG_NVIM="$HOME/.config/nvim"
 
@@ -143,9 +136,13 @@ fi
 
 # ........................[  6. Miscellaneous  ]........................ #
 
-# Temporary Offline Alias File
-if [ "$TEMP_OFFLINE_CONFIG" = "Yes" ]; then
-    [ ! -f "$HOME/.temp_zsh" ] && touch "$HOME/.temp_zsh"
+# Temporary Offline Config File
+if [[ "$TEMP_OFFLINE_CONFIG" == "Yes" ]]; then
+    # Zsh optimized check: file does not exist
+    if [[ ! -e "$HOME/.temp_zsh" ]]; then
+        # 'print' is a Zsh builtin, slightly cleaner than echo
+        print "# Put temporary/offline aliases here. Not tracked by Git." > "$HOME/.temp_zsh"
+    fi
 fi
 
 # vim:filetype=zsh
