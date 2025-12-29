@@ -41,6 +41,7 @@ is_installed() {
 
 # ........................[  1. System & Locale  ]........................ #
 
+export HISTFILE="${ZDOTDIR:-$HOME}/zhistory"
 export LANG="en_US.UTF-8"
 export LC_ALL="en_US.UTF-8"
 export KEYTIMEOUT=1

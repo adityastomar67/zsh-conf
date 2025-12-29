@@ -9,6 +9,7 @@
 # HISTORY CONFIGURATION
 # ==============================================================================
 # Note: Zsh needs a file location to save history across sessions
+HISTFILE="${ZDOTDIR:-$HOME}/zhistory"
 HISTSIZE=10000
 SAVEHIST=10000
 

@@ -11,9 +11,6 @@ export ZSH_PATH="${ZSH_PATH:-$HOME/.config/zsh-conf}"
 # Zsh Completion Dump Location
 export ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump"
 
-# zsh history file
-export HISTFILE="${ZDOTDIR:-$HOME}/zhistory"
-
 # Path where the main dotfiles resides
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # Values for macOS
