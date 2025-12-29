@@ -489,6 +489,9 @@ Installer::run() {
     if UI::confirm "Launch new shell now?"; then
         clear
         exec zsh
+        [[ -f "$HOME/.zsh_history" ]] && command rm -f "$HOME/.zsh_history"
+        [[ -f "$HOME/.zcompdump" ]]   && command rm -f "$HOME/.zcompdump"
+        exec zsh
     else
         echo
         Log::info "Please restart your terminal manually to see changes."
