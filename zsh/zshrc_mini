@@ -52,6 +52,7 @@ alias ls='eza --icons=always --color=always -a'
 alias ll='eza --icons=always --color=always -la'
 alias v='nvim'
 alias py="python3"
+alias zsh="exec zsh"
 
 # -- Navigation --
 alias dv="cd ~/Developer/"

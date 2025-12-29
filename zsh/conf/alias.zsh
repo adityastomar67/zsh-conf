@@ -48,6 +48,9 @@ if [[ "$OS_TYPE" == "Linux" ]]; then
     alias chgrp="chgrp --preserve-root"
 fi
 
+# Starting a new Refresh shell instead of child spawniing
+alias zsh="exec zsh"
+
 # ........................[  3. Navigation & Directories  ]........................ #
 
 # Basic Movement
