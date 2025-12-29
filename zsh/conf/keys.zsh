@@ -61,6 +61,9 @@ fi
 # ........................[  3. Menu Selection  ]........................ #
 # Use Vi keys (h/j/k/l) to navigate the tab completion menu.
 
+# [NEW] Enable searching inside the completion menu
+bindkey -M menuselect '?' history-incremental-search-forward
+bindkey -M menuselect '/' history-incremental-search-backward
 bindkey -M menuselect '^h' vi-backward-char
 bindkey -M menuselect '^k' vi-up-line-or-history
 bindkey -M menuselect '^l' vi-forward-char
@@ -105,6 +108,11 @@ function _sudo-command-line() {
 
 zle -N _sudo-command-line
 bindkey "\e\e" _sudo-command-line
+
+
+# [NEW] Quick Reload Config (Ctrl+x)
+# Checks if ZDOTDIR is set, otherwise defaults to HOME
+bindkey -s '^x' '^usource "${ZDOTDIR:-$HOME}/.zshrc"\n'
 
 
 # ........................[  5. Terminal Application Mode  ]........................ #

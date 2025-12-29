@@ -69,6 +69,8 @@ setopt COMPLETE_IN_WORD     # Complete from both ends of a word
 setopt MENU_COMPLETE        # Insert first match immediately
 setopt GLOB_COMPLETE        # Show autocompletion menu with globs
 setopt HASH_LIST_ALL        # Hash entire command path first
+setopt EXTENDED_GLOB        # Use extended globbing syntax
+setopt GLOB_DOTS            # files beginning with a . are matched without explicitly specifying the dot
 
 # History
 setopt APPEND_HISTORY          # Append history instead of replacing
@@ -82,6 +84,8 @@ setopt HIST_NO_FUNCTIONS       # Don't save function definitions
 setopt HIST_EXPIRE_DUPS_FIRST  # Expire duplicates first when trimming
 setopt HIST_SAVE_NO_DUPS       # Don't write duplicates to history file
 setopt HIST_REDUCE_BLANKS      # Remove superfluous blanks
+setopt HIST_VERIFY          # Don't execute immediately upon history expansion
+setopt BANG_HIST            # Treat the '!' character specially during expansion
 
 # General
 setopt NOTIFY                  # Report status of background jobs immediately

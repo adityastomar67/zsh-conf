@@ -96,7 +96,6 @@ elif [ "$PLUG_MANAGER" = "zap" ]; then
 
     # 3. Core Tools
     plug "zap-zsh/zap"
-    plug "zap-zsh/supercharge"
     plug "romkatv/zsh-defer"
 
     # 4. Functional Plugins (Load Immediately)
