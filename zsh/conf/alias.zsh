@@ -96,7 +96,7 @@ is_installed code  && alias code="code --extensions-dir=\"$HOME/.config/Code/Use
 # Replacement Tools (Rust/Modern alternatives)
 is_installed bat     && alias cat='bat'
 is_installed duf     && alias df="duf" || alias df="df -h"
-is_installed trash   && alias rm="trash --trash-dir='$HOME/.Trash' --recursive"
+is_installed trash   && alias del="trash"
 is_installed ripgrep && alias grep="ripgrep"
 
 # Listing (ls -> eza/lsd)
