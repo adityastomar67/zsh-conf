@@ -51,10 +51,12 @@ typeset -A Paths
 typeset -a Dependencies
 
 Config::init() {
-    Paths[REPO]="$HOME/.config/zsh-conf"
+    Paths[REPO]="${ZDOTDIR:-$HOME}/.config/zsh-conf"
     Paths[RC]="${ZDOTDIR:-$HOME}/.zshrc"
+    Paths[HIST]="${ZDOTDIR:-$HOME}/zhistory"
+    Paths[DUMP]="${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump"
     Paths[ENV]="${ZDOTDIR:-$HOME}/.zshenv"
-    Paths[BACKUP]="$HOME/.zsh_backups/$(date +%Y-%m-%d)"
+    Paths[BACKUP]="${ZDOTDIR:-$HOME}/.zsh_backups/$(date +%Y-%m-%d)"
 
     # Binary dependencies to ensure are present
     Dependencies=(
@@ -420,6 +422,8 @@ Installer::run() {
     # 6. Symlinks
     FileSys::symlink "${Paths[REPO]}/.zshrc" "${Paths[RC]}"
     FileSys::symlink "${Paths[REPO]}/.zshenv" "${Paths[ENV]}"
+    FileSys::symlink "${Paths[REPO]}/zsh/zhistory" "${Paths[HIST]}"
+    FileSys::symlink "${Paths[REPO]}/zsh/zcompdump" "${Paths[DUMP]}"
 
     # 7. Dependencies
     Installer::dependencies

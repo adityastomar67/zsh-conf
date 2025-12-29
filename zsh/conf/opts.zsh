@@ -229,7 +229,7 @@ zstyle ':autocomplete:*' add-space executables aliases functions builtins reserv
 # ........................[  7. History & Syntax Highlighting  ]........................ #
 
 # History File Configuration
-HISTFILE="$ZSH_PATH/zsh/zhistory"
+HISTFILE="${ZDOTDIR:-$HOME}/zhistory"
 HISTSIZE=50000
 SAVEHIST=50000
 HISTTIMEFORMAT="%Y/%m/%d %H:%M:%S:   "
