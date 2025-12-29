@@ -24,17 +24,25 @@ setopt HIST_SAVE_NO_DUPS         # Don't write duplicates to the file
 # ==============================================================================
 # COMPLETION & PLUGINS
 # ==============================================================================
-# Faster completion loading (Cache check once a day)
 autoload -Uz compinit
-if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.m-1) ]]; then
+
+# Define the location explicitly so we can zcompile it later
+_comp_dump="${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump"
+
+# 🔒 CRITICAL: Enable extended globbing locally for the (#q) syntax to work.
+# Without this, the check always fails and you pay the full 14ms penalty.
+setopt LOCAL_OPTIONS EXTENDED_GLOB
+
+# Check if the dump file exists and is less than 24 hours old (.m-1)
+if [[ -n "$_comp_dump"(#qN.m-1) ]]; then
+  # Fast Path: Load from cache without security checks
   compinit -C
 else
+  # Slow Path: Regenerate completion cache
   compinit
+  # Optimization: Compile the dump to bytecode (.zwc) for faster reading next time
+  zcompile "$_comp_dump"
 fi
-
-
-# Case insensitive tab completion
-zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 
 # ==============================================================================
 # PROMPT
