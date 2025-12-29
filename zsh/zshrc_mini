@@ -24,33 +24,14 @@ setopt HIST_SAVE_NO_DUPS         # Don't write duplicates to the file
 # ==============================================================================
 # COMPLETION & PLUGINS
 # ==============================================================================
+# Faster completion loading (Cache check once a day)
 autoload -Uz compinit
-
-# Define cache location
-_comp_dump="${ZDOTDIR:-$HOME}/.zcompdump"
-
-# 🔒 ENABLE GLOBBING LOCALLY (Required for the time check)
-setopt LOCAL_OPTIONS EXTENDED_GLOB
-
-# Logic:
-# 1. Check if the dump file exists AND is less than 20 hours old (.mh-20)
-# 2. If yes, use -C to skip checks (0ms)
-# 3. If no, regenerate the cache but SKIP the slow permission audit (compaudit)
-if [[ -n "$_comp_dump"(#qN.mh-20) ]]; then
+if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.m-1) ]]; then
   compinit -C
 else
-  # ⚡ HACK: Mock compaudit to return success immediately.
-  # This skips the slow permission checks on every single folder in fpath.
-  compaudit() { : }
-
   compinit
-
-  # Compile the cache to bytecode for faster loading next time
-  zcompile "$_comp_dump"
-
-  # Remove the mock
-  unfunction compaudit
 fi
+
 
 # Case insensitive tab completion
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
