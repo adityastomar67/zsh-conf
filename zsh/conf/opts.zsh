@@ -8,8 +8,19 @@
 autoload -Uz vcs_info
 autoload -Uz add-zsh-hook
 autoload -U colors && colors
-autoload -Uz compinit
 autoload _vi_search_fix
+
+# Faster completion loading (Cache check once a day)
+autoload -Uz compinit
+
+# Check if the dump file exists (-f) to decide whether to regenerate or use cache (-C)
+if [[ -f "$ZSH_COMPDUMP" ]]; then
+  # File exists: Use cache (-C) and specify path (-d)
+  compinit -C -d "$ZSH_COMPDUMP"
+else
+  # File missing: Full build and specify path (-d)
+  compinit -d "$ZSH_COMPDUMP"
+fi
 
 # Load Zsh Modules
 zmodload zsh/zle
@@ -130,18 +141,20 @@ zle -N _toggle-left-prompt
 
 # ........................[  5. Completion System  ]........................ #
 
-# On-demand Rehash (Pacman cache check)
-zshcache_time="$(date +%s%N)"
-rehash_precmd() {
-    if [[ -a /var/cache/zsh/pacman ]]; then
-        local paccache_time="$(date -r /var/cache/zsh/pacman +%s%N)"
-        if (( zshcache_time < paccache_time )); then
-            rehash
-            zshcache_time="$paccache_time"
+# On-demand Rehash (Only run this on Arch Linux)
+if [[ -f /etc/arch-release ]]; then
+    zshcache_time="$(date +%s%N)"
+    rehash_precmd() {
+        if [[ -a /var/cache/zsh/pacman ]]; then
+            local paccache_time="$(date -r /var/cache/zsh/pacman +%s%N)"
+            if (( zshcache_time < paccache_time )); then
+                rehash
+                zshcache_time="$paccache_time"
+            fi
         fi
-    fi
-}
-add-zsh-hook -Uz precmd rehash_precmd
+    }
+    add-zsh-hook -Uz precmd rehash_precmd
+fi
 
 # --- Unified Zstyle Configuration ---
 
@@ -211,25 +224,28 @@ fi
 
 # ........................[  6. Autocomplete Plugin Hooks  ]........................ #
 # These settings apply if using zsh-autocomplete plugin
+## Define where Zap installs the plugins
+local ZAP_AC_DIR="$HOME/.local/share/zap/plugins/marlonrichert/zsh-autocomplete"
 
-zstyle ':autocomplete:*' default-context ''
-zstyle ':autocomplete:*' min-delay 0.05
-zstyle ':autocomplete:*' min-input 1
-zstyle ':autocomplete:*' ignored-input ''
-zstyle ':autocomplete:*' list-lines 16
-zstyle ':autocomplete:history-search:*' list-lines 16
-zstyle ':autocomplete:history-incremental-search-*:*' list-lines 16
-zstyle ':autocomplete:*' recent-dirs cdr
-zstyle ':autocomplete:*' insert-unambiguous no
-zstyle ':autocomplete:*' widget-style complete-word
-zstyle ':autocomplete:*' fzf-completion no
-zstyle ':autocomplete:*' add-space executables aliases functions builtins reserved-words commands
-
+# --- LOGIC SWITCH ---
+if [[ -d "$ZAP_AC_DIR" ]]; then
+    zstyle ':autocomplete:*' default-context ''
+    zstyle ':autocomplete:*' min-delay 0.05
+    zstyle ':autocomplete:*' min-input 1
+    zstyle ':autocomplete:*' ignored-input ''
+    zstyle ':autocomplete:*' list-lines 16
+    zstyle ':autocomplete:history-search:*' list-lines 16
+    zstyle ':autocomplete:history-incremental-search-*:*' list-lines 16
+    zstyle ':autocomplete:*' recent-dirs cdr
+    zstyle ':autocomplete:*' insert-unambiguous no
+    zstyle ':autocomplete:*' widget-style complete-word
+    zstyle ':autocomplete:*' fzf-completion no
+    zstyle ':autocomplete:*' add-space executables aliases functions builtins reserved-words commands
+fi
 
 # ........................[  7. History & Syntax Highlighting  ]........................ #
 
 # History File Configuration
-HISTFILE="${ZDOTDIR:-$HOME}/zhistory"
 HISTSIZE=50000
 SAVEHIST=50000
 HISTTIMEFORMAT="%Y/%m/%d %H:%M:%S:   "

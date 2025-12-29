@@ -441,8 +441,12 @@ Installer::run() {
     # 6. Symlinks
     FileSys::symlink "${Paths[REPO]}/.zshrc" "${Paths[RC]}"
     FileSys::symlink "${Paths[REPO]}/.zshenv" "${Paths[ENV]}"
-    FileSys::symlink "${Paths[REPO]}/zsh/zhistory" "${Paths[HIST]}"
-    FileSys::symlink "${Paths[REPO]}/zsh/zcompdump" "${Paths[DUMP]}"
+
+    [[ -f "${Paths[HIST]}" ]] && rm -f "${Paths[HIST]}"
+    command mv "${Paths[REPO]}/zsh/zhistory" "${Paths[HIST]}"
+    
+    [[ -f "${Paths[DUMP]}" ]] && rm -f "${Paths[DUMP]}"
+    command mv "${Paths[REPO]}/zsh/zcompdump" "${Paths[DUMP]}"
 
     # 7. Dependencies
     Installer::dependencies

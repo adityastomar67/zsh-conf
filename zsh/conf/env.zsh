@@ -9,7 +9,7 @@ export PATH="$ZSH_PATH/zsh/bin:$PATH"
 
 # Dynamic Path Loader
 ## 1. Ensure the system 'path' array does not contain duplicates
-typeset -U path
+typeset -U path fpath
 
 ## 2. Iterate through the array defined in .zshenv
 for entry in "${USER_PATHS[@]}"; do
@@ -46,9 +46,6 @@ export LC_ALL="en_US.UTF-8"
 export KEYTIMEOUT=1
 export GPG_TTY=${TTY:-$(tty)} # Faster than calling subshell $(tty) if TTY is already set
 export ARCHFLAGS="-arch x86_64"
-
-# Zsh Completion Dump Location
-export ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump"
 
 # True Color Support
 if [[ "$COLORTERM" == "truecolor" || "$TERM" == *256* ]]; then

@@ -9,7 +9,6 @@
 # HISTORY CONFIGURATION
 # ==============================================================================
 # Note: Zsh needs a file location to save history across sessions
-HISTFILE="$HOME/zhistory"
 HISTSIZE=10000
 SAVEHIST=10000
 
@@ -25,11 +24,16 @@ setopt HIST_SAVE_NO_DUPS         # Don't write duplicates to the file
 # COMPLETION & PLUGINS
 # ==============================================================================
 # Faster completion loading (Cache check once a day)
+typeset -U path fpath # Ensure duplicate paths don't slow down startup
 autoload -Uz compinit
-if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.m-1) ]]; then
-  compinit -C
+
+# Check if the dump file exists (-f) to decide whether to regenerate or use cache (-C)
+if [[ -f "$ZSH_COMPDUMP" ]]; then
+  # File exists: Use cache (-C) and specify path (-d)
+  compinit -C -d "$ZSH_COMPDUMP"
 else
-  compinit
+  # File missing: Full build and specify path (-d)
+  compinit -d "$ZSH_COMPDUMP"
 fi
 
 
