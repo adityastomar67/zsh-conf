@@ -354,12 +354,12 @@ Installer::configure_features() {
     local options=(
         "Tmux Integration" "Alias Expansion" "Custom Functions"
         "Theme Engine" "Multi-Neovim Setup" "Custom Wallpapers"
-        "Temp Offline config"
+        "Temp Offline config" "Minimalist Config"
     )
     local config_var=(
         "USE_TMUX" "USE_ALIAS" "USE_FUNCTION"
         "OPT_THEME" "MULTI_NEOVIM" "CUSTOM_WALL"
-        "TEMP_OFFLINE_CONFIG"
+        "TEMP_OFFLINE_CONFIG" "MINIMALIST"
     )
 
     if [[ -f "${Paths[ENV]}" ]]; then
@@ -444,7 +444,7 @@ Installer::run() {
 
     [[ -f "${Paths[HIST]}" ]] && rm -f "${Paths[HIST]}"
     command mv "${Paths[REPO]}/zsh/zhistory" "${Paths[HIST]}"
-    
+
     [[ -f "${Paths[DUMP]}" ]] && rm -f "${Paths[DUMP]}"
     command mv "${Paths[REPO]}/zsh/zcompdump" "${Paths[DUMP]}"
 

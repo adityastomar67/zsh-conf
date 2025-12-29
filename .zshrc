@@ -30,7 +30,7 @@ local time_start=$EPOCHREALTIME
 : ${ZSH_PATH:=$HOME/.config/zsh-conf}
 
 local RC="$ZSH_PATH/zsh/zshrc"
-[[ "$MINIMALIST" == "1" ]] && RC="$ZSH_PATH/zsh/zshrc_mini"  # Minimal config test
+[[ "$MINIMALIST" == "Yes" ]] && RC="$ZSH_PATH/zsh/zshrc_mini"  # Minimal config test
 
 # Loading the actual config file
 if [[ -r "$RC" ]]; then

@@ -12,7 +12,7 @@ export ZSH_PATH="${ZSH_PATH:-$HOME/.config/zsh-conf}"
 export ZSH_COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump"
 
 # zsh history file
-HISTFILE="${ZDOTDIR:-$HOME}/zhistory"
+export HISTFILE="${ZDOTDIR:-$HOME}/zhistory"
 
 # Path where the main dotfiles resides
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -29,8 +29,8 @@ export PLUG_MANAGER="zap"
 # Prompt Theme (Options: "gh0st", "z", "10k", etc.)
 export PROMPT_THEME="gh0st"
 
-# Minimal ZSH settings for "Not So Advanced" User. ("1" to enable, "0" to disable)
-export MINIMALIST="0"
+# Minimal ZSH settings for "Not So Advanced" User. ("Yes" to enable, "No" to disable)
+export MINIMALIST="No"
 
 # Define a list of paths you want to add.
 ## You can mix absolute paths (starting with /) and relative paths (relative to $HOME).
