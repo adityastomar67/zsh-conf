@@ -8,8 +8,8 @@
 [[ "$USE_TMUX" != "Yes" ]] && return
 
 # Exit with a warning if enabled but tmux binary is missing
-if ! command -v tmux &>/dev/null; then
-    printf "\n\033[0;33m[WARN] USE_TMUX='Yes' but 'tmux' is not installed.\033[0m\n"
+if (( ! $+commands[tmux] )); then
+    print -P "\n%F{yellow}[WARN] USE_TMUX='Yes' but 'tmux' is not installed.%f"
     return
 fi
 
