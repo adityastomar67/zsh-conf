@@ -9,4 +9,6 @@ new.sh
 _bin
 install.bak
 temp.zsh
+_text
+.gitignore
 

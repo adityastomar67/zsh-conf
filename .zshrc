@@ -14,7 +14,7 @@
 
 # ........................[  2. Benchmarking (Start)  ]........................ #
 
-# Enable startup timing if ZSH_BENCHMARK=1 in ~/.zshenv
+# Enable startup timing if ZSH_BENCHMARK="Yes" in ~/.zshenv
 
 ## Start a wall-clock timer (nanoseconds) for total load time precision
 ## zprof only measures functions; this measures actual file sourcing time.
@@ -45,9 +45,9 @@ fi
 # ------------------------[  4. TERMINAL DECORATIONS  ]------------------------ #
 
 #  Random Visuals (Run on every shell start)
-if [[ -x "$HOME/.local/bin/colorscript" ]]; then
-    # Run random ASCII art script (distro-tube/dt-colorscripts)
-    "$HOME/.local/bin/colorscript" -r
+if is_installed ColorScript; then
+    # Run random ASCII art script
+    ColorScript -r
 elif (( $+commands[motivate] )); then
     # Run motivational quotes if installed
     motivate && echo
