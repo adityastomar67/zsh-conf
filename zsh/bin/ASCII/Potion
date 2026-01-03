@@ -10,7 +10,7 @@
 #  :: Magic Potion
 #  :: Renders an RPG-style flask using ANSI colors.
 #  :: Optimized for Zsh using static constants.
-#  :: Updates By: @adityastomar67
+#  :: Updated By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. Make executable: chmod +x Potion

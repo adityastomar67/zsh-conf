@@ -11,7 +11,7 @@
 #  :: Renders the classic pixel art using ANSI codes.
 #  :: Original Author: Rob O'Leary
 #  :: Optimized for Zsh by Rob O'Leary (Modified)
-#  :: Updates By: @adityastomar67
+#  :: Updated By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. Make executable: chmod +x Mario

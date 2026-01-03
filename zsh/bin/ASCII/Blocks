@@ -10,7 +10,7 @@
 #  :: Minimal Terminal Color Palette Tester (Zsh Version)
 #  :: Renders standard (0-7) and bright (8-15) ANSI color blocks.
 #  :: Works natively on macOS and Linux without external dependencies.
-#  :: Updates By: @adityastomar67
+#  :: Updated By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. Make executable: chmod +x Blocks

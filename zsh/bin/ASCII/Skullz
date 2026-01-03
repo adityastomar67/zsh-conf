@@ -11,7 +11,7 @@
 #  :: Randomly renders either the Standard or Detailed skull variant.
 #  :: Original Author: pyratebeard / pfh
 #  :: Optimized for Zsh with random selection logic.
-#  :: Updates By: @adityastomar67
+#  :: Updated By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. Make executable: chmod +x Skullz

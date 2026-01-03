@@ -10,7 +10,7 @@
 #  :: Pixel Art Fetch (z0mbi3 Style)
 #  :: Modified version of rxfetch.
 #  :: Optimized for Zsh with macOS & Linux support.
-#  :: Updates By: @adityastomar67
+#  :: Updated By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. Make executable: chmod +x zfetch

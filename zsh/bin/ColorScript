@@ -7,6 +7,7 @@
 #  :: Simple CLI for shell-color-scripts (Zsh Native Version)
 #  :: A collection of terminal color scripts for eye-candy.
 #  :: Based on: https://github.com/charitarthchugh/shell-color-scripts
+#  :: Updated By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. List scripts:    colorscript -l

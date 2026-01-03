@@ -11,7 +11,7 @@
 #  :: Renders a 256-color taco in the terminal.
 #  :: Original Author: xero <x@xero.nu>
 #  :: Optimized for Zsh by abstracting ANSI sequences.
-#  :: Updates By: @adityastomar67
+#  :: Updated By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. Make executable: chmod +x Taco

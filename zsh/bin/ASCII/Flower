@@ -11,7 +11,7 @@
 #  :: Renders 8-bit style pixel art using ANSI escape codes.
 #  :: Original Author: rob o'leary
 #  :: Optimized for Zsh by pre-defining color blocks.
-#  :: Updates By: @adityastomar67
+#  :: Updated By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. Make executable: chmod +x Flower

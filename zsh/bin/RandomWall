@@ -7,6 +7,7 @@
 #  :: Cross-platform Random Wallpaper Manager (Zsh Version)
 #  :: Auto-downloads from git if empty.
 #  :: Supports: Linux (Feh/Nitrogen) & macOS.
+#  :: Created By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. Make executable: chmod +x RandomWall

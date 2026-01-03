@@ -12,7 +12,7 @@
 #  :: 256-Color Spectrum (Compact)
 #  :: Generates a smooth, condensed color gradient.
 #  :: Optimized for Zsh loops.
-#  :: Updates By: @adityastomar67
+#  :: Updated By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. Make executable: chmod +x Spectrum

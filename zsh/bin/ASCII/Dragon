@@ -13,7 +13,7 @@
 #  :: Renders the classic BackTrack/Kali dragon style art.
 #  :: Original Author: Ivo
 #  :: Optimized for Zsh (Removed repetitive per-line color codes).
-#  :: Updates By: @adityastomar67
+#  :: Updated By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. Make executable: chmod +x Dragon

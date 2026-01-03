@@ -10,7 +10,7 @@
 #  :: Random Art Generator
 #  :: Randomly renders Cosmo, 1-Up Mushroom, or Burger.
 #  :: Optimized for Zsh.
-#  :: Updates By: @adityastomar67
+#  :: Updated By: GitHub@adityastomar67
 #
 #  USAGE:
 #      1. Make executable: chmod +x Items
