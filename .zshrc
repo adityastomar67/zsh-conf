@@ -77,15 +77,20 @@ fi
 
 # Print profile report if benchmarking was enabled
 if [[ "$ZSH_BENCHMARK" == "Yes" ]]; then
+    # 1. STOP THE CLOCK IMMEDIATELY
+    #    We capture time here so the logic below is not counted in the score.
     local time_end=$EPOCHREALTIME
-    # Precision calculation in milliseconds
     local total_ms=$(( (time_end - time_start) * 1000 ))
 
-    printf "\n\033[1;33m--- ⏱️  Startup Benchmark ---\033[0m\n"
-    printf "Total Wall-Clock Time: \033[1;32m%.2f ms\033[0m\n" $total_ms
+    # 2. Source the UI logic
+    #    Adjust the path to where you saved the file in Step 1
+    local BENCH_UI="$ZSH_PATH/zsh/conf/_benchmark.ui"
 
-    printf "\nTop 20 Slowest Functions:\n"
-    zprof | head -20
-    echo "-----------------------------------------------------------------------------------"
+    if [[ -r "$BENCH_UI" ]]; then
+        source "$BENCH_UI"
+    else
+        echo "Benchmark UI file not found at: $BENCH_UI"
+        echo "Total startup time: ${total_ms}ms"
+    fi
 fi
 

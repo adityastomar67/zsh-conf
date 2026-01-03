@@ -73,3 +73,6 @@ if [[ "$USE_TMUX" == "Yes" ]] && (( $+commands[tmux] )) && [[ -z "$TMUX" && -t 0
     exec tmux new-session -A -s b001
 fi
 
+# Instant terminal clear (Removes initialization artifacts)
+# Only runs if NOT in an SSH connection
+[[ -z "$SSH_CONNECTION" ]] && echo -en "\x1b[2J\x1b[1;1H"
