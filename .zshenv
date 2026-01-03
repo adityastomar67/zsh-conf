@@ -53,6 +53,8 @@ export USE_FUNCTION="No"
 # Enable 'theme.sh' script integration ("Yes" / "No")
 export OPT_THEME="No"
 
+# Enables the Fancy startup Terminal
+export FANCY_TERM="Yes"
 
 # ........................[  Advanced Integrations  ]........................ #
 

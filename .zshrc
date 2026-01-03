@@ -44,13 +44,18 @@ fi
 
 # ------------------------[  4. TERMINAL DECORATIONS  ]------------------------ #
 
-#  Random Visuals (Run on every shell start)
-if is_installed ColorScript; then
-    # Run random ASCII art script
-    ColorScript -r
-elif (( $+commands[motivate] )); then
-    # Run motivational quotes if installed
-    motivate && echo
+# Random Visuals (Run on every shell start)
+if [[ "$FANCY_TERM" == "Yes" ]]; then
+    # Create a list of available commands
+    local -a available_visuals=()
+    (( $+commands[ColorScript] )) && available_visuals+=( "ColorScript -r" )
+    (( $+commands[motivate] ))    && available_visuals+=( "motivate" )
+
+    # If list is not empty, pick a random one
+    if (( ${#available_visuals} > 0 )); then
+        eval "${available_visuals[$(( RANDOM % ${#available_visuals} + 1 ))]}"
+        echo "" # Add spacing
+    fi
 fi
 
 
