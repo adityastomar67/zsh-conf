@@ -1,3 +1,4 @@
+#!/usr/bin/env zsh
 # $ZSH_PATH/zsh/conf/_benchmark.zsh
 
 # Ensure we actually have the data needed

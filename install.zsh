@@ -477,21 +477,13 @@ Installer::run() {
     printf "\n${Color[G]}  Installation Finished Successfully! ${Color[Rst]}\n"
     sleep 2
 
-    printf "\n"
-    printf \
-    "  ${Color[R]}[IMPORTANT]${Color[Rst]} ${Color[B]}Do not edit the main config file directly:${Color[Rst]}${Color[U]} ${Paths[REPO]}/zshrc${Color[Rst]}\n"
-    printf \
-    "              ${Color[B]}Instead, add custom settings in:${Color[Rst]}${Color[U]} ${Paths[RC]}${Color[Rst]}\n\n"
-
-    sleep 2
-
     # --- ASK TO LAUNCH ---
     if UI::confirm "Launch new shell now?"; then
         clear
         exec zsh
-        [[ -f "$HOME/.zsh_history" ]] && command rm -f "$HOME/.zsh_history"
-        [[ -f "$HOME/.zcompdump" ]]   && command rm -f "$HOME/.zcompdump"
-        exec zsh
+        [[ -f "$HOME/.zsh_history" ]] && command rm -f "$HOME/.zsh_history" &> /dev/null
+        [[ -f "$HOME/.zcompdump" ]]   && command rm -f "$HOME/.zcompdump" &> /dev/null
+        source "$ZSH_PATH/zsh/conf/_welcome.ui"
     else
         echo
         Log::info "Please restart your terminal manually to see changes."

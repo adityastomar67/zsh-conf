@@ -1,0 +1,88 @@
+#!/usr/bin/env zsh
+#  _    _      _                           _   _ _____
+# | |  | |    | |                         | | | |_   _|
+# | |  | | ___| | ___ ___  _ __ ___   ___ | | | | | |
+# | |/\| |/ _ \ |/ __/ _ \| '_ ` _ \ / _ \| | | | | |
+# \  /\  /  __/ | (_| (_) | | | | | |  __/| |_| |_| |_
+#  \/  \/ \___|_|\___\___/|_| |_| |_|\___(_)___/ \___/
+#
+#  :: ZSH-CONF Welcome Message
+#  :: Displays a guide on the very first shell start.
+
+# Wrap in anonymous function to prevent variable leakage into the shell
+() {
+    # Configuration & Colors
+    # --------------------------------------------------------------------------
+    typeset -r c_rst=$'\e[0m'
+    typeset -r c_acc=$'\e[1;36m'  # Cyan
+    typeset -r c_key=$'\e[1;33m'  # Yellow
+    typeset -r c_tit=$'\e[1;35m'  # Purple
+    typeset -r c_dim=$'\e[90m'    # Grey
+    typeset -r c_bld=$'\e[1m'     # Bold White
+    typeset -r c_wrn=$'\e[1;31m'  # Red
+    typeset -r c_und=$'\e[4m'     # Underline
+
+    # The Message Logic
+    # --------------------------------------------------------------------------
+    clear
+
+    # -- Header Box --
+    printf "${c_dim}╭──────────────────────────────────────────────────────────────╮${c_rst}\n"
+    printf "${c_dim}│${c_rst}                ${c_acc}👋 HELLO, WELCOME TO ZSH-CONF${c_rst}                 ${c_dim}│${c_rst}\n"
+    printf "${c_dim}╰──────────────────────────────────────────────────────────────╯${c_rst}\n"
+
+    # -- Intro --
+    print "   Maybe it's your first time using a custom Zsh setup or maybe not."
+    print "   Here are some tips to help you get the most out of your terminal.\n"
+    print "   ${c_dim}🔗 Repo:${c_rst} https://github.com/adityastomar67/zsh-conf\n"
+
+    # -- Philosophy & Features --
+    printf "   ${c_tit}:: PHILOSOPHY & FEATURES${c_rst}\n"
+    print "   I tried to make this shell environment ${c_bld}MINIMALIST${c_rst} yet powerful."
+    print "   It is designed to be fast, beautiful, and efficient.\n"
+
+    # Benchmarking
+    printf "   ${c_dim}•${c_rst} ${c_bld}Startup Benchmarking:\n${c_rst}"
+    printf "     Automatically times your shell load. Set ${c_key}ZSH_BENCHMARK=\"Yes\"${c_rst} in ${c_und}~/.zshenv${c_rst} to see the report.\n\n"
+
+    # Minimalist
+    printf "   ${c_dim}•${c_rst} ${c_bld}Minimalist Mode:\n${c_rst}"
+    printf "     Need raw speed? Toggle the lightweight version by setting ${c_key}MINIMALIST=\"Yes\"${c_rst} in ${c_und}~/.zshenv${c_rst}.\n\n"
+
+    # Visuals
+    printf "   ${c_dim}•${c_rst} ${c_bld}Visuals:\n${c_rst}"
+    printf "     Enjoy random pixel art or quotes on start. Set ${c_key}FANCY_TERM=\"Yes\"${c_rst} in ${c_und}~/.zshenv${c_rst}.\n"
+    print  "     ${c_acc}[NOTE]${c_rst} (Requires '${c_und}motivate${c_rst}' installed for Quotes).\n"
+
+    # -- Configuration --
+    printf "   ${c_tit}:: CONFIGURATION${c_rst}\n"
+    print "   This configuration is managed, meaning the core files may update."
+    print "   To keep your settings safe, please follow this rule:\n"
+
+    # Warning / Do Not Edit
+    printf "   ${c_wrn}⚠  DO NOT EDIT:${c_rst} Any file at ${c_dim}${c_und}~/.config/zsh-conf/zsh/${c_rst} directly.\n"
+
+    # Do Edit
+    printf "   ${c_acc}✓  DO EDIT:${c_rst}     The ${c_bld}'USER OVERRIDES'${c_rst} section at the bottom of your ${c_dim}${c_und}~/.zshrc${c_rst} file.\n                   All pre-set options are in ${c_dim}${c_und}~/.zshenv${c_rst}.\n\n"
+
+    # Aliases
+    print "   ${c_dim}${c_und}~/.zshrc${c_rst} is where you should place your custom aliases, exports, and functions\n   (e.g. ${c_key}alias myip='curl ifconfig.me'${c_rst}).\n"
+
+    # Dotup / Updates (ADDED HERE)
+    printf "   ${c_dim}•${c_rst} ${c_bld}Updates:\n${c_rst}"
+    printf "     Keep this config fresh easily. Just run ${c_key}dotup -z${c_rst} in the terminal. It handles git pulls and resets automatically.\n\n"
+
+    # -- Footer --
+    printf "   ${c_dim}──────────────────────────────────────────────────────────────────────────────────────────────────────────────────${c_rst}\n"
+    print "   ${c_bld} NEED HELP?${c_rst}"
+    print "   If you find a bug or have a suggestion, open an issue at the repo.\n"
+
+    print "   ${c_dim}> The terminal can be intimidating. ${c_rst}"
+    print "   ${c_dim}> But once you master Zsh, you never go back to Bash. ${c_rst}\n"
+
+    # -- Exit Prompt --
+    print -n "   ${c_acc}Press [ENTER] to start hacking...${c_rst}"
+    read -k1 -s
+    clear && exec zsh
+
+} # End of anonymous function
