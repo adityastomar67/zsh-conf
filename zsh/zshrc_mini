@@ -43,23 +43,25 @@ PS1=$'%B%F{blue}%n %B%F{red}/ %B%F{yellow}%m%f%b %{\e[3m%}%B%F{grey}[%~]%f%b%{\e
 # ==============================================================================
 # ALIASES
 # ==============================================================================
+# Exit if aliases are disabled in config
+if [[ "$USE_ALIAS" == "Yes" ]]; then
+  # -- Core Replacements --
+  alias cat="bat --theme=TwoDark"
+  alias ls='eza --icons=always --color=always -a'
+  alias ll='eza --icons=always --color=always -la'
+  alias v='nvim'
+  alias py="python3"
+  alias zsh="exec zsh"
 
-# -- Core Replacements --
-alias cat="bat --theme=TwoDark"
-alias ls='eza --icons=always --color=always -a'
-alias ll='eza --icons=always --color=always -la'
-alias v='nvim'
-alias py="python3"
-alias zsh="exec zsh"
+  # -- Navigation --
+  alias dv="cd ~/Developer/"
 
-# -- Navigation --
-alias dv="cd ~/Developer/"
+  # -- Tmux Utilities --
+  alias tkill='tmux kill-session -t'
 
-# -- Tmux Utilities --
-alias tkill='tmux kill-session -t'
-
-# Improved :q to only run if inside TMUX (kills session or exits shell)
-alias ':q'='[ -n "$TMUX" ] && tmux kill-session -t $(tmux display-message -p "#S") || exit'
+  # Improved :q to only run if inside TMUX (kills session or exits shell)
+  alias ':q'='[ -n "$TMUX" ] && tmux kill-session -t $(tmux display-message -p "#S") || exit'
+fi
 
 ####--------------------------------------------------
 ####  Tmux auto-start / auto-attach (Safe Version)
@@ -76,3 +78,7 @@ fi
 # Instant terminal clear (Removes initialization artifacts)
 # Only runs if NOT in an SSH connection
 [[ -z "$SSH_CONNECTION" ]] && echo -en "\x1b[2J\x1b[1;1H"
+
+# Enable Vi-mode for command line editing
+[[ "$VI_MODE" == "Yes" ]] && set -o vi
+

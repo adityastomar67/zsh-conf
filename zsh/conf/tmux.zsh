@@ -92,4 +92,3 @@ function _tmux_launch() {
 # Run the launcher
 _tmux_launch
 
-# vim:filetype=zsh

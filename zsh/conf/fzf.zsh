@@ -332,4 +332,3 @@ export FZF_ALT_C_OPTS="
 --preview 'eza --tree --color=always {} | head -200'
 "
 
-# vim:filetype=zsh

@@ -143,4 +143,3 @@ if [[ "$TEMP_OFFLINE_CONFIG" == "Yes" ]]; then
     fi
 fi
 
-# vim:filetype=zsh

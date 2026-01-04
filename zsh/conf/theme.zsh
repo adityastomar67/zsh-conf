@@ -66,4 +66,3 @@ if [[ "$CUSTOM_WALL" == "Yes" ]] && is_installed RandomWall; then
     RandomWall
 fi
 
-# vim:filetype=zsh

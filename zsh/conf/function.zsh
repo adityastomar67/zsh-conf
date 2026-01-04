@@ -619,4 +619,3 @@ matrix() {
     clear
 }
 
-# vim:filetype=zsh

@@ -178,4 +178,3 @@ if (( $+commands[aws] )); then
     compdef _aws_completer_lazy aws
 fi
 
-# vim:filetype=zsh

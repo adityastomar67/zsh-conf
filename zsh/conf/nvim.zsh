@@ -92,4 +92,3 @@ function nvims() {
 # Shortcut: Ctrl+a
 bindkey -s ^a "nvims\n"
 
-# vim:filetype=zsh

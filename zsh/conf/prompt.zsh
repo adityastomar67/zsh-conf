@@ -261,4 +261,3 @@ case "$PROMPT_THEME" in
     *)       return       ;;
 esac
 
-# vim:filetype=zsh

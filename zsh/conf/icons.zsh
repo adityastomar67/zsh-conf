@@ -41,7 +41,7 @@ icons=(
     VCS_GIT_GITLAB_ICON            $'\uF296 '             # 
     VCS_HG_ICON                    $'\uF0C3 '             # 
     VCS_SVN_ICON                   '(svn) '               # Text Fallback
-    
+
     VCS_BRANCH_ICON                $'\uF126'              # 
     VCS_REMOTE_BRANCH_ICON         $'\u2192'              # →
     VCS_TAG_ICON                   $'\uF217 '             # 
@@ -102,4 +102,3 @@ get_icon_names() {
     done
 }
 
-# vim:filetype=zsh

@@ -268,4 +268,3 @@ alias week='date +%V'
 # Fun
 is_installed cbonsai && alias ccbonsai="cbonsai -ilt 0.02 -c '  ,  ,  ,  ,  ' -L 5"
 
-# vim:filetype=zsh
