@@ -71,6 +71,57 @@ Config::init() {
     )
 }
 
+Config::font_capabilities() {
+    printf "\n  ${Color[C]}:: FONT CAPABILITY CALIBRATION ::${Color[Rst]}\n"
+    printf "  ${Color[K]}Since scripts cannot see your screen, we need your eyes.${Color[Rst]}\n\n"
+    sleep 1
+
+    # --- TEST 1: NERD FONTS ---
+    # We use common icons: Folder (), Git (), Python ()
+    print "  1. Look at the icons inside the brackets:"
+    print "     [  ]  [  ]  [  ]"
+    sleep 1
+    print ""
+    print -n "     Do you see clear icons (Folder, Git, Python)? (Y/n): "
+    read -k1 -r NERD
+    print ""
+    sleep 1
+
+    # --- TEST 2: LIGATURES ---
+    print ""
+    print "  2. Look at these symbols:"
+    print "     !=   =>   =="
+    print ""
+    sleep 1
+    print -n "     Did the symbols merge into single glyphs? (Y/n): "
+    read -k1 -r LIGS
+    sleep 1
+    print ""
+    print ""
+
+    if [[ "$NERD" =~ ^[Yy]$ ]]; then
+        printf "${Color[C]}  ✔ Nerd Fonts enabled.${Color[Rst]}\n"
+    else
+        printf "${Color[K]}  ✘ Nerd Fonts disabled. Switching to ASCII mode.${Color[Rst]}\n"
+    fi
+
+    if [[ "$LIGS" =~ ^[Yy]$ ]]; then
+        printf "${Color[C]}  ✔ Ligatures confirmed.${Color[Rst]}\n"
+    else
+        printf "${Color[K]}  ✘ Ligatures not detected (Visual only).${Color[Rst]}\n"
+    fi
+
+    if [[ "$NERD" =~ ^[Nn]$ || "$LIGS" =~ ^[Nn]$ ]]; then
+        sleep 2
+        printf "\n\n  ${Color[R]}${Color[Bld]}Do you want to continue with the above options? (Y/n)${Color[Rst]}"
+        read -k1 -r ANS
+        if [[ "$ANS" =~ ^[Nn]$ ]]; then
+            printf "\n  ${Color[R]}Setup aborted by user.${Color[Rst]}\n"
+            exit 1
+        fi
+    fi
+}
+
 
 # ........................[  3. Class: Log  ]........................ #
 # Encapsulates all printing logic to ensure consistent formatting.
@@ -389,6 +440,13 @@ Installer::run() {
     Theme::init
     Config::init
     Sys::detect
+
+    # 1.2. System Check with User
+    UI::header
+    sleep 1
+    UI::typewriter "  :: Checking Nerd Fonts/Font Ligatures..."
+    sleep 2
+    Config::font_capabilities
 
     # 2. UI Intro
     UI::header
