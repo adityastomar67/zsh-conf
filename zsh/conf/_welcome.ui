@@ -22,6 +22,10 @@
     typeset -r c_wrn=$'\e[1;31m'  # Red
     typeset -r c_und=$'\e[4m'     # Underline
 
+    # Cleanup
+    [[ -f "$HOME/.zsh_history" ]] && command rm -f "$HOME/.zsh_history" &> /dev/null # NOTE: Sometimes it doesn't works!!
+    [[ -f "$HOME/.zcompdump" ]]   && command rm -f "$HOME/.zcompdump" &> /dev/null
+
     # The Message Logic
     # --------------------------------------------------------------------------
     clear

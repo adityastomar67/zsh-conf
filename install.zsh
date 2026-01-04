@@ -537,11 +537,7 @@ Installer::run() {
 
     # --- ASK TO LAUNCH ---
     if UI::confirm "Launch new shell now?"; then
-        clear
-        exec zsh
-        [[ -f "$HOME/.zsh_history" ]] && command rm -f "$HOME/.zsh_history" &> /dev/null
-        [[ -f "$HOME/.zcompdump" ]]   && command rm -f "$HOME/.zcompdump" &> /dev/null
-        source "$ZSH_PATH/zsh/conf/_welcome.ui"
+        exec zsh -c "source \"$ZSH_PATH/zsh/conf/_welcome.ui\""
     else
         echo
         Log::info "Please restart your terminal manually to see changes."

@@ -54,7 +54,7 @@ export USE_FUNCTION="No"
 export OPT_THEME="No"
 
 # Enables the Fancy startup Terminal
-export FANCY_TERM="Yes"
+export FANCY_TERM="No"
 
 # ........................[  Advanced Integrations  ]........................ #
 

@@ -51,6 +51,7 @@ Config::init() {
     Paths[REPO]="$HOME/.config/zsh-conf"
     Paths[RC]="${ZDOTDIR:-$HOME}/.zshrc"
     Paths[ENV]="${ZDOTDIR:-$HOME}/.zshenv"
+    Paths[TEMP]="$HOME/.temp_zsh"
     Paths[CACHE]="${XDG_CACHE_HOME:-$HOME/.cache}"
 
     # Plugin Managers installed by plugs.zsh
@@ -197,12 +198,16 @@ Cleaner::remove_dir() {
 }
 
 Cleaner::remove_cache() {
-    # Remove compiled zsh files and caches
-    find "${Paths[CACHE]}" -name "zsh-*-init.zsh" -delete 2>/dev/null
-    find "${Paths[CACHE]}" -name "zsh-*-init.zsh.zwc" -delete 2>/dev/null
-    find "$HOME" -name ".zcompdump*" -delete 2>/dev/null
-    find "$HOME" -name "*.zwc" -delete 2>/dev/null
+    {
+        # Remove compiled zsh files and caches
+        find "${Paths[CACHE]}" -name "zsh-*-init.zsh" -delete 2>/dev/null
+        find "${Paths[CACHE]}" -name "zsh-*-init.zsh.zwc" -delete 2>/dev/null
+        find "$HOME" -name ".zcompdump*" -delete 2>/dev/null
+        find "$HOME" -name "*.zwc" -delete 2>/dev/null
+    } &
 
+    UI::spinner $! "Cleaning Cache..."
+    wait $!
     Log::delete "Cleared Zsh caches and compdumps"
 }
 
@@ -250,6 +255,7 @@ Uninstaller::run() {
     sleep 1
     Cleaner::remove_symlinks "${Paths[RC]}"
     Cleaner::remove_symlinks "${Paths[ENV]}"
+    Cleaner::remove_symlinks "${Paths[TEMP]}"
 
     # 3. Remove Repository
     UI::header
@@ -281,7 +287,6 @@ Uninstaller::run() {
 
     # 5. Clear Cache
     UI::header
-    Log::info "Cleaning Cache..."
     Cleaner::remove_cache
 
     # 6. Restore Shell
