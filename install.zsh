@@ -64,10 +64,10 @@ Config::init() {
 
     # Binary dependencies to ensure are present
     Dependencies=(
-        "tmux" "ranger" "fd" "ripgrep" "lazygit"
-        "zoxide" "fzf" "lsd" "npm" "ffmpegthumbnailer"
-        "navi" "eza" "bat" "git-delta" "starship"
-        "atuin" "shellcheck"
+        "atuin" "bat" "eza" "fd" "ffmpegthumbnailer"
+        "fzf" "git-delta" "lazygit" "lsd" "navi"
+        "npm" "ranger" "ripgrep" "shellcheck"
+        "starship" "tmux" "zoxide"
     )
 }
 
@@ -403,14 +403,14 @@ Installer::configure_features() {
     sleep 2
 
     local options=(
-        "Tmux Integration" "Alias Expansion" "Custom Functions"
-        "Theme Engine" "Multi-Neovim Setup" "Custom Wallpapers"
-        "Temp Offline config" "Minimalist Config"
+        "Alias Expansion" "Custom Functions" "Custom Wallpapers"
+        "Minimalist Config" "Multi-Neovim Setup" "Temp Offline config"
+        "Theme Engine" "Tmux Integration"
     )
     local config_var=(
-        "USE_TMUX" "USE_ALIAS" "USE_FUNCTION"
-        "OPT_THEME" "MULTI_NEOVIM" "CUSTOM_WALL"
-        "TEMP_OFFLINE_CONFIG" "MINIMALIST"
+        "USE_ALIAS" "USE_FUNCTION" "CUSTOM_WALL"
+        "MINIMALIST" "MULTI_NEOVIM" "TEMP_OFFLINE_CONFIG"
+        "OPT_THEME" "USE_TMUX"
     )
 
     if [[ -f "${Paths[ENV]}" ]]; then
