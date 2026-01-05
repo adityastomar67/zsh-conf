@@ -14,6 +14,19 @@
 #   7. Installer::  -> Business logic orchestration.
 
 
+# ........................[  0. Setup & Initialization  ]........................ #
+# Security Options to minimize the unexpected behaviour
+
+## Reset shell environment to standard Zsh defaults (implies unsetopt aliases)
+emulate -L zsh
+
+## Security: Stop on error, stop on unset vars, catch pipeline failures
+setopt ERR_EXIT NO_UNSET PIPE_FAIL
+
+## Optional: Prevent '>' from overwriting existing files (force use of '>!')
+setopt NO_CLOBBER
+
+
 # ........................[  1. Class: Theme  ]........................ #
 # Responsible for defining the visual palette and symbols.
 
@@ -60,7 +73,6 @@ Config::init() {
 
     BIN_DIR="${Paths[REPO]}/zsh/bin"
     BIN_REPO="https://github.com/adityastomar67/uniq-scripts.git"
-    TEMP_DIR="/tmp/zsh_bin_temp"
 
     # Binary dependencies to ensure are present
     Dependencies=(
@@ -236,11 +248,12 @@ Sys::detect() {
 
 Sys::install() {
     local pkg="$1"
-    if [[ "${Sys[PKG_MANAGER]}" == "pacman" ]]; then
-        sudo pacman -S "$pkg" --noconfirm &>/dev/null &
-    elif [[ "${Sys[PKG_MANAGER]}" == "brew" ]]; then
-        brew install "$pkg" &>/dev/null &
-    fi
+    case "${Sys[PKG_MANAGER]}" in
+        pacman) sudo pacman -S --noconfirm "$pkg" &>/dev/null & ;;
+        brew)   brew install "$pkg" &>/dev/null & ;;
+        apt)    sudo apt-get install -y "$pkg" &>/dev/null & ;;
+        dnf)    sudo dnf install -y "$pkg" &>/dev/null & ;;
+    esac
 }
 
 Sys::cleanup() {
@@ -474,20 +487,27 @@ Installer::run() {
     [[ -d "${Paths[REPO]}" ]] && mv "${Paths[REPO]}" "${Paths[REPO]}_${DATE}_${ID}"
 
     {
-        git clone --depth=1 --quiet "https://github.com/adityastomar67/zsh-conf.git" "${Paths[REPO]}"
+        # 1. Config Repo: Start cloning in background
+        git clone --depth=1 --quiet "https://github.com/adityastomar67/zsh-conf.git" "${Paths[REPO]}" &
 
-        # Cloning of scripts
-        ## 1. Clone
-        git clone --depth=1 "$BIN_REPO" "$TEMP_DIR" &> /dev/null
+        # 2. Scripts Repo: Clone to TEMP, then sync to BIN_DIR
+        (
+            # Use a unique temp directory to prevent conflicts
+            local temp_dir="/tmp/zsh_bin_$(date +%s)"
 
-        ## 2. Copy
-        mkdir -p "$BIN_DIR" &> /dev/null
+            # Clone to temp
+            git clone --depth=1 --quiet "$BIN_REPO" "$temp_dir"
 
-        ## The * wildcard ignores hidden files by default
-        cp -r "$TEMP_DIR"/* "$BIN_DIR/" &> /dev/null
+            # Copy ALL files (including hidden ones) to destination
+            # The "/." syntax tells cp to include hidden files (dotfiles)
+            cp -rf "$temp_dir/*" "$BIN_DIR/"
 
-        ## 3. Cleanup
-        rm -rf "$TEMP_DIR" &> /dev/null
+            # Cleanup
+            rm -rf "$temp_dir"
+        ) &
+
+        # 3. Wait for both to finish
+        wait
     } &
     UI::spinner $! "Cloning repository..."
     wait $!
@@ -501,10 +521,10 @@ Installer::run() {
     FileSys::symlink "${Paths[REPO]}/.zshenv" "${Paths[ENV]}"
 
     [[ -f "${Paths[HIST]}" ]] && rm -f "${Paths[HIST]}"
-    command mv "${Paths[REPO]}/zsh/zhistory" "${Paths[HIST]}"
+    mv "${Paths[REPO]}/zsh/zhistory" "${Paths[HIST]}"
 
     [[ -f "${Paths[DUMP]}" ]] && rm -f "${Paths[DUMP]}"
-    command mv "${Paths[REPO]}/zsh/zcompdump" "${Paths[DUMP]}"
+    mv "${Paths[REPO]}/zsh/zcompdump" "${Paths[DUMP]}"
 
     # 7. Dependencies
     Installer::dependencies
@@ -533,15 +553,17 @@ Installer::run() {
 
     # Exit Summary & Warning
     printf "\n${Color[G]}  Installation Finished Successfully! ${Color[Rst]}\n"
+    if ! grep -q "_welcome.ui" "$HOME/.zshrc"; then
+        echo 'source "$ZSH_PATH/zsh/conf/_welcome.ui"' >> "$HOME/.zshrc"
+    fi
     sleep 2
 
     # --- ASK TO LAUNCH ---
     if UI::confirm "Launch new shell now?"; then
-        exec zsh -c "source \"$ZSH_PATH/zsh/conf/_welcome.ui\""
+        exec zsh
     else
         echo
         Log::info "Please restart your terminal manually to see changes."
-        echo 'source "$ZSH_PATH/zsh/conf/_welcome.ui"' >> "$HOME/.zshrc"
         exit 0
     fi
 }
