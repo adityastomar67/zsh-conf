@@ -246,9 +246,9 @@ alias -g '|L'="| less"
 alias -g '|H'="| head"
 alias -g '|T'="| tail"
 alias -g '|S'="| sed"
-alias -g NE="2> /dev/null"
-alias -g NUL="> /dev/null 2>&1"
-alias -g LL="2>&1 | less"
+alias -g 'NE'="2> /dev/null"
+alias -g 'NUL'="> /dev/null 2>&1"
+alias -g 'LL'="2>&1 | less"
 
 
 # ........................[  9. Miscellaneous  ]........................ #

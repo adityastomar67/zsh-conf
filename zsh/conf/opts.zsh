@@ -58,19 +58,19 @@ esac
 # ........................[  3. Zsh Options (Setopt)  ]........................ #
 
 # Navigation & Listing
-setopt AUTO_CD              # cd by typing directory name
-setopt AUTO_LIST            # List choices on ambiguous completion
-setopt AUTO_MENU            # Show completion menu on successive tab press
-setopt AUTO_PARAM_SLASH     # Tab completing directory appends a slash
-setopt LIST_PACKED          # Compact completion list
-
-# Completion Behavior
-setopt COMPLETE_IN_WORD     # Complete from both ends of a word
-setopt MENU_COMPLETE        # Insert first match immediately
-setopt GLOB_COMPLETE        # Show autocompletion menu with globs
-setopt HASH_LIST_ALL        # Hash entire command path first
-setopt EXTENDED_GLOB        # Use extended globbing syntax
-setopt GLOB_DOTS            # files beginning with a . are matched without explicitly specifying the dot
+setopt AUTO_CD                 # cd by typing directory name
+setopt AUTO_LIST               # List choices on ambiguous completion
+setopt AUTO_MENU               # Show completion menu on successive tab press
+setopt AUTO_PARAM_SLASH        # Tab completing directory appends a slash
+setopt LIST_PACKED             # Compact completion list
+   
+# Completion Behavior   
+setopt COMPLETE_IN_WORD        # Complete from both ends of a word
+setopt MENU_COMPLETE           # Insert first match immediately
+setopt GLOB_COMPLETE           # Show autocompletion menu with globs
+setopt HASH_LIST_ALL           # Hash entire command path first
+setopt EXTENDED_GLOB           # Use extended globbing syntax
+setopt GLOB_DOTS               # files beginning with a . are matched without explicitly specifying the dot
 
 # History
 setopt APPEND_HISTORY          # Append history instead of replacing
@@ -84,8 +84,8 @@ setopt HIST_NO_FUNCTIONS       # Don't save function definitions
 setopt HIST_EXPIRE_DUPS_FIRST  # Expire duplicates first when trimming
 setopt HIST_SAVE_NO_DUPS       # Don't write duplicates to history file
 setopt HIST_REDUCE_BLANKS      # Remove superfluous blanks
-setopt HIST_VERIFY          # Don't execute immediately upon history expansion
-setopt BANG_HIST            # Treat the '!' character specially during expansion
+setopt HIST_VERIFY             # Don't execute immediately upon history expansion
+setopt BANG_HIST               # Treat the '!' character specially during expansion
 
 # General
 setopt NOTIFY                  # Report status of background jobs immediately
@@ -250,10 +250,12 @@ fi
 # ........................[  7. History & Syntax Highlighting  ]........................ #
 
 # History File Configuration
+export HISTFILE="${ZDOTDIR:-$HOME}/zhistory"
 HISTSIZE=50000
 SAVEHIST=50000
 HISTTIMEFORMAT="%Y/%m/%d %H:%M:%S:   "
 HIST_STAMPS="mm/dd/yyyy"
+HISTORY_IGNORE="(ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
 
 # Syntax Highlighting & Autosuggestions
 ZSH_AUTOSUGGEST_USE_ASYNC="true"
@@ -268,4 +270,5 @@ ENABLE_CORRECTION="true"
 DISABLE_AUTO_UPDATE="true"
 DISABLE_UPDATE_PROMPT="true"
 COMPLETION_WAITING_DOTS="true"
+KEYTIMEOUT=1
 

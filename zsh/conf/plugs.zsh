@@ -5,88 +5,114 @@
 
 # ........................[  1. Path Definitions  ]........................ #
 
-local OMZ_HOME="$HOME/.oh-my-zsh"
-local ZINIT_HOME="$HOME/.zinit"
-local ZAP_HOME="$HOME/.local/share/zap"
+typeset -r OMZ_HOME="$HOME/.oh-my-zsh"
+typeset -r OMZ_CUSTOM="$OMZ_HOME/custom"
+typeset -r ZINIT_HOME="$HOME/.zinit"
+typeset -r ZAP_HOME="$HOME/.local/share/zap"
+typeset -r CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-init"
 
 
 # ........................[  2. Plugin Manager Logic  ]........................ #
 
 # Option A: Zinit (Flexible & Fast)
-if [ "$PLUG_MANAGER" = "zinit" ]; then
+if [[ "$PLUG_MANAGER" == "zinit" ]]; then
 
-    # 1. Install Zinit if missing
-    if [ ! -d "$ZINIT_HOME" ]; then
-        echo "ZINIT not found. Cloning..."
+    # Install Zinit if missing
+    if [[ ! -d "$ZINIT_HOME" ]]; then
+        print -P "%F{33}▓▒░ %F{220}Installing Zinit Plugin Manager...%f"
         git clone --quiet --depth 1 https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
     fi
     source "$ZINIT_HOME/zinit.zsh"
 
-    # 2. Aliases & Turbo Mode
-    alias use='zinit light'
-    alias ice='zinit ice'
-    alias load='zinit load'
+    # Turbo Mode (Asynchronous Loading)
+    # "wait'0'" = Load immediately AFTER the prompt is drawn (Non-blocking).
+    # "lucid"   = Silences the "Loaded plugin..." messages.
 
-    # 3. Load Plugins (Synchronous - Critical for UX)
-    ice depth"1"
-    use hlissner/zsh-autopair
-    use Aloxaf/fzf-tab
+    # --- Group A: Core UI & Input (High Priority) ---
+    # Load these FIRST so the terminal feels responsive immediately.
+    # Moved 'autopair' and 'fzf-tab' here to unblock startup time.
+    zinit wait"0" lucid for \
+        hlissner/zsh-autopair \
+        Aloxaf/fzf-tab \
+        jeffreytse/zsh-vi-mode \
+        MichaelAquilina/zsh-you-should-use
 
-    # 4. Load Plugins (Asynchronous/Turbo)
+    # --- Group B: Completions (Heavy) ---
+    # 'blockf' prevents unnecessary fpath processing which slows down compinit.
+    zinit wait"0" lucid blockf for \
+        zsh-users/zsh-completions
 
-    # Load heavy completions immediately after prompt (wait'0') to unblock startup
-    ice wait'0' lucid blockf
-    load zsh-users/zsh-completions
+    # --- Group C: Search & History (Background) ---
+    # These can load a split second later without user noticing.
+    zinit wait"0b" lucid for \
+        zsh-users/zsh-history-substring-search \
+        zdharma-continuum/history-search-multi-word
 
-    # Syntax highlighting (Only load one!)
-    ice wait'0' lucid atinit"ZINIT[COMPINIT_OPTS]=-C; zicompinit; zicdreplay"
-    load zdharma-continuum/fast-syntax-highlighting
+    # --- Group D: Autosuggestions & Syntax Highlighting ---
+    # Autosuggestions: Load fast so suggestions appear immediately.
+    zinit wait"0a" lucid for \
+        zsh-users/zsh-autosuggestions
 
-    # Utility plugins
-    ice wait'1' lucid;  load MichaelAquilina/zsh-you-should-use
-    ice wait'2' lucid;  load zsh-users/zsh-history-substring-search
-    ice wait'2' lucid;  load zsh-users/zsh-autosuggestions
-    ice wait'2' lucid;  load zdharma-continuum/history-search-multi-word
-    ice wait'3' lucid;  load jeffreytse/zsh-vi-mode
-
-    # 5. Cleanup aliases
-    ice wait'5' lucid;  unalias use ice load
+    # Syntax Highlighting: MUST be last.
+    # 'atinit' hook optimizes compinit to run only once, saving massive time.
+    zinit wait"0c" lucid atinit"ZINIT[COMPINIT_OPTS]=-C; zicompinit; zicdreplay" for \
+        zdharma-continuum/fast-syntax-highlighting
 
 
 # Option B: Oh-My-Zsh (Standard & Robust)
-elif [ "$PLUG_MANAGER" = "omz" ]; then
+elif [[ "$PLUG_MANAGER" == "omz" ]]; then
 
-    # 1. Install OMZ if missing
-    if [ ! -d "$OMZ_HOME" ]; then
-        echo "OH-MY-ZSH not found. Cloning..."
-        sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    # Install OMZ if missing
+    if [[ ! -d "$OMZ_HOME" ]]; then
+        print -P "%F{33}▓▒░ %F{220}Cloning Oh-My-Zsh...%f"
+        git clone --quiet --depth 1 https://github.com/ohmyzsh/ohmyzsh.git "$OMZ_HOME"
     fi
 
-    # 2. Configuration
-    plugins=(git history web-search copybuffer dirhistory zsh-autosuggestions zsh-syntax-highlighting)
+    # Plugins
+    typeset -A external_plugins
+    external_plugins=(
+        "zsh-autosuggestions"       "https://github.com/zsh-users/zsh-autosuggestions"
+        "zsh-syntax-highlighting"   "https://github.com/zsh-users/zsh-syntax-highlighting"
+    )
 
-    DISABLE_UPDATE_PROMPT="true"
-    ENABLE_CORRECTION="true"
-    COMPLETION_WAITING_DOTS="true"
+    for plugin_name repo_url in ${(kv)external_plugins}; do
+        if [[ ! -d "$OMZ_CUSTOM/plugins/$plugin_name" ]]; then
+            print -P "%F{33}▓▒░ %F{220}Installing ${plugin_name}...%f"
+            git clone --quiet --depth 1 "$repo_url" "$OMZ_CUSTOM/plugins/$plugin_name"
+        fi
+    done
 
+    # Configuration
+    # Note: OMZ is inherently synchronous. We cannot "defer" these easily.
+    plugins=(
+        git
+        history
+        web-search
+        copybuffer
+        dirhistory
+        zsh-autosuggestions
+        zsh-syntax-highlighting
+    )
+
+    # Settings
+    # (Exported variables are usually required by OMZ internals)
+    export DISABLE_UPDATE_PROMPT="true"
+    export ENABLE_CORRECTION="true"
+    export COMPLETION_WAITING_DOTS="true"
+
+    # Load
     source "$OMZ_HOME/oh-my-zsh.sh"
-
-    # 3. Fix Zshrc (OMZ installer overwrites it)
-    if [ -f "$HOME/.zshrc.pre-oh-my-zsh" ]; then
-        rm -rf "$HOME/.zshrc"
-        mv "$HOME/.zshrc.pre-oh-my-zsh" "$HOME/.zshrc"
-    fi
 
 
 # Option C: Zap (Minimal & Blazing Fast)
-elif [ "$PLUG_MANAGER" = "zap" ]; then
+elif [[ "$PLUG_MANAGER" == "zap" ]]; then
 
     # 1. Install Zap if missing
-    if [ ! -d "$ZAP_HOME" ]; then
+    if [[ ! -d "$ZAP_HOME" ]]; then
         git clone --quiet --depth 1 https://github.com/zap-zsh/zap.git "$ZAP_HOME"
     fi
 
-    [ -f "$ZAP_HOME/zap.zsh" ] && source "$ZAP_HOME/zap.zsh"
+    [[ -f "$ZAP_HOME/zap.zsh" ]] && source "$ZAP_HOME/zap.zsh"
 
     # 2. Optimization Variables
     # CRITICAL FIX: This flag tells Autosuggestions: "Don't panic if another plugin
@@ -99,7 +125,7 @@ elif [ "$PLUG_MANAGER" = "zap" ]; then
     plug "romkatv/zsh-defer"
 
     # 4. Functional Plugins (Load Immediately)
-    plug "hlissner/zsh-autopair"
+    zsh-defer plug "hlissner/zsh-autopair"
     # plug "MichaelAquilina/zsh-you-should-use"
 
     # 5. Visual Plugins (Strict Order Required)
@@ -129,20 +155,29 @@ fi
 # Helper: Cache eval output to file and compile it.
 # Regeneration triggers only if the cache is missing or the binary is newer.
 _eval_cache() {
-    local cmd_name="$1"
-    local init_cmd="$2"
-    local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
-    local cache_file="$cache_dir/zsh-${cmd_name}-init.zsh"
+    local name="$1"
+    local cmd="$2"
+    local mode="${3:-defer}" # Default to 'defer'
 
-    # Only proceed if the command actually exists
-    if (( $+commands[$cmd_name] )); then
-        # Check if cache is missing OR if the binary is newer than the cache
-        if [[ ! -f "$cache_file" || "$commands[$cmd_name]" -nt "$cache_file" ]]; then
-            [ ! -d "$cache_dir" ] && mkdir -p "$cache_dir"
-            eval "$init_cmd" > "$cache_file"
-            zcompile "$cache_file" # Compile to .zwc for faster parsing
-        fi
+    # Define directory INSIDE the function to prevent scope errors
+    local cache_file="$CACHE_DIR/${name}.zsh"
+
+    # Safety check: Ensure we aren't trying to write to root
+    [[ -z "$CACHE_DIR" ]] && return 1
+
+    # 1. Compile/Update Cache (Only if missing or binary changed)
+    if [[ ! -e "$cache_file" || "$commands[$name]" -nt "$cache_file" ]]; then
+        [[ ! -d "$CACHE_DIR" ]] && mkdir -p "$CACHE_DIR"
+        eval "$cmd" > "$cache_file"
+        zcompile "$cache_file"
+    fi
+
+    # 2. Load Logic
+    if [[ "$mode" == "immediate" ]]; then
         source "$cache_file"
+    else
+        # Run in background after prompt
+        zsh-defer source "$cache_file"
     fi
 }
 
@@ -150,28 +185,26 @@ _eval_cache() {
 # ........................[  4. Tool Initialization  ]........................ #
 
 # Zoxide (Smarter cd) - Cached
-_eval_cache "zoxide" "zoxide init zsh"
+if (( $+commands[zoxide] )); then
+    _eval_cache "zoxide" "zoxide init zsh" "defer"
+fi
 
 # Starship (Prompt) - Cached
-_eval_cache "starship" "starship init zsh"
+if (( $+commands[starship] )); then
+    _eval_cache "starship" "starship init zsh" "immediate"
+fi
 
 # Atuin (Shell History) - Cached
-_eval_cache "atuin" "atuin init zsh"
+if (( $+commands[atuin] )); then
+    _eval_cache "atuin" "atuin init zsh" "defer"
+fi
 
 # AWS CLI - Lazy Loaded
 # Only loads the completer when you actually type 'aws <TAB>'
 if (( $+commands[aws] )); then
     function _aws_completer_lazy() {
-        # Check if we can use the Zsh native completer first
         if [[ -f /usr/local/bin/aws_completer ]]; then
-            # Standard AWS completer path
-            local AWS_COMPLETER=/usr/local/bin/aws_completer
-            bashcompinit 2>/dev/null || autoload -U +X bashcompinit && bashcompinit
-            complete -C $AWS_COMPLETER aws
-        else
-            # Fallback or just re-source completion
-            unset -f _aws_completer_lazy
-            # Triggers default completion
+            complete -C /usr/local/bin/aws_completer aws
         fi
         zle complete-word
     }
