@@ -19,7 +19,7 @@
 ## Start a wall-clock timer (nanoseconds) for total load time precision
 ## zprof only measures functions; this measures actual file sourcing time.
 zmodload zsh/datetime
-local time_start=$EPOCHREALTIME
+local _zsh_load_start=$EPOCHREALTIME
 
 [[ "$ZSH_BENCHMARK" == "Yes" ]] && zmodload zsh/zprof 2>/dev/null
 
@@ -29,8 +29,8 @@ local time_start=$EPOCHREALTIME
 # Ensure ZSH_PATH is set (fallback to default if missing)
 : ${ZSH_PATH:=$HOME/.config/zsh-conf}
 
-local RC="$ZSH_PATH/zsh/zshrc"
-[[ "$MINIMALIST" == "Yes" ]] && RC="$ZSH_PATH/zsh/zshrc_mini"  # Minimal config test
+# Checking which config file user wanted
+[[ "$MINIMALIST" == "Yes" ]] && RC="$ZSH_PATH/zsh/zshrc.mini" || RC="$ZSH_PATH/zsh/zshrc"
 
 # Loading the actual config file
 if [[ -r "$RC" ]]; then
@@ -47,14 +47,14 @@ fi
 # Random Visuals (Run on every shell start)
 if [[ "$FANCY_TERM" == "Yes" ]]; then
     # Create a list of available commands
-    local -a available_visuals=()
-    (( $+commands[ColorScript] )) && available_visuals+=( "ColorScript -r" )
-    (( $+commands[motivate] ))    && available_visuals+=( "motivate" )
+    local -a visuals=()
+    (( $+commands[ColorScript] )) && visuals+=( "ColorScript -r" )
+    (( $+commands[motivate] ))    && visuals+=( "motivate" )
 
     # If list is not empty, pick a random one
-    if (( ${#available_visuals} > 0 )); then
-        eval "${available_visuals[$(( RANDOM % ${#available_visuals} + 1 ))]}"
-        echo "" # Add spacing
+    if (( ${#visuals} > 0 )); then
+        ${=visuals[$(( RANDOM % ${#visuals} + 1 ))]}
+        echo # Add spacing
     fi
 fi
 
@@ -79,8 +79,8 @@ fi
 if [[ "$ZSH_BENCHMARK" == "Yes" ]]; then
     # 1. STOP THE CLOCK IMMEDIATELY
     #    We capture time here so the logic below is not counted in the score.
-    local time_end=$EPOCHREALTIME
-    local total_ms=$(( (time_end - time_start) * 1000 ))
+    local _zsh_load_end=$EPOCHREALTIME
+    local total_ms=$(( (_zsh_load_end - _zsh_load_start) * 1000 ))
 
     # 2. Source the UI logic
     #    Adjust the path to where you saved the file in Step 1

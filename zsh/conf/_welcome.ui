@@ -87,6 +87,13 @@
     # -- Exit Prompt --
     print -n "   ${c_acc}Press [ENTER] to start hacking...${c_rst}"
     read -k1 -s
+
+    # Run the removal on the REAL file
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' '\|source "\$ZSH_PATH/zsh/conf/_welcome\.ui"|d' "$ZSH_PATH/.zshrc"
+    else
+        sed -i '\|source "\$ZSH_PATH/zsh/conf/_welcome\.ui"|d' "$ZSH_PATH/.zshrc"
+    fi
     clear && exec zsh
 
 } # End of anonymous function

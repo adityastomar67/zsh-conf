@@ -541,7 +541,7 @@ Installer::run() {
     else
         echo
         Log::info "Please restart your terminal manually to see changes."
-        # NOTE: Need to figure out a way to run welcome message here also
+        echo 'source "$ZSH_PATH/zsh/conf/_welcome.ui"' >> "$HOME/.zshrc"
         exit 0
     fi
 }
