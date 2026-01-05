@@ -31,7 +31,6 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     CLIP_CMD="pbcopy"
     XARGS_R="xargs"
 else
-    IS_MAC=0
     XARGS_R="xargs -r"
 
     # Cached check for Linux clipboard tools
@@ -183,8 +182,8 @@ function fcd_file() {
 }
 
 function cd_work() {
-    local projects="$HOME/Documents/Workspace"
-    [[ ! -d $projects ]] && echo "$projects dir does not exist" && return 1
+    local projects="$WORK_DIR"
+    [[ ! -d $projects ]] && echo "$projects does not exist" && return 1
 
     local project
     if is_installed fd; then

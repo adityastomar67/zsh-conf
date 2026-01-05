@@ -20,6 +20,9 @@ else
     export DOT_PATH="$HOME/.config/b001-dots"
 fi
 
+# Path for the projects
+export WORK_DIR="$HOME/Developer"
+
 # Package Manager Selection (Options: "zap", "zinit", "omz")
 export PLUG_MANAGER="zap"
 
@@ -53,7 +56,7 @@ export USE_FUNCTION="No"
 # Enable 'theme.sh' script integration ("Yes" / "No")
 export OPT_THEME="No"
 
-# Enables the Fancy startup Terminal
+# Enables the Fancy startup Terminal ("Yes" / "No")
 export FANCY_TERM="No"
 
 # ........................[  Advanced Integrations  ]........................ #
@@ -61,7 +64,7 @@ export FANCY_TERM="No"
 # NVIM_APPNAME switcher by @elijahmanor (Requires nvim >= 0.9.0)
 export MULTI_NEOVIM="No"
 
-# Load personal wallpapers and source zsh on change
+# Load personal wallpapers and source zsh on change ("Yes" / "No")
 export CUSTOM_WALL="No"
 
 # Location for wallpapers
@@ -70,7 +73,7 @@ export WALL_DIR="$HOME/Backdrops"
 # Load private/offline aliases (Not meant for git tracking)
 export TEMP_OFFLINE_CONFIG="No"
 
-# Want vi mode in Shell?
+# Want vi mode in Shell? ("Yes" / "No")
 export VI_MODE="No"
 
 
@@ -82,14 +85,10 @@ export ZSH_BENCHMARK="Yes"
 # Path to your env file
 ENV_FILE="$ZSH_PATH/.env"
 
+## Check for $ZSH_PATH/env.example for setting up .env file
 if [[ -f "$ENV_FILE" ]]; then
-    # 1. Turn on 'allexport' (Automatically export all defined variables)
-    set -a
-
-    # 2. Source the file (Load the variables)
-    source "$ENV_FILE"
-
-    # 3. Turn off 'allexport' (Back to normal safety)
-    set +a
+    set -a              # 1. Turn on 'allexport' (Automatically export all defined variables)
+    source "$ENV_FILE"  # 2. Source the file (Load the variables)
+    set +a              # 3. Turn off 'allexport' (Back to normal safety)
 fi
 
