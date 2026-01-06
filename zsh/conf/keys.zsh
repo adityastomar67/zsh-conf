@@ -1,128 +1,89 @@
 # ------------------------[  ZSH KEY BINDINGS  ]------------------------ #
-# This file configures keymaps, ZLE widgets, and terminal input modes.
 
+# ........................[  1. Initialization  ]........................ #
 
-# ........................[  1. Input Mode & Basics  ]........................ #
+# Ensure terminfo is available for arrow key detection
+zmodload zsh/terminfo
 
-# Use Vi Mode (Change to -e for Emacs)
-bindkey -v
+# Use a cleaner way to map keys
+typeset -g -A key=(
+  Up             "${terminfo[kcuu1]}"
+  Down           "${terminfo[kcud1]}"
+  Left           "${terminfo[kcub1]}"
+  Right          "${terminfo[kcuf1]}"
+  Backspace      "${terminfo[kbs]}"
+  Home           "${terminfo[khome]}"
+  End            "${terminfo[kend]}"
+  Delete         "${terminfo[kdch1]}"
+  Control-Left   "${terminfo[kLFT5]}"
+  Control-Right  "${terminfo[kRIT5]}"
+)
 
-# Standard Backspace/Delete Fixes
+# Standard Fixes
 bindkey "^?" backward-delete-char
-bindkey "^H" backward-delete-char
 bindkey "^U" backward-kill-line
+bindkey "^W" backward-kill-word
+bindkey " "  magic-space            # Expand history (e.g., !! <space>)
 
-# History Search (Ctrl+R)
-bindkey "^r" history-incremental-search-backward
+# ........................[  2. Smart Navigation  ]........................ #
 
-# Magic Space (History expansion on space)
-bindkey " " magic-space
-
-
-# ........................[  2. Terminfo & Arrow Keys  ]........................ #
-# Map keys using terminfo codes for better compatibility across terminals.
-
-typeset -g -A key
-
-key[Up]="${terminfo[kcuu1]}"
-key[Down]="${terminfo[kcud1]}"
-key[Left]="${terminfo[kcub1]}"
-key[Right]="${terminfo[kcuf1]}"
-key[Backspace]="${terminfo[kbs]}"
-key[Shift-Tab]="${terminfo[kcbt]}"
-key[Control-Left]="${terminfo[kLFT5]}"
-key[Control-Right]="${terminfo[kRIT5]}"
-
-# Basic Bindings
-[[ -n "${key[Backspace]}" ]]     && bindkey -- "${key[Backspace]}"     backward-delete-char
-[[ -n "${key[Shift-Tab]}" ]]     && bindkey -- "${key[Shift-Tab]}"     reverse-menu-complete
+# Word Jumping (Control + Arrows)
 [[ -n "${key[Control-Left]}" ]]  && bindkey -- "${key[Control-Left]}"  backward-word
 [[ -n "${key[Control-Right]}" ]] && bindkey -- "${key[Control-Right]}" forward-word
 
-# Smart History Search (Type + Arrow Up/Down)
-autoload -U up-line-or-beginning-search
-autoload -U down-line-or-beginning-search
+# Home/End Fixes (common in modern terminals)
+[[ -n "${key[Home]}" ]] && bindkey -- "${key[Home]}" beginning-of-line
+[[ -n "${key[End]}" ]]  && bindkey -- "${key[End]}"  end-of-line
+
+# Search History by Prefix (Type 'ls' then press Up)
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
 zle -N up-line-or-beginning-search
 zle -N down-line-or-beginning-search
+[[ -n "${key[Up]}" ]]   && bindkey -- "${key[Up]}"   up-line-or-beginning-search
+[[ -n "${key[Down]}" ]] && bindkey -- "${key[Down]}" down-line-or-beginning-search
 
-if [[ -n "${key[Up]}" ]]; then
-    bindkey -- "${key[Up]}" up-line-or-beginning-search
-else
-    bindkey "^k" up-line-or-beginning-search
-fi
+# ........................[  3. Menu Selection (Vi-Style)  ]........................ #
 
-if [[ -n "${key[Down]}" ]]; then
-    bindkey -- "${key[Down]}" down-line-or-beginning-search
-else
-    bindkey "^j" down-line-or-beginning-search
-fi
-
-
-# ........................[  3. Menu Selection  ]........................ #
-# Use Vi keys (h/j/k/l) to navigate the tab completion menu.
-
-# [NEW] Enable searching inside the completion menu
-bindkey -M menuselect '?' history-incremental-search-forward
-bindkey -M menuselect '/' history-incremental-search-backward
-bindkey -M menuselect '^h' vi-backward-char
-bindkey -M menuselect '^k' vi-up-line-or-history
-bindkey -M menuselect '^l' vi-forward-char
-bindkey -M menuselect '^j' vi-down-line-or-history
-bindkey -M menuselect '^[[Z' vi-up-line-or-history
-
+# These only trigger when the completion menu is open
+# IMPORTANT: fzf-tab uses its own keys, but these are backups for standard zsh menus
+# bindkey -M menuselect 'h' vi-backward-char
+# bindkey -M menuselect 'j' vi-down-line-or-history
+# bindkey -M menuselect 'k' vi-up-line-or-history
+# bindkey -M menuselect 'l' vi-forward-char
+# bindkey -M menuselect '^g' clear-screen          # Abort menu
+# bindkey -M menuselect '^i' accept-line           # Tab to accept
 
 # ........................[  4. Custom Widgets  ]........................ #
 
-# Edit the current command line in $EDITOR (Ctrl+x, Ctrl+e)
-autoload -U edit-command-line
+# 1. Edit current command line in $EDITOR
+autoload -Uz edit-command-line
 zle -N edit-command-line
-bindkey "\C-x\C-e" edit-command-line
+bindkey '^e' edit-command-line
 
-# Copy previous shell word (Ctrl+p)
-bindkey "^p" copy-prev-shell-word
-
-# Quick 'ls' (Ctrl+k) - Note: Conflicts with history search if not careful
-bindkey -s '^K' 'ls^M'
-
-# Sudo Toggle (Double Esc)
-# Puts 'sudo ' at the beginning of the line, or removes it if present.
-function _sudo-command-line() {
-    [[ -z $BUFFER ]] && LBUFFER=$(fc -ln -1)
-
-    # Save beginning space
-    local WHITESPACE=""
-    if [[ ${LBUFFER:0:1} = " " ]]; then
-        WHITESPACE=" "
-        LBUFFER="${LBUFFER:1}"
-    fi
-
-    if [[ $BUFFER = sudo\ * ]]; then
-        LBUFFER=${BUFFER:5}
+# 2. Improved Sudo Toggle (handles cursor position better)
+sudo-command-line() {
+    [[ -z $BUFFER ]] && LBUFFER="$(fc -ln -1 | sed 's/^[[:space:]]*//')"
+    if [[ $BUFFER == sudo\ * ]]; then
+        LBUFFER="${LBUFFER#sudo }"
     else
         LBUFFER="sudo $LBUFFER"
     fi
-
-    # Restore beginning space
-    LBUFFER=${WHITESPACE}${LBUFFER}
 }
+zle -N sudo-command-line
+bindkey "\e\e" sudo-command-line
 
-zle -N _sudo-command-line
-bindkey "\e\e" _sudo-command-line
+# 3. Directory Stack Quick Navigation (Alt + Arrows)
+# Go back/forward in directory history (cd -1, cd +1)
+bindkey '^[OA' cd -1   # Alt + Up
+bindkey '^[OB' cd +1   # Alt + Down
 
+# ........................[  5. Terminal Mode Sync  ]........................ #
 
-# [NEW] Quick Reload Config (Ctrl+x)
-# Checks if ZDOTDIR is set, otherwise defaults to HOME
-bindkey -s '^x' '^usource "${ZDOTDIR:-$HOME}/.zshrc"\n'
-
-
-# ........................[  5. Terminal Application Mode  ]........................ #
-# Ensures the terminal is in the correct mode when ZLE is active.
-
+# The "Smkx" hook ensures terminal sends the correct escape codes for terminfo to work
 if (( ${+terminfo[smkx]} && ${+terminfo[rmkx]} )); then
     autoload -Uz add-zle-hook-widget
-    function zle_application_mode_start { echoti smkx }
-    function zle_application_mode_stop { echoti rmkx }
-    add-zle-hook-widget -Uz zle-line-init zle_application_mode_start
-    add-zle-hook-widget -Uz zle-line-finish zle_application_mode_stop
+    function _zle_smkx() { echoti smkx }
+    function _zle_rmkx() { echoti rmkx }
+    add-zle-hook-widget zle-line-init _zle_smkx
+    add-zle-hook-widget zle-line-finish _zle_rmkx
 fi
-
