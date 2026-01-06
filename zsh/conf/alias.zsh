@@ -37,7 +37,7 @@ alias cp="cp -i"
 alias ln="ln -i"
 alias rm="rm -i"  # Prompt once before removing more than 3 files
 alias md="mkdir -p"
-alias _="sudo "
+alias _="sudo"
 alias please='sudo $(fc -ln -1)'  # Re-run last command with sudo
 alias which='type -a'
 

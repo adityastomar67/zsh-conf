@@ -63,8 +63,8 @@ setopt AUTO_LIST               # List choices on ambiguous completion
 setopt AUTO_MENU               # Show completion menu on successive tab press
 setopt AUTO_PARAM_SLASH        # Tab completing directory appends a slash
 setopt LIST_PACKED             # Compact completion list
-   
-# Completion Behavior   
+
+# Completion Behavior
 setopt COMPLETE_IN_WORD        # Complete from both ends of a word
 setopt MENU_COMPLETE           # Insert first match immediately
 setopt GLOB_COMPLETE           # Show autocompletion menu with globs
@@ -258,10 +258,10 @@ HIST_STAMPS="mm/dd/yyyy"
 HISTORY_IGNORE="(ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
 
 # Syntax Highlighting & Autosuggestions
+# ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern cursor regexp root line)
+# ZSH_HIGHLIGHT_MAXLENGTH=512
 ZSH_AUTOSUGGEST_USE_ASYNC="true"
-ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern cursor regexp root line)
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
-ZSH_HIGHLIGHT_MAXLENGTH=512
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=8,bold"
 ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
