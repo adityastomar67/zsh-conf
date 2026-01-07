@@ -74,8 +74,8 @@ bindkey "\e\e" sudo-command-line
 
 # 3. Directory Stack Quick Navigation (Alt + Arrows)
 # Go back/forward in directory history (cd -1, cd +1)
-bindkey '^[OA' cd -1   # Alt + Up
-bindkey '^[OB' cd +1   # Alt + Down
+# bindkey '^[OA' cd -1   # Alt + Up
+# bindkey '^[OB' cd +1   # Alt + Down
 
 # ........................[  5. Terminal Mode Sync  ]........................ #
 

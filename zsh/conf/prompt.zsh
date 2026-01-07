@@ -228,14 +228,31 @@ z_prompt() {
 gh0st_prompt() {
     # Helper: Git Branch
     git_prompt() {
-        is_installed git || return
-        local branch="$(git symbolic-ref HEAD 2> /dev/null | cut -d'/' -f3-)"
-        [ -z "$branch" ] && return
+        # Check if git is installed
+        (( $+commands[git] )) || return
 
-        # Truncate long branch names
-        local branch_truncated="${branch:0:30}"
+        # Get the branch name (fastest method)
+        local ref
+        ref=$(command git symbolic-ref --quiet HEAD 2> /dev/null) || \
+        ref=$(command git rev-parse --short HEAD 2> /dev/null) || return
+
+        local branch=${ref#refs/heads/}
+
+        # Truncate branch name if it's too long (over 20 chars)
+        local branch_truncated="${branch:0:20}"
         (( ${#branch} > ${#branch_truncated} )) && branch="${branch_truncated}..."
-        echo "  ${branch}"
+
+        # Dirty Check (Optimized)
+        local dirty_status="%F{green} ✓%f"
+
+        # Check for modifications (fast check)
+        # --porcelain: machine readable
+        # -unormal: standard untracked file checking
+        if [[ -n $(command git status --porcelain --ignore-submodules -unormal 2>/dev/null | head -n1) ]]; then
+            dirty_status="%F{red} ✗%f"
+        fi
+
+        echo "  ${branch}${dirty_status}"
     }
 
     # Helper: Directory Icon
