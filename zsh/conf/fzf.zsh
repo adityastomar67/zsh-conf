@@ -297,37 +297,3 @@ _fzf_comprun() {
     esac
 }
 
-
-# ........................[  7. FZF Configuration  ]........................ #
-
-export FZF_DEFAULT_OPTS="
---color fg:#d4d4d5,fg+:#f5c9c9,bg+:-1,hl:#0080ff,hl+:#FCE700
---color info:#79dcaa,prompt:#00788A,spinner:#3877ff,pointer:#d4d4d5
---color marker:#ffe59e,border:#101317,gutter:-1,header:#949494
---bind 'ctrl-j:preview-down,ctrl-k:preview-up,ctrl-a:select-all'
---bind 'ctrl-y:execute-silent(echo {+} | $CLIP_CMD)'
---bind 'ctrl-e:execute(echo {+} | xargs -o nvim)'
---bind 'ctrl-v:execute(code {+})'
---bind 'tab:down,shift-tab:up'
---prompt '  ' --pointer ' ' --border none --height 40
-"
-
-# Default Command (Optimized: Uses cached check to prefer rg > fd > find)
-if is_installed rg; then
-    export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git/*" --glob "!node_modules/*"'
-elif is_installed fd; then
-    export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git --exclude node_modules'
-else
-    export FZF_DEFAULT_COMMAND='find . -type f'
-fi
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-
-export FZF_CTRL_T_OPTS="
---preview 'bat --color=always --style=numbers --line-range=:500 {} 2>/dev/null || cat {} 2>/dev/null || tree -C {} 2>/dev/null'
---bind 'ctrl-/:toggle-preview'
-"
-
-export FZF_ALT_C_OPTS="
---preview 'eza --tree --color=always {} | head -200'
-"
-

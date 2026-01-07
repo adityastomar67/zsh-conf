@@ -4,6 +4,20 @@
 
 # ........................[  0. Helpers & Path configurations  ]........................ #
 
+# Colors for the whole config
+typeset -rA Colors=(
+        [Reset]='%f'
+        [Bold]='%B'
+        [Off]='%b'
+        [Orange]='%F{#fe8019}'
+        [Ivory]='%F{#d5c4a1}'
+        [Green]='%F{#b8bb26}'
+        [Yellow]='%F{#fabd2f}'
+        [Red]='%F{#fb4934}'
+        [Blue]='%F{#83a598}'
+        [Magenta]='%F{#d3869b}'
+)
+
 # Standard Paths
 export PATH="$ZSH_PATH/zsh/bin:$PATH"
 
