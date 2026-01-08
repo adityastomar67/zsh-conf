@@ -1,14 +1,5 @@
 Ignore/
-.zshrc_bak
-env.zsh
-temp.sh
-TODO.md
-.DS_Store
-ui.zsh
-new.sh
-_bin
-install.bak
-temp.zsh
-_text
-.gitignore
 .vscode
+Project-Files
+_IGNORE
+
