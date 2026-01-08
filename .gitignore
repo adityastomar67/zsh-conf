@@ -2,4 +2,4 @@ Ignore/
 .vscode
 Project-Files
 _IGNORE
-
+.env
