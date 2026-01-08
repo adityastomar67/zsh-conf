@@ -1,0 +1,173 @@
+#!/usr/bin/env zsh
+#    ░█░█░▀█▀░░░░▀█▀░█▀▀░█▀█░█▀█░█▀▀
+#    ░█░█░░█░░░░░░█░░█░░░█░█░█░█░▀▀█
+#    ░▀▀▀░▀▀▀░▀░░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   This file defines a global library of glyphs and icons for use in
+#   prompts, status bars, and CLI interfaces.
+#
+# Problems Solved
+#   - Centralizes "Magic Strings" (unicode hex codes) into readable keys.
+#   - Ensures UTF-8 compliance before definition.
+#   - Provides a lookup utility for safe icon retrieval.
+#
+# Features / Responsibilities
+#   - Powerline Separators (Hard/Soft).
+#   - Operating System Logos.
+#   - Version Control Indicators (Git/Hg/Svn).
+#   - Language & Framework Brand Icons.
+#   - System Status Indicators (Battery, Network, RAM).
+#
+# Usage Notes
+#   - Requires a patched "Nerd Font" (https://www.nerdfonts.com/).
+#   - Usage: echo ${ICON[LINUX_ICON]}
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+#
+
+# Initialization
+# ─────────────────────────────────────────────────────────────
+## Preparation steps to ensure the environment can handle wide characters.
+
+# 1. UTF-8 Guard
+# We need to ensure the `LANG` environment variable supports UTF-8,
+# otherwise Zsh might mangle multibyte characters.
+if [[ $LANG != *UTF-8* ]]; then
+    export LANG=en_US.UTF-8
+fi
+
+# 2. Map Declaration
+# typeset -g : Global scope (visible outside this file)
+# typeset -A : Associative Array (Key-Value map)
+# typeset -H : Hide from 'typeset' output (optional, keeps clutter down)
+typeset -gAH ICON
+
+
+# Icon Definitions
+# ─────────────────────────────────────────────────────────────
+## Populating the map. We use $'\uXXXX' syntax for explicit unicode points.
+## Grouped logically for easier maintenance.
+
+#
+
+ICON=(
+
+    # ── powerline separators ───────────────────────────────────────────────
+    # Used to create the "arrow" effect in prompts.
+    LEFT_SEGMENT_SEPARATOR          $'\uE0B0'    #   (Hard Right Arrow)
+    RIGHT_SEGMENT_SEPARATOR         $'\uE0B2'    #   (Hard Left Arrow)
+    LEFT_SUBSEGMENT_SEPARATOR       $'\uE0B1'    #   (Soft Right Arrow)
+    RIGHT_SUBSEGMENT_SEPARATOR      $'\uE0B3'    #   (Soft Left Arrow)
+    LEFT_SEGMENT_END_SEPARATOR      ' '          #    (Whitespace padding)
+
+    # ── os & system logos ──────────────────────────────────────────────────
+    ROOT_ICON                       $'\uF201'    #   (Dashboard/Graph)
+    LINUX_ICON                      $'\uF17C'    #   (Tux)
+    APPLE_ICON                      $'\uF179'    #   (Apple Logo)
+    FREEBSD_ICON                    $'\U1F608'   # 😈 (Daemon / Smiley)
+    SUNOS_ICON                      $'\uF185'    #   (Sun)
+    SERVER_ICON                     $'\uF233'    #   (Rack Server)
+    SSH_ICON                        $'\uF489'    #   (Terminal/Console)
+
+    # ── directory & filesystem ─────────────────────────────────────────────
+    HOME_ICON                       $'\uF015'    #   (House)
+    HOME_SUB_ICON                   $'\uF07C'    #   (Open Folder)
+    FOLDER_ICON                     $'\uF115'    #   (Closed Folder)
+    DISK_ICON                       $'\uF0A0'    #   (HDD)
+    LOCK_ICON                       $'\uF023'    #   (Padlock)
+
+    # ── version control systems (vcs) ──────────────────────────────────────
+    VCS_GIT_ICON                    $'\uF1D3'    #   (Git Logo)
+    VCS_GIT_GITHUB_ICON             $'\uF113'    #   (Octocat)
+    VCS_GIT_BITBUCKET_ICON          $'\uF171'    #   (Bitbucket)
+    VCS_GIT_GITLAB_ICON             $'\uF296'    #   (Fox)
+    VCS_HG_ICON                     $'\uF0C3'    #   (Flask/Mercurial)
+    VCS_SVN_ICON                    $'\uE739'    #   (Subversion)
+
+    # ── git status indicators ──────────────────────────────────────────────
+    VCS_BRANCH_ICON                 $'\uF126'    #   (Branch Split)
+    VCS_REMOTE_BRANCH_ICON          $'\uE728'    #   (Remote/Cloud)
+    VCS_TAG_ICON                    $'\uF217'    #   (Tag)
+    VCS_BOOKMARK_ICON               $'\uF27B'    #   (Bookmark)
+    VCS_COMMIT_ICON                 $'\uF221'    #   (Commit Point)
+
+    VCS_UNTRACKED_ICON              $'\uF059'    #   (Question Mark)
+    VCS_UNSTAGED_ICON               $'\uF06A'    #   (Exclamation Circle)
+    VCS_STAGED_ICON                 $'\uF055'    #   (Plus Circle)
+    VCS_CHANGED_ICON                $'\uF067'    #   (Plus)
+    VCS_STASH_ICON                  $'\uF01C'    #   (Inbox/Tray)
+    VCS_INCOMING_CHANGES_ICON       $'\uF01A'    #   (Down Arrow)
+    VCS_OUTGOING_CHANGES_ICON       $'\uF01B'    #   (Up Arrow)
+
+    # ── programming languages ──────────────────────────────────────────────
+    PYTHON_ICON                     $'\U1F40D'   # 🐍 (Snake)
+    RUBY_ICON                       $'\uF219'    #   (Diamond)
+    NODE_ICON                       $'\uE718'    #   (Hexagon JS)
+    RUST_ICON                       $'\uE7A8'    #   (Gear/Rust)
+    ELIXIR_ICON                     $'\uE62D'    #   (Drop)
+    SWIFT_ICON                      $'\uE755'    #   (Bird)
+    SYMFONY_ICON                    $'\uE757'    #   (S wrapper)
+    AWS_ICON                        $'\uE7AD'    #   (AWS Cube)
+    AWS_EB_ICON                     $'\U1F331'   # 🌱 (Seedling)
+
+    # ── hardware & diagnostics ─────────────────────────────────────────────
+    OK_ICON                         $'\uF00C'    #   (Check)
+    FAIL_ICON                       $'\uF00D'    #   (Cross)
+    TEST_ICON                       $'\uF291'    #   (Basket/Test)
+    TODO_ICON                       $'\u2611'    # ☑  (Checkbox)
+    LOAD_ICON                       $'\uF080'    #   (Bar Chart)
+    BATTERY_ICON                    $'\uF240'    #   (Full Battery)
+    NETWORK_ICON                    $'\uF09E'    #   (RSS/Wifi)
+    RAM_ICON                        $'\uF0E4'    #   (Dashboard Gauge)
+    SWAP_ICON                       $'\uF0E4'    #   (Gauge)
+    EXECUTION_TIME_ICON             $'\uF253'    #   (Hourglass)
+    BACKGROUND_JOBS_ICON            $'\uF013'    #   (Cog)
+    CARRIAGE_RETURN_ICON            $'\u21B5'    # ↵  (Enter/Return)
+
+    # ── prompt decorators ──────────────────────────────────────────────────
+    # Top-left and bottom-left curves for multi-line prompts
+    MULTILINE_FIRST_PROMPT_PREFIX   $'\u256D'$'\U2500'   # ╭─
+    MULTILINE_SECOND_PROMPT_PREFIX  $'\u2570'$'\U2500'   # ╰─
+)
+
+
+# Helper Functions
+# ─────────────────────────────────────────────────────────────
+## Utilities for retrieving and debugging the icon set.
+
+# Function: get_nerd_icon
+# Description:
+#   Safely retrieves an icon by key. If the key doesn't exist, it prints
+#   the provided fallback text (or nothing).
+# Parameters:
+#   $1 : The key name (e.g., "LINUX_ICON")
+#   $2 : (Optional) Fallback text if key is missing
+function get_nerd_icon() {
+    local key="$1"
+    local fallback="$2"
+
+    # Use standard array expansion with default value syntax :-
+    echo -n "${ICON[$key]:-$fallback}"
+}
+
+# Function: preview_nerd_icons
+# Description:
+#   Iterates through the entire map and prints the Key + Icon.
+#   Useful for checking if the terminal font supports the glyphs.
+function preview_nerd_icons() {
+    print -P "\n%B%F{blue}:: ZSH Icons Map Preview ::%f%b\n"
+
+    # Get all keys using ${(k)...} and sort them alphabetically with (o)
+    local -a sorted_keys
+    sorted_keys=(${(ok)ICON})
+
+    for key in $sorted_keys; do
+        # Format: Key (padded to 35 chars) : Icon
+        printf "  %F{242}%-35s%f : %s\n" "$key" "${ICON[$key]}"
+    done
+    echo
+}

@@ -1,0 +1,145 @@
+#    ░░░░▀▀█░█▀▀░█░█░█▀▀░█▀█░█░█
+#    ░░░░▄▀░░▀▀█░█▀█░█▀▀░█░█░▀▄▀
+#    ░▀░░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀░▀░░▀░
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   This file serves as the foundational configuration layer for Zsh.
+#   It is typically sourced by .zshenv or at the very top of .zshrc.
+#
+# Problems Solved
+#   - Establishes critical directory paths before plugins load.
+#   - Centralizes feature toggles (Enable/Disable flags).
+#   - Handles OS-specific logic (macOS vs Linux) for dotfile locations.
+#   - Securely loads environment secrets from an external .env file.
+#
+# Features / Responsibilities
+#   - Path Definitions (Config, Cache, Projects).
+#   - User Preference Configuration (Theme, Minimal Mode).
+#   - Feature Flags (Tmux, Aliases, Profiling).
+#   - Dynamic $PATH construction.
+#
+# Usage Notes
+#   - Toggle features by changing "Yes" to "No".
+#   - Adjust `USER_PATH_ENTRIES` to add binaries to your system PATH.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+#
+
+# Core Directory & Path Setup
+# ─────────────────────────────────────────────────────────────
+## Defines the physical locations of configuration files and project directories.
+## We use standard XDG locations where possible for cleanliness.
+
+# Root directory for the Zsh configuration framework
+export ZSH_CONFIG_ROOT="${ZDOTDIR:-$HOME/.config/zsh-conf}/zsh"
+
+# Location where Zsh dumps its completion cache (speeds up startup)
+export ZSH_COMPLETION_DUMP="${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump"
+
+# Location of your main dotfiles repository (OS-dependent)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS specific path
+    export DOTFILES_ROOT="$HOME/.config/mac-dots"
+else
+    # Linux / BSD specific path
+    export DOTFILES_ROOT="$HOME/.config/b001-dots"
+fi
+
+# Primary workspace for code projects
+export PROJECTS_ROOT="$HOME/Developer"
+
+# ── system preference configuration ────────────────────────────────────
+
+# Package Manager: Controls which plugin loader to use.
+# Options: "zap" (fastest), "zinit" (powerful), "omz" (legacy)
+export PLUGIN_MANAGER="zap"
+
+# Prompt Theme: Controls the visual appearance of the terminal prompt.
+# Options: "gh0st", "z", "10k", etc.
+export PROMPT_THEME="gh0st"
+
+# Minimal Mode: Skips heavy plugins for older machines or root users.
+# Options: "Yes", "No"
+export ENABLE_MINIMAL_MODE="No"
+
+# ── path definition ────────────────────────────────────────────────────
+
+# A list of custom paths to append/prepend to the system $PATH.
+# You can mix absolute paths and paths relative to $HOME.
+typeset -a USER_PATH_ENTRIES
+USER_PATH_ENTRIES=(
+    "/usr/local/go/bin"     # Absolute: Go Language Binaries
+    ".scripts"              # Relative: Personal Shell Scripts, $HOME will be appended for realtive paths
+    ".spicetify"            # Relative: Spotify CLI customization
+)
+
+
+# Feature Toggles
+# ─────────────────────────────────────────────────────────────
+## Boolean-style flags to enable or disable specific shell capabilities.
+## These prevent the shell from becoming bloated with unused features.
+
+# ------------------------------------------------------------------------------
+# Core Behavior
+
+# Auto-launch Tmux: Starts a session immediately upon terminal launch.
+export ENABLE_AUTO_TMUX="No"
+
+# Custom Aliases: Loads shortcut definitions (e.g., 'g' for 'git').
+export LOAD_CUSTOM_ALIASES="No"
+
+# Custom Functions: Loads shell functions defined in the config.
+export LOAD_CUSTOM_FUNCTIONS="No"
+
+# Theme.sh Integration: Enables the 'theme.sh' script for dynamic colors.
+export ENABLE_THEME_SH_INTEGRATION="No"
+
+# Fancy Startup: Displays a banner/logo on shell init.
+export ENABLE_FANCY_STARTUP="No"
+
+# ------------------------------------------------------------------------------
+# Advanced Integrations
+
+# Multi-Neovim: Enables NVIM_APPNAME switcher (requires Neovim >= 0.9.0).
+export ENABLE_MULTI_NEOVIM="No"
+
+# Wallpaper Sync: Reloads shell/colors when wallpaper changes.
+export ENABLE_WALLPAPER_SYNC="No"
+
+# Wallpaper Directory: Source for background images.
+if [[ "$ENABLE_WALLPAPER_SYNC" == "Yes" ]]; then
+    export WALLPAPER_DIR="$HOME/Backdrops"
+fi
+
+# Private Config: Loads local aliases ignored by git (work-specific settings).
+export LOAD_PRIVATE_CONFIG="No"
+
+# Vi Mode: Enables Vim keybindings (k/j/h/l) for the shell line editor.
+export ENABLE_VI_MODE="No"
+
+
+# Secrets & Debugging
+# ─────────────────────────────────────────────────────────────
+## Configuration for secure environment variables and performance metrics.
+
+# Startup Profiling: Measures how long Zsh takes to load.
+# Useful for debugging slow terminal starts.
+export ZSH_BENCHMARK="Yes"
+
+# Secure Environment Loading
+# Looks for a .env file containing API keys and secrets.
+local ENV_SECRET_FILE="$ZDOTDIR/.env"
+
+if [[ -f "$ENV_SECRET_FILE" ]]; then
+    # 1. Enable 'allexport': Any variable defined next is automatically exported.
+    set -a
+
+    # 2. Source the secrets file into the current shell session.
+    source "$ENV_SECRET_FILE"
+
+    # 3. Disable 'allexport': Return to standard safety behavior.
+    set +a
+fi

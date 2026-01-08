@@ -1,0 +1,145 @@
+#!/usr/bin/env zsh
+#    ░█░█░▀█▀░░░░█▀▄░█▀▀░█▀█░█▀▀░█░█░█▄█░█▀█░█▀▄░█░█
+#    ░█░█░░█░░░░░█▀▄░█▀▀░█░█░█░░░█▀█░█░█░█▀█░█▀▄░█▀▄
+#    ░▀▀▀░▀▀▀░▀░░▀▀░░▀▀▀░▀░▀░▀▀▀░▀░▀░▀░▀░▀░▀░▀░▀░▀░▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   This script generates the visual "Report Card" displayed after Zsh finishes
+#   loading. It calculates a performance rating and renders a top-10 list
+#   of the slowest functions using 'zprof'.
+#
+# Problems Solved
+#   - Contextualizes raw milliseconds into human-readable ratings (e.g., "Fast").
+#   - Visualizes bottlenecks with a bar chart.
+#   - Filters verbose 'zprof' output into a clean summary table.
+#
+# Features / Responsibilities
+#   - Performance Rating Logic (Blazing vs Sluggish).
+#   - Boxed UI Rendering.
+#   - AWK processing of profiling data.
+#
+# Usage Notes
+#   - Requires 'zprof' to be enabled in the entry point.
+#   - Expects '$total_duration_ms' to be calculated before sourcing.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+#
+
+# 0. Safety Checks & Dependencies
+# ─────────────────────────────────────────────────────────────
+## Ensure we have the necessary data and color definitions before rendering.
+
+# Exit if the duration variable wasn't set by the parent script
+[[ -z "$total_duration_ms" ]] && return
+
+# Load color definitions if not already present
+# (Assuming the file from the previous step is saved as _ui.color.zsh)
+[[ -f "$ZSH_CONFIG_ROOT/lib/_ui.color" ]] && source "$ZSH_CONFIG_ROOT/lib/_ui.color"
+
+
+# 1. Performance Rating System
+# ─────────────────────────────────────────────────────────────
+## Categorizes the startup time into human-readable levels.
+
+local performance_label="Unknown"
+local label_color=${COLOR[WHITE]}
+
+if (( total_duration_ms < 40 )); then
+    performance_label="🚀 Blazing"
+    label_color=${COLOR[GREEN]}
+
+elif (( total_duration_ms < 100 )); then
+    performance_label="⚡ Fast"
+    label_color=${COLOR[CYAN]}
+
+elif (( total_duration_ms < 200 )); then
+    performance_label="🐢 Acceptable"
+    label_color=${COLOR[YELLOW]} # Changed to Yellow for warning territory
+
+else
+    performance_label="🐌 Sluggish"
+    label_color=${COLOR[RED]}
+fi
+
+
+# 2. Header Rendering
+# ─────────────────────────────────────────────────────────────
+## Draws the top box containing the total time and rating.
+
+# Top Border
+printf "\n${COLOR[DIM]}╭───────────────────────────────────────────────────╮${COLOR[RESET]}\n"
+
+# Content Row (Dynamic based on Minimal Mode)
+if [[ "${ENABLE_MINIMAL_MODE:-$MINIMALIST}" == "Yes" ]]; then
+    printf "${COLOR[DIM]}│${COLOR[RESET]}  ZSH ${COLOR[YELLOW]}[MINIMAL]${COLOR[RESET]}    ${label_color}%-16s${COLOR[RESET]}    ${label_color}%6.2f ms${COLOR[RESET]}  ${COLOR[DIM]}│${COLOR[RESET]}\n" \
+        "$performance_label" \
+        "$total_duration_ms"
+else
+    printf "${COLOR[DIM]}│${COLOR[RESET]}  ZSH BENCHMARK    ${label_color}%-16s${COLOR[RESET]}    ${label_color}%6.2f ms${COLOR[RESET]}  ${COLOR[DIM]}│${COLOR[RESET]}\n" \
+        "$performance_label" \
+        "$total_duration_ms"
+fi
+
+# Bottom Border
+printf "${COLOR[DIM]}╰───────────────────────────────────────────────────╯${COLOR[RESET]}\n"
+
+
+# 3. Profiling Data Table
+# ─────────────────────────────────────────────────────────────
+## parses the 'zprof' output to find the most expensive function calls.
+## We use 'awk' to generate a visual bar chart inline.
+
+# Table Headers
+printf "   ${COLOR[DIM]}%-25s %-10s %-8s %s${COLOR[RESET]}\n" "FUNCTION" "TIME" "CALLS" "LOAD"
+
+# Process Zprof Data
+zprof | awk \
+    -v color_norm="${COLOR[WHITE]}" \
+    -v color_dim="${COLOR[DIM]}" \
+    -v color_warn="${COLOR[RED]}" \
+    -v color_reset="${COLOR[RESET]}" \
+    -v color_func="${COLOR[MAGENTA]}" \
+    '{
+        # 1. Filter: Only process lines starting with a number (e.g., "1)")
+        #    This ignores zprof headers, separators, and the breakdown graph.
+        if ($1 !~ /^[0-9]+\)$/) next
+
+        # 2. Limit: Stop after processing the top 10 rows
+        if (count++ >= 10) exit
+
+        # 3. Extract Data
+        # $NF is the last field (Function Name)
+        # $3  is the time in ms
+        # $5  is the percentage of total time
+        fn_name = $NF
+        time_ms = $3 + 0
+        percent = $5 + 0
+
+        # 4. Color Logic
+        # Highlight slower functions to draw attention
+        time_color = color_dim
+        if (time_ms > 5)  time_color = color_norm
+        if (time_ms > 20) time_color = color_warn
+
+        # 5. Visual Bar Chart Logic
+        # Create a bar based on percentage (approx 1 block per 5%)
+        bar_len = int(percent / 5)
+        bar_visual = ""
+        for(i=0; i<bar_len; i++) bar_visual = bar_visual "■"
+
+        # Ensure extremely small non-zero items still show something
+        if (bar_visual == "" && percent > 0) bar_visual = "·"
+
+        # 6. Print Formatted Row
+        printf "   %s%-25s%s %s%-10s%s %s%-8s%s %s%s%s\n",
+            color_func, fn_name, color_reset,   # Function Name
+            time_color, $3,      color_reset,   # Time
+            color_dim,  $2,      color_reset,   # Calls
+            time_color, bar_visual, color_reset # Bar Chart
+    }'
+
+# Final spacing
+echo

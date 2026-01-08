@@ -1,0 +1,176 @@
+#    ░▀▀█░█▀▀░█░█░█▀▄░█▀▀
+#    ░▄▀░░▀▀█░█▀█░█▀▄░█░░
+#    ░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   This script acts as the "Engine Room" of the Zsh configuration.
+#   It is responsible for modular loading, background optimization, and
+#   applying the final layer of user settings.
+#
+# Problems Solved
+#   - Breaks config into manageable chunks (modules) instead of one huge file.
+#   - Compiles scripts to bytecode (.zwc) in the background for speed.
+#   - Prevents recursive loading of Tmux.
+#   - Handles non-login shell edge cases.
+#
+# Features / Responsibilities
+#   - Environment Safety Checks.
+#   - Conditional Module Loading (Tmux, Vi-mode).
+#   - Auto-Compilation (Self-healing performance).
+#   - Private Config Injection.
+#
+# Usage Notes
+#   - Modules in 'conf.d' are loaded in the order defined in the arrays.
+#   - Background compilation happens silently; you won't see output.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+#
+
+# 0. Safety Check & Environment Restoration
+# ─────────────────────────────────────────────────────────────
+## In some non-login shells (e.g., executing a script, some IDE terminals),
+## .zshenv might be skipped. We ensure critical variables are loaded here.
+
+if [[ -z "$ZSH_CONFIG_ROOT" ]]; then
+    # Fallback if .zshenv wasn't sourced (e.g., specific non-login shells)
+    [[ -f "${ZDOTDIR:-$HOME/.config/zsh-conf}/.zshenv" ]] && source "${ZDOTDIR:-$HOME/.config/zsh-conf}/.zshenv"
+fi
+
+
+# 1. Feature: Auto-Tmux Integration
+# ─────────────────────────────────────────────────────────────
+## conditionally launches Tmux. We use the ':l' modifier to lowercase the
+## variable for case-insensitive comparison ("Yes" == "yes").
+
+#
+
+if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" && -z "$TMUX" ]]; then
+    # Only load if we are NOT already inside a Tmux session or Tmux is enabled by user.
+    [[ -f "$ZSH_CONFIG_ROOT/conf.d/tmux.zsh" ]] && source "$ZSH_CONFIG_ROOT/conf.d/tmux.zsh"
+fi
+
+
+# 2. Module Loading System
+# ─────────────────────────────────────────────────────────────
+## Iterates through distinct configuration files.
+## We separate them into "Core" (Essential) and "Auxiliary" (Nice to have).
+
+# ------------------------------------------------------------------------------
+# Core Modules
+# These define the shell's behavior, appearance, and input handling.
+
+typeset -a core_modules
+core_modules=(
+    "env"       # Environment variables overrides
+    "opts"      # Zsh setopt configurations
+    "plugs"     # Plugin manager initialization
+    "keys"      # Key bindings
+    "prompt"    # Prompt logic
+    "theme"     # Color schemes
+    "nvim"      # Neovim integration
+    "#icons"    # Icon definitions (if applicable)
+)
+
+for module in "${core_modules[@]}"; do
+    # Source if file exists
+    [[ -f "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh" ]] && source "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh"
+done
+
+# ------------------------------------------------------------------------------
+# Auxiliary Modules
+# These are sourced silently to prevent startup noise from minor tools.
+
+typeset -a aux_modules
+aux_modules=(
+    "alias"     # Command shortcuts
+    "function"  # Utility functions
+)
+
+for module in "${aux_modules[@]}"; do
+    # Source silently (&> /dev/null)
+    [[ -f "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh" ]] && source "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh" &> /dev/null
+done
+
+# ------------------------------------------------------------------------------
+# Cleanup
+# Unset variables to keep the global namespace clean.
+
+unset core_modules aux_modules module
+
+
+# 3. Private Configuration
+# ─────────────────────────────────────────────────────────────
+## Loads work-specific or private settings that are ignored by Git.
+
+if [[ "${LOAD_PRIVATE_CONFIG:l}" == "yes" ]]; then
+    [[ -f "$ZSH_CONFIG_ROOT/User-Overrides.zsh" ]] && source "$ZSH_CONFIG_ROOT/User-Overrides.zsh" &> /dev/null
+fi
+
+
+# 4. Background Optimization (Zcompile)
+# ─────────────────────────────────────────────────────────────
+## Zsh can compile text scripts into bytecode (.zwc) for faster parsing.
+## This block runs in a background subshell to avoid slowing down startup.
+
+#
+
+(
+    # Set safe options for the background job (prevent alias expansion, etc.)
+    setopt LOCAL_OPTIONS NO_ALIASES null_glob extended_glob
+
+    # Define a lockfile to prevent multiple instances running simultaneously
+    local lock_file="/tmp/zsh_compiling_$USER.lock"
+
+    # Check if lock exists (compilation already running). If so, exit.
+    if [[ -f "$lock_file" ]]; then
+        return
+    fi
+
+    # Create the lock file
+    : >| "$lock_file"
+
+    # Function: try_compile
+    # Compiles a file ONLY if the source is newer than the existing .zwc file.
+    function try_compile() {
+        local file="$1"
+        local compiled="${file}.zwc"
+
+        # Logic:
+        # 1. File must exist.
+        # 2. Compiled version doesn't exist OR Source is newer (-nt) than Compiled.
+        if [[ -f "$file" && ( ! -f "$compiled" || "$file" -nt "$compiled" ) ]]; then
+            zcompile "$file"
+        fi
+    }
+
+    # 1. Compile Configuration Modules in conf.d
+    # Note: Assuming $module_path was meant to point to the conf directory
+    local config_dir="$ZSH_CONFIG_ROOT/conf.d"
+    for config_file in "$config_dir"/*.zsh; do
+        try_compile "$config_file"
+    done
+
+    # 2. Compile Main RC files
+    try_compile "$HOME/.zshrc"
+    try_compile "${ZDOTDIR:-$HOME}/.zshrc"
+
+    # Cleanup: Remove the lock file so it can run next time
+    # ---- NOTE: Changed 'rmdir' to 'rm' because we created a file, not a dir.
+    rm -f "$lock_file"
+
+) &! # The '&!' operator disowns the job immediately
+
+
+# 5. Vi-Mode Activation
+# ─────────────────────────────────────────────────────────────
+## Enables Vim-style keybindings for the command line.
+
+if [[ "${ENABLE_VI_MODE:l}" == "yes" ]]; then
+    bindkey -v
+
+    # Reduce delay when switching modes (Esc key latency)
+    export KEYTIMEOUT=1
+fi

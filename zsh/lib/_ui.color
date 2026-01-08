@@ -1,0 +1,154 @@
+#!/usr/bin/env zsh
+#    ░█░█░▀█▀░░░░█▀▀░█▀█░█░░░█▀█░█▀▄
+#    ░█░█░░█░░░░░█░░░█░█░█░░░█░█░█▀▄
+#    ░▀▀▀░▀▀▀░▀░░▀▀▀░▀▀▀░▀▀▀░▀▀▀░▀░▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Defines a global associative array containing standard ANSI escape codes
+#   for terminal styling (colors, formatting, resets).
+#
+# Problems Solved
+#   - Eliminates magic strings (`\e[31m`) scattered throughout scripts.
+#   - Provides a readable API for styling (`${COLOR[RED]}`).
+#   - Centralizes color definitions for easy theme adjustments.
+#
+# Features / Responsibilities
+#   - Text Modifiers (Bold, Dim, Italic, Blink).
+#   - Foreground Colors (Standard & High Intensity).
+#   - Background Colors (Standard & High Intensity).
+#   - Debugging utility to visually preview all defined styles.
+#
+# Usage Notes
+#   echo "${COLOR[RED]}Error found${COLOR[RESET]}"
+#   echo "${COLOR[BOLD]}${COLOR[BLUE]}Info${COLOR[RESET]}"
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+#
+
+# Data Structure Definition
+# ─────────────────────────────────────────────────────────────
+## We use a global (-g) associative array (-A) to map readable names
+## to their corresponding ANSI escape sequences.
+
+typeset -Ag COLOR
+
+# ── 1. resets & modifiers ──────────────────────────────────────────────
+# These codes alter the text style rather than just the color.
+# NOTE: Support for Italic/Blink/Strike depends on the terminal emulator.
+
+COLOR[RESET]=$'\e[0m'      # Clear all attributes
+COLOR[BOLD]=$'\e[1m'       # Increased intensity
+COLOR[DIM]=$'\e[2m'        # Decreased intensity (Faint)
+COLOR[ITALIC]=$'\e[3m'     # Slanted text
+COLOR[UNDERLINE]=$'\e[4m'  # Single line under text
+COLOR[BLINK]=$'\e[5m'      # Slow blink (often disabled by users)
+COLOR[REVERSE]=$'\e[7m'    # Swap foreground and background
+COLOR[HIDDEN]=$'\e[8m'     # Text is present but invisible (passwords)
+COLOR[STRIKE]=$'\e[9m'     # Strikethrough
+
+# ── 2. standard foreground ─────────────────────────────────────────────
+# Basic text colors supported by almost all terminals.
+
+COLOR[BLACK]=$'\e[30m'
+COLOR[RED]=$'\e[31m'
+COLOR[GREEN]=$'\e[32m'
+COLOR[YELLOW]=$'\e[33m'
+COLOR[BLUE]=$'\e[34m'
+COLOR[MAGENTA]=$'\e[35m'
+COLOR[CYAN]=$'\e[36m'
+COLOR[WHITE]=$'\e[37m'     # Light Grey usually
+
+# ── 3. bright/neon foreground ──────────────────────────────────────────
+# "AIxTerm" high-intensity colors (often codes 90-97).
+
+COLOR[GREY]=$'\e[90m'      # Dark Grey (Bright Black)
+COLOR[B_RED]=$'\e[91m'
+COLOR[B_GREEN]=$'\e[92m'
+COLOR[B_YELLOW]=$'\e[93m'
+COLOR[B_BLUE]=$'\e[94m'
+COLOR[B_MAGENTA]=$'\e[95m'
+COLOR[B_CYAN]=$'\e[96m'
+COLOR[B_WHITE]=$'\e[97m'   # Pure White
+
+# ── 4. standard backgrounds ────────────────────────────────────────────
+# Sets the background color behind the text.
+
+COLOR[BG_BLACK]=$'\e[40m'
+COLOR[BG_RED]=$'\e[41m'
+COLOR[BG_GREEN]=$'\e[42m'
+COLOR[BG_YELLOW]=$'\e[43m'
+COLOR[BG_BLUE]=$'\e[44m'
+COLOR[BG_MAGENTA]=$'\e[45m'
+COLOR[BG_CYAN]=$'\e[46m'
+COLOR[BG_WHITE]=$'\e[47m'
+
+# ── 5. high intensity backgrounds ──────────────────────────────────────
+
+COLOR[BG_GREY]=$'\e[100m'
+COLOR[BG_B_RED]=$'\e[101m'
+COLOR[BG_B_GREEN]=$'\e[102m'
+COLOR[BG_B_YELLOW]=$'\e[103m'
+COLOR[BG_B_BLUE]=$'\e[104m'
+COLOR[BG_B_MAGENTA]=$'\e[105m'
+COLOR[BG_B_CYAN]=$'\e[106m'
+COLOR[BG_B_WHITE]=$'\e[107m'
+
+
+# Debugging / Visualization
+# ─────────────────────────────────────────────────────────────
+
+function preview_ansi_colors() {
+    # Zsh Print: %B(Bold) %F{blue}(Color) ... %f(end color) %b(end bold)
+    print -P "%B%F{blue}:: ZSH Color Map Preview ::%f%b"
+
+    # Define logical groups for display iteration
+    local -a standard_keys=(BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE)
+    local -a bright_keys=(GREY B_RED B_GREEN B_YELLOW B_BLUE B_MAGENTA B_CYAN B_WHITE)
+    local -a modifier_keys=(BOLD DIM ITALIC UNDERLINE BLINK REVERSE HIDDEN STRIKE)
+
+    # Zsh Magic: Get all keys from the map that match the pattern "BG_*"
+    # (k) = keys, (I) = pattern match index
+    local -a background_keys=(${(k)COLOR[(I)BG_*]})
+
+    # --------------------------------------------------------------------------
+    # Helper: _render_sample_row
+    # Prints the name of the color, applies it to sample text, and resets.
+    function _render_sample_row() {
+        local key_name="$1"
+        local color_code="${COLOR[$key_name]}"
+        local reset_code="${COLOR[RESET]}"
+
+        # Format: "KeyName (padded) : [Effect] Sample Text [Reset]"
+        printf "  %-12s : %s%s%s\n" "$key_name" "$color_code" "The quick brown fox" "$reset_code"
+    }
+
+    # --------------------------------------------------------------------------
+    # Render Groups
+
+    echo "\n${COLOR[BOLD]}--- Modifiers ---${COLOR[RESET]}"
+    for key in $modifier_keys; do _render_sample_row $key; done
+
+    echo "\n${COLOR[BOLD]}--- Standard Foreground ---${COLOR[RESET]}"
+    for key in $standard_keys; do _render_sample_row $key; done
+
+    echo "\n${COLOR[BOLD]}--- Bright/Neon Foreground ---${COLOR[RESET]}"
+    for key in $bright_keys; do _render_sample_row $key; done
+
+    echo "\n${COLOR[BOLD]}--- Backgrounds ---${COLOR[RESET]}"
+    # Backgrounds need different contrast logic (Black text on colored BG)
+    # (o) = sort the keys alphabetically
+    for key in ${(o)background_keys}; do
+        printf "  %-12s : %s%s%s%s\n" \
+            "$key" \
+            "${COLOR[$key]}" \
+            "${COLOR[BLACK]}" \
+            " BLACK TEXT " \
+            "${COLOR[RESET]}"
+    done
+
+    # Clean up the local helper function to avoid namespace pollution
+    unfunction _render_sample_row
+}

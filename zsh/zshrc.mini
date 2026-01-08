@@ -1,0 +1,231 @@
+#    ░▀▀█░█▀▀░█░█░█▀▄░█▀▀░░░░█▄█░▀█▀░█▀█░▀█▀
+#    ░▄▀░░▀▀█░█▀█░█▀▄░█░░░░░░█░█░░█░░█░█░░█░
+#    ░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀░░▀░▀░▀▀▀░▀░▀░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   This file acts as a standalone "Mini-Zshrc" configuration.
+#   It consolidates History, Completion, Prompt, Aliases, and Session logic
+#   into a single file for minimalist or portable setups.
+#
+# Problems Solved
+#   - sets up persistent command history with de-duplication.
+#   - Initializes the completion system with smart caching (speed boost).
+#   - Defines a clean, functional prompt with git/status indicators.
+#   - Provides safety aliases and optional Tmux auto-launching.
+#
+# Features / Responsibilities
+#   - History Management (Size, Ignore patterns, sharing).
+#   - Completion System (compinit, colors, menu selection).
+#   - Visual Prompt (User, Host, Directory, Status).
+#   - Vi-Mode Keybindings.
+#
+# Usage Notes
+#   - This file assumes standard Zsh options are available.
+#   - Adjust 'HISTORY_IGNORE' to filter out sensitive or trivial commands.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+#
+
+# History Configuration
+# ─────────────────────────────────────────────────────────────
+## Defines how the shell remembers previous commands.
+## We prioritize a large history size with aggressive de-duplication to
+## keep the history file useful and clean.
+
+#
+
+# File location and size limits
+HISTFILE="${ZDOTDIR:-$HOME}/zhistory"
+HISTSIZE=10000
+SAVEHIST=10000
+
+# Pattern to ignore specific commands from history.
+# Requires 'EXTENDED_GLOB' to handle the '(...|...)' syntax.
+HISTORY_IGNORE="(ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
+
+# ── history options ────────────────────────────────────────────────────
+
+setopt EXTENDED_HISTORY          # Save timestamp and duration (:start:elapsed;command)
+setopt SHARE_HISTORY             # Share history immediately across running tabs/panes
+setopt EXTENDED_GLOB             # Enable advanced pattern matching (needed for IGNORE)
+
+# ── duplication control ────────────────────────────────────────────────
+
+setopt HIST_EXPIRE_DUPS_FIRST    # Delete duplicates first when HISTSIZE is reached
+setopt HIST_IGNORE_DUPS          # Ignore entry if it matches the immediately previous one
+setopt HIST_IGNORE_ALL_DUPS      # Delete *old* duplicates if a new one is added
+setopt HIST_FIND_NO_DUPS         # Do not show duplicates when searching (Ctrl+R)
+setopt HIST_IGNORE_SPACE         # Ignore commands starting with a space ( " secret_cmd")
+setopt HIST_SAVE_NO_DUPS         # Do not write duplicate entries to the disk file
+setopt HIST_REDUCE_BLANKS        # Trim extra whitespace before saving
+
+
+# Completion System & Plugins
+# ─────────────────────────────────────────────────────────────
+## Initializes the Zsh completion system (tab-completion).
+## Includes optimization logic to prevent slow startups by caching results.
+
+#
+
+# Ensure fpath/path arrays do not contain duplicate directories
+typeset -U path fpath
+
+# Load the completion initializer function
+autoload -Uz compinit
+
+# Smart Cache Logic:
+# 1. Check if the dump file exists.
+# 2. Check if it is older than 20 hours (#qN.mh+20).
+#    - #q : Glob qualifier start
+#    - N  : Nullglob (don't error if missing)
+#    - .  : Plain files only
+#    - mh : Modification time in hours
+#    - +20: Older than 20 hours
+if [[ -n "$ZSH_COMPLETION_DUMP"(#qN.mh+20) ]]; then
+    # Rebuild completion (-d) if cache is old/missing
+    compinit -d "$ZSH_COMPLETION_DUMP"
+else
+    # Reuse existing cache (-C) for speed
+    compinit -C -d "$ZSH_COMPLETION_DUMP"
+fi
+
+# ── style configuration ────────────────────────────────────────────────
+
+# Matcher List: Allows case-insensitive completion (a matching A)
+# and partial matching (f.b expanding to foo.bar).
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+
+# Colors: Use the system LS_COLORS for completion menu items
+# (s.:.) splits the LS_COLORS string by colon
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+
+# Menu: Enable interactive selection menu (highlighting)
+zstyle ':completion:*' menu select
+
+
+# Prompt Configuration
+# ─────────────────────────────────────────────────────────────
+## Visual configuration for the command line prompt (PS1).
+## Keeps it minimal: "User Host [Directory] StatusSymbol"
+
+#
+
+# Initialize color module
+autoload -Uz colors && colors
+
+# ── components ─────────────────────────────────────────────────────────
+
+# Format: User (Blue) Host (Yellow) separated by Red slash
+local prompt_user_host='%B%F{blue}%n %B%F{red}/ %B%F{yellow}%m%f%b'
+
+# Format: Current Directory (Grey 242), Italicized
+# \e[3m = Start Italic, \e[23m = End Italic
+local prompt_current_dir='%{\e[3m%}%B%F{242}[%~]%f%b%{\e[23m%}'
+
+# Format: Arrow symbol changing color based on exit status
+# %(?.Success.Failure)
+local prompt_status_symbol='%(?.%B%F{green} .%F{red} )%f%b'
+
+# ── assembly ───────────────────────────────────────────────────────────
+
+PS1="${prompt_user_host} ${prompt_current_dir}${prompt_status_symbol} "
+
+
+# Aliases
+# ─────────────────────────────────────────────────────────────
+## Command shortcuts and modern replacements.
+## Only loads if the feature flag is enabled.
+
+if [[ "${LOAD_CUSTOM_ALIASES:l}" == "Yes" ]]; then
+
+    # ── core replacements ──────────────────────────────────────────────────
+    # Check if modern alternatives exist before aliasing.
+
+    # Cat -> Bat (Syntax highlighting)
+    if (( $+commands[bat] )); then
+        alias cat="bat --theme=TwoDark"
+    fi
+
+    # Ls -> Eza (Icons, Git status)
+    if (( $+commands[eza] )); then
+        alias ls='eza --icons=always --color=always -a'
+        alias ll='eza --icons=always --color=always -la'
+    else
+        alias ll='ls -la'
+    fi
+
+    # Vim -> Neovim
+    if (( $+commands[nvim] )); then
+        alias v='nvim'
+        alias vim='nvim'
+    fi
+
+    alias py="python3"
+
+    # ── shell management ───────────────────────────────────────────────────
+
+    # Reload Config: Replaces current process with new Zsh instance.
+    # ---- NOTE: Using 'exec' ensures a clean slate, unlike 'source'.
+    alias reload="exec zsh"
+
+    # ── navigation ─────────────────────────────────────────────────────────
+    alias dv="cd ~/Developer/"
+
+    # ── tmux utilities ─────────────────────────────────────────────────────
+    alias tkill='tmux kill-session -t'
+
+    # Smart Exit:
+    # If in Tmux: Kill the specific session.
+    # If in Zsh:  Just exit the shell.
+    alias ':q'='[ -n "$TMUX" ] && tmux kill-session -t $(tmux display-message -p "#S") || exit'
+fi
+
+
+# Vi Mode & Keybindings
+# ─────────────────────────────────────────────────────────────
+## Enables Vim-style navigation on the command line.
+
+if [[ "${ENABLE_VI_MODE:l}" == "yes" ]]; then
+    bindkey -v
+
+    # Reduce key delay (latency) for mode switching
+    export KEYTIMEOUT=1
+
+    # ── fixes ──────────────────────────────────────────────────────────────
+    # Re-bind standard keys that Vi-mode often breaks
+
+    bindkey '^?' backward-delete-char                  # Backspace
+    bindkey '^h' backward-delete-char                  # Ctrl + H
+    bindkey '^r' history-incremental-search-backward   # Ctrl + R
+fi
+
+
+# Tmux Auto-Start
+# ─────────────────────────────────────────────────────────────
+## Automatically launches or attaches to a Tmux session on login.
+## Checks:
+## 1. Feature enabled?
+## 2. Tmux installed?
+## 3. Not already in Tmux?
+## 4. Is this a terminal (stdin is tty)?
+
+if [[ "${ENABLE_AUTO_TMUX:l}" == "Yes" ]] && (( $+commands[tmux] )) && [[ -z "$TMUX" && -t 0 ]]; then
+    # -A: Attach to existing session if it exists
+    # -s: Session name ('b001')
+    exec tmux new-session -A -s b001
+fi
+
+
+# Final Cleanup
+# ─────────────────────────────────────────────────────────────
+## Aesthetic cleanup actions performed after everything loads.
+
+# Clear Screen:
+# Only done if NOT over SSH (preserves context) and this is a top-level shell.
+if [[ -z "$SSH_CONNECTION" && "$SHLVL" -eq 1 ]]; then
+    # ANSI Escape: Clear Screen (\x1b[2J) and Move Cursor Home (\x1b[1;1H)
+    echo -en "\x1b[2J\x1b[1;1H"
+fi
