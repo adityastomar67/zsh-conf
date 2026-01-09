@@ -1,0 +1,75 @@
+#!/usr/bin/env zsh
+
+# ______ _            _
+# | ___ \ |          | |
+# | |_/ / | ___   ___| | _____
+# | ___ \ |/ _ \ / __| |/ / __|
+# | |_/ / | (_) | (__|   <\__ \
+# \____/|_|\___/ \___|_|\_\___/
+#
+#  :: Minimal Terminal Color Palette Tester (Zsh Version)
+#  :: Renders standard (0-7) and bright (8-15) ANSI color blocks.
+#  :: Works natively on macOS and Linux without external dependencies.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Blocks
+#      2. Run:             ./Blocks
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# Constants for the block character
+typeset -r BLOCK="██"
+
+# ==============================================================================
+# [2] FUNCTIONS
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# :: Print Palette
+#    Iterates through ANSI color codes and prints them.
+#    Arguments:
+#      $1: Base color code (30 for standard, 90 for bright)
+#      $2: Style prefix (e.g., "1;" for bold/bright, or empty)
+# ------------------------------------------------------------------------------
+print_palette() {
+    local base=$1
+    local style=$2
+    local color_code
+
+    # Zsh Loop: {0..7} iterates from 0 to 7 inclusive
+    for i in {0..7}; do
+        # Calculate the specific ANSI color code
+        color_code=$(( base + i ))
+
+        # Zsh Printing:
+        # print -n   : Do not print a newline at the end
+        # $'\e[...m' : ANSI Escape sequence
+        # \e[0m      : Reset color
+        print -n $'\e['"${style}${color_code}m ${BLOCK} "$'\e[0m'
+    done
+}
+
+# ==============================================================================
+# [3] MAIN EXECUTION
+# ==============================================================================
+
+main() {
+    print "" # Top spacing
+
+    # 1. Print Standard Colors (ANSI 30-37)
+    #    No style prefix needed
+    print_palette 30 ""
+
+    print "" # Newline between rows
+
+    # 2. Print Bright/Bold Colors (ANSI 90-97)
+    #    "1;" adds the bold attribute, making colors pop on some terminals
+    print_palette 90 "1;"
+
+    print "\n" # Bottom spacing
+}
+
+main

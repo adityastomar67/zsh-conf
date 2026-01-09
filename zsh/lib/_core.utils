@@ -1,0 +1,135 @@
+#!/usr/bin/env zsh
+#    ░█▀▀░█▀█░█▀▄░█▀▀░░░░█░█░▀█▀░▀█▀░█░░░█▀▀
+#    ░█░░░█░█░█▀▄░█▀▀░░░░█░█░░█░░░█░░█░░░▀▀█
+#    ░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀░░▀▀▀░░▀░░▀▀▀░▀▀▀░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   This script handles the initialization of the shell environment, specifically
+#   managing the executable search path ($PATH) and providing global utility
+#   functions used by other configuration modules.
+#
+# Problems Solved
+#   - Prevents duplicate entries in $PATH (slows down command lookups).
+#   - Automatically resolves relative paths (e.g., ".scripts" -> "/home/user/.scripts").
+#   - Provides a cached "is_installed" check to optimize startup speed when
+#     configuring aliases or plugins conditionally.
+#
+# Features / Responsibilities
+#   - Unique Path Enforcement.
+#   - Dynamic Path Expansion.
+#   - Command Availability Caching.
+#
+# Usage Notes
+#   - Relies on 'USER_PATH_ENTRIES' being defined in 'env.zsh'.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# Path Construction
+# ─────────────────────────────────────────────────────────────
+## We construct the system $PATH and $FPATH (function path) here.
+## Using specific Zsh flags ensures these arrays remain clean and efficient.
+
+# 1. Global Uniqueness
+# typeset -g : Global scope (vars persist after this script ends).
+# typeset -U : Unique (automatically removes duplicates).
+typeset -gU path fpath
+
+# 2. Dynamic Path Injection
+# Iterate through the array defined in env.zsh (USER_PATH_ENTRIES).
+# Default to empty array if variable is unset.
+for directory_entry in "${USER_PATH_ENTRIES[@]}"; do
+
+    # Path Resolution Logic:
+    # If the entry does NOT start with a slash (/), assume it is relative
+    # to the user's home directory.
+    if [[ "$directory_entry" != /* ]]; then
+        directory_entry="$HOME/$directory_entry"
+    fi
+
+    # Existence Check:
+    # Only add the directory to the $PATH if it actually exists on disk.
+    # This prevents "command not found" errors and useless stat calls.
+    if [[ -d "$directory_entry" ]]; then
+        path+=("$directory_entry")
+    fi
+done
+
+# Cleanup local loop variable
+unset directory_entry
+
+
+# Global Helpers & Caching
+# ─────────────────────────────────────────────────────────────
+## Utility functions required by the rest of the configuration.
+
+# ------------------------------------------------------------------------------
+# Caching Mechanism
+# We use an associative array to store the result of 'command -v' checks.
+# This prevents checking the filesystem multiple times for the same binary
+# (e.g., checking if 'git' exists 50 times during startup).
+
+typeset -gA COMMAND_AVAILABILITY_CACHE
+
+# ------------------------------------------------------------------------------
+# Function: is_installed
+# Description:
+#   Checks if a command exists in the $PATH. Returns 0 (true) or 1 (false).
+#   Uses caching to speed up repeated checks.
+#
+# Usage:
+#   if is_installed "nvim"; then ... fi
+
+function is_installed() {
+    local command_name="$1"
+
+    # 1. Check Cache
+    # If key exists in the hash map, return the stored exit code immediately.
+    if [[ -n "${COMMAND_AVAILABILITY_CACHE[$command_name]}" ]]; then
+        return "${COMMAND_AVAILABILITY_CACHE[$command_name]}"
+    fi
+
+    # 2. System Check
+    # 'command -v' is the POSIX standard for checking executable existence.
+    # &>/dev/null suppresses output (we only care about the exit code).
+    command -v "$command_name" &>/dev/null
+    local exit_code=$?
+
+    # 3. Update Cache
+    # Store the result (0 or 1) in the global map for next time.
+    COMMAND_AVAILABILITY_CACHE[$command_name]=$exit_code
+
+    # 4. Return Result
+    return $exit_code
+}
+
+# ------------------------------------------------------------------------------
+# Safe Edit Function
+# Checks if the file exists before attempting to open it.
+# ------------------------------------------------------------------------------
+function _safe_edit() {
+    local file="$1"
+    local sudo_required="$2"
+
+    # 1. Check if file exists
+    if [[ ! -f "$file" ]]; then
+        # Use colors if available (from your $C array), otherwise plain text
+        echo "${C[RED]:-Error:} File not found at ${C[YELLOW]:-}$file${C[RESET]:-}"
+        return 1
+    fi
+
+    # 2. Open file
+    if [[ "$sudo_required" == "true" ]]; then
+        # Use standard 'visudo' for sudoers to ensure syntax checking
+        if [[ "$file" == "/etc/sudoers" ]]; then
+            echo "Using system 'visudo' for safety..."
+            sudo visudo
+        else
+            sudo "$EDITOR" "$file"
+        fi
+    else
+        "$EDITOR" "$file"
+    fi
+}

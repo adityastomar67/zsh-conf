@@ -1,0 +1,84 @@
+#!/usr/bin/env zsh
+
+# ______ _
+# |  ___| |
+# | |_  | | _____      _____ _ __
+# |  _| | |/ _ \ \ /\ / / _ \ '__|
+# | |   | | (_) \ V  V /  __/ |
+# \_|   |_|\___/ \_/\_/ \___|_|
+#
+#  :: Nintendo Fire Flower Art
+#  :: Renders 8-bit style pixel art using ANSI escape codes.
+#  :: Original Author: rob o'leary
+#  :: Optimized for Zsh by pre-defining color blocks.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Flower
+#      2. Run:             ./Flower
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# Define ANSI Color Blocks
+# Format: \e[<color_code>m<character>
+# We embed the '█' directly in the variable to clean up the matrix below.
+
+typeset -r ESC=$'\e['
+
+# S = Sky/Background (Blue)
+typeset -r S="${ESC}34m█"
+
+# K = Key/Outline (Black)
+typeset -r K="${ESC}30m█"
+
+# O = Outer Flower (Orange/Yellow)
+typeset -r O="${ESC}33m█"
+
+# Y = Inner Eyes (Bright Yellow)
+typeset -r Y="${ESC}93m█"
+
+# W = Highlight (White)
+typeset -r W="${ESC}97m█"
+
+# G = Green Stem
+typeset -r G="${ESC}32m█"
+
+# Reset Code
+typeset -r R="${ESC}0m"
+
+# ==============================================================================
+# [2] MAIN EXECUTION
+# ==============================================================================
+
+main() {
+    print "" # Top Padding
+
+    # The Fire Flower Pixel Grid
+    # Using 'cat' prevents Zsh from interpreting the grid as commands,
+    # while still expanding the color variables.
+    cat << EOF
+  $S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S
+  $S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S$S
+  $S$S$S$S$S$S$S$S$S$S$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$S$S$S$S$S$S$S$S$S$S$S$S
+  $S$S$S$S$S$S$K$K$K$K$K$K$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$K$K$K$K$K$K$S$S$S$S$S$S$S$S
+  $S$S$S$S$K$K$K$K$O$O$O$O$O$O$Y$Y$Y$Y$Y$Y$Y$Y$Y$Y$Y$Y$O$O$O$O$O$O$K$K$K$K$S$S$S$S$S$S
+  $S$S$S$S$K$K$O$O$O$O$Y$Y$Y$Y$Y$Y$K$K$W$W$W$W$K$K$Y$Y$Y$Y$Y$Y$O$O$O$O$K$K$S$S$S$S$S$S
+  $S$S$S$S$K$K$O$O$O$O$Y$Y$Y$Y$Y$Y$K$K$Y$Y$Y$Y$K$K$Y$Y$Y$Y$Y$Y$O$O$O$O$K$K$S$S$S$S$S$S
+  $S$S$S$S$K$K$O$O$O$O$O$O$O$O$Y$Y$Y$Y$Y$Y$Y$Y$Y$Y$Y$Y$O$O$O$O$O$O$O$O$K$K$S$S$S$S$S$S
+  $S$S$S$S$K$K$K$K$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$K$K$K$K$S$S$S$S$S$S
+  $S$S$S$S$S$S$K$K$K$K$K$K$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$O$K$K$K$K$K$S$S$S$S$S$S$S
+  $S$S$S$S$S$S$S$S$S$S$S$S$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$K$S$S$S$S$S$S$S$S$S$S
+  $S$S$S$S$S$S$K$K$K$K$S$S$S$S$S$S$K$K$G$G$G$G$K$K$S$S$S$S$S$S$K$K$K$K$S$S$S$S$S$S$S$S
+  $S$S$S$S$K$K$G$G$G$G$K$K$K$K$S$S$K$K$G$G$G$G$K$K$S$S$K$K$K$K$G$G$G$G$K$K$S$S$S$S$S$S
+  $S$S$S$S$K$K$G$G$G$G$G$G$G$G$K$K$K$K$G$G$G$G$K$K$K$K$G$G$G$G$G$G$G$G$K$K$S$S$S$S$S$S
+  $S$S$S$S$K$K$G$G$G$G$G$G$G$G$G$G$K$K$G$G$G$G$K$K$G$G$G$G$G$G$G$G$G$G$K$K$S$S$S$S$S$S
+  $S$S$S$S$S$S$K$K$G$G$G$G$G$G$G$G$K$K$G$G$G$G$K$K$G$G$G$G$G$G$G$G$K$K$S$S$S$S$S$S$S$S
+  $S$S$S$S$S$S$S$S$K$K$K$K$G$G$G$G$G$G$G$G$G$G$G$G$G$G$G$G$G$G$K$K$K$K$S$S$S$S$S$S$S$S
+$R
+EOF
+    print "" # Bottom Padding
+}
+
+main

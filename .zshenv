@@ -26,7 +26,6 @@
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
-#
 
 # Core Directory & Path Setup
 # ─────────────────────────────────────────────────────────────
@@ -63,7 +62,7 @@ export PROMPT_THEME="gh0st"
 
 # Minimal Mode: Skips heavy plugins for older machines or root users.
 # Options: "Yes", "No"
-export ENABLE_MINIMAL_MODE="No"
+export ENABLE_MINIMAL_MODE="Yes"
 
 # ── path definition ────────────────────────────────────────────────────
 
@@ -89,7 +88,7 @@ USER_PATH_ENTRIES=(
 export ENABLE_AUTO_TMUX="No"
 
 # Custom Aliases: Loads shortcut definitions (e.g., 'g' for 'git').
-export LOAD_CUSTOM_ALIASES="No"
+export LOAD_CUSTOM_ALIASES="Yes"
 
 # Custom Functions: Loads shell functions defined in the config.
 export LOAD_CUSTOM_FUNCTIONS="No"
@@ -106,11 +105,28 @@ export ENABLE_FANCY_STARTUP="No"
 # Multi-Neovim: Enables NVIM_APPNAME switcher (requires Neovim >= 0.9.0).
 export ENABLE_MULTI_NEOVIM="No"
 
+if [[ "${ENABLE_MULTI_NEOVIM:l}" == "yes" ]]; then
+    # ── multi nvim paths ────────────────────────────────────────────────────
+
+    # Define the Associative Array (-A) Globally (-g)
+    typeset -gA NVIM_DISTROS
+
+    NVIM_DISTROS=(
+        # [FolderName]   "Flag   | Git URL"
+        [LazyVim]="--lazy|https://github.com/LazyVim/starter"
+        [NvChad]="--chad|https://github.com/adityastomar67/NvChad"
+        [LazyNV]="--nv|https://github.com/adityastomar67/LazyNV"
+        [AstroNvim]="--astro|https://github.com/AstroNvim/AstroNvim"
+    )
+
+    autolaod -Uz MultiVim && MultiVim
+fi
+
 # Wallpaper Sync: Reloads shell/colors when wallpaper changes.
 export ENABLE_WALLPAPER_SYNC="No"
 
 # Wallpaper Directory: Source for background images.
-if [[ "$ENABLE_WALLPAPER_SYNC" == "Yes" ]]; then
+if [[ "${ENABLE_WALLPAPER_SYNC:l}" == "yes" ]]; then
     export WALLPAPER_DIR="$HOME/Backdrops"
 fi
 

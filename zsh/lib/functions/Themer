@@ -1,3 +1,5 @@
+#!/usr/bin/env zsh
 #    ░▀█▀░█░█░█▀▀░█▄█░█▀▀░░░░▀▀█░█▀▀░█░█
 #    ░░█░░█▀█░█▀▀░█░█░█▀▀░░░░▄▀░░▀▀█░█▀█
 #    ░░▀░░▀░▀░▀▀▀░▀░▀░▀▀▀░▀░░▀▀▀░▀▀▀░▀░▀
+    # "theme"     # Color schemes # make it so that we can autload it and only if user say yes

@@ -1,0 +1,87 @@
+#!/usr/bin/env zsh
+
+#  _   _           _
+# | | | |         | |
+# | |_| | __ _ ___| |__   ___  ___
+# |  _  |/ _` / __| '_ \ / _ \/ __|
+# | | | | (_| \__ \ | | |  __/\__ \
+# \_| |_/\__,_|___/_| |_|\___||___/
+#
+#  :: Space Invaders Color Test (Zsh Native Version)
+#  :: Original Author: steampunknyanja
+#  :: Optimized to generate the pattern dynamically via loops.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Hashes
+#      2. Run:             ./Hashes
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# Shapes (Split into parts to allow specific coloring of the shadow)
+# Part A: Main Body (Standard Color)
+# Part B: 3D Shadow Effect (Bold/Bright Color)
+typeset -r SHAPE_1A="  ██  ██   "
+typeset -r SHAPE_1B="██    "
+
+typeset -r SHAPE_2A="██████████ "
+typeset -r SHAPE_2B="██    "
+
+typeset -r SHAPE_3A="  ██  ██   "
+typeset -r SHAPE_3B="██    "
+
+typeset -r SHAPE_4A="██████████       "
+# Line 4 has no shadow in the original design
+
+typeset -r SHAPE_5A="  ██  ██   "
+typeset -r SHAPE_5B="██    "
+
+# ==============================================================================
+# [2] FUNCTIONS
+# ==============================================================================
+
+main() {
+    # Initialize empty line buffers
+    local line1="" line2="" line3="" line4="" line5=""
+
+    local c_norm c_bold reset
+    reset=$'\e[0m'
+
+    print "" # Top Padding
+
+    # Loop through ANSI Color Offsets for:
+    # Red(1), Green(2), Yellow(3), Blue(4), Magenta(5), Cyan(6)
+    for i in {1..6}; do
+
+        # Calculate ANSI Codes
+        # 30 + i = Standard Foreground (e.g., 31 is Red)
+        # 90 + i = Bright Foreground   (e.g., 91 is Bright Red)
+        # 1      = Bold attribute
+        c_norm=$'\e['"$((30 + i))m"
+        c_bold=$'\e[1;'"$((90 + i))m"
+
+        # Construct lines by appending the colored segments
+        line1+="${c_norm}${SHAPE_1A}${c_bold}${SHAPE_1B}${reset}"
+        line2+="${c_norm}${SHAPE_2A}${c_bold}${SHAPE_2B}${reset}"
+        line3+="${c_norm}${SHAPE_3A}${c_bold}${SHAPE_3B}${reset}"
+        line4+="${c_norm}${SHAPE_4A}${reset}" # Line 4 is flat, no bold shadow
+        line5+="${c_norm}${SHAPE_5A}${c_bold}${SHAPE_5B}${reset}"
+    done
+
+    # Print the constructed lines
+    print "$line1"
+    print "$line2"
+    print "$line3"
+    print "$line4"
+    print "$line5"
+
+    print "" # Bottom Padding
+}
+
+# ==============================================================================
+# [3] EXECUTION
+# ==============================================================================
+
+main

@@ -1,0 +1,75 @@
+#!/usr/bin/env zsh
+
+#  _____                 _
+# /  ___|               | |
+# \ `--. _ __   ___  ___| |_ _ __ _   _ _ __ ___
+#  `--. \ '_ \ / _ \/ __| __| '__| | | | '_ ` _ \
+# /\__/ / |_) |  __/ (__| |_| |  | |_| | | | | | |
+# \____/| .__/ \___|\___|\__|_|   \__,_|_| |_| |_|
+#       | |
+#       |_|
+#
+#  :: 256-Color Spectrum (Compact)
+#  :: Generates a smooth, condensed color gradient.
+#  :: Optimized for Zsh loops.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Spectrum
+#      2. Run:             ./Spectrum
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# Reduced block size from 4 chars to 2 for a tighter grid
+typeset -r BLOCK="██"
+typeset -r RESET=$'\e[0m'
+
+# ==============================================================================
+# [2] MAIN EXECUTION
+# ==============================================================================
+
+main() {
+    print "" # Top Padding
+
+    # 1. Standard Colors (0-15)
+    # Printed in a single line
+    # print "  Standard:"
+    print -n "  "
+    for i in {0..15}; do
+        print -nP $'\e[38;5;'"${i}m${BLOCK}"
+    done
+    print "$RESET" # Newline + Reset
+
+    print ""
+
+    # 2. Color Cube (16-231)
+    # The 256-color cube is actually 6 slices of 6x6 colors.
+    # We print 36 colors per line to show these slices clearly.
+    # print "  Color Cube:"
+    for i in {16..231}; do
+        # Add indentation at the start of a new line
+        (( (i - 16) % 36 == 0 )) && print -n "  "
+
+        print -nP $'\e[38;5;'"${i}m${BLOCK}"
+
+        # Break line after every 36 blocks (one full slice)
+        (( (i - 15) % 36 == 0 )) && print "$RESET"
+    done
+
+    print ""
+
+    # 3. Grayscale Ramp (232-255)
+    # Printed in a single line
+    # print "  Grayscale:"
+    print -n "  "
+    for i in {232..255}; do
+        print -nP $'\e[38;5;'"${i}m${BLOCK}"
+    done
+
+    print "$RESET"
+    print "" # Bottom Padding
+}
+
+main

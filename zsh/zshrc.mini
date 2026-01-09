@@ -1,3 +1,4 @@
+#!/usr/bin/env zsh
 #    ░▀▀█░█▀▀░█░█░█▀▄░█▀▀░░░░█▄█░▀█▀░█▀█░▀█▀
 #    ░▄▀░░▀▀█░█▀█░█▀▄░█░░░░░░█░█░░█░░█░█░░█░
 #    ░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀░░▀░▀░▀▀▀░▀░▀░▀▀▀
@@ -27,7 +28,6 @@
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
-#
 
 # History Configuration
 # ─────────────────────────────────────────────────────────────
@@ -35,10 +35,9 @@
 ## We prioritize a large history size with aggressive de-duplication to
 ## keep the history file useful and clean.
 
-#
-
 # File location and size limits
-HISTFILE="${ZDOTDIR:-$HOME}/zhistory"
+# HISTFILE="${ZDOTDIR:-$HOME/.cache}/zhistory"
+HISTFILE="${ZDOTDR:-$HOME/.cache}/zhistory" #temporary chnges
 HISTSIZE=10000
 SAVEHIST=10000
 
@@ -67,11 +66,6 @@ setopt HIST_REDUCE_BLANKS        # Trim extra whitespace before saving
 # ─────────────────────────────────────────────────────────────
 ## Initializes the Zsh completion system (tab-completion).
 ## Includes optimization logic to prevent slow startups by caching results.
-
-#
-
-# Ensure fpath/path arrays do not contain duplicate directories
-typeset -U path fpath
 
 # Load the completion initializer function
 autoload -Uz compinit
@@ -111,23 +105,17 @@ zstyle ':completion:*' menu select
 ## Visual configuration for the command line prompt (PS1).
 ## Keeps it minimal: "User Host [Directory] StatusSymbol"
 
-#
-
-# Initialize color module
-autoload -Uz colors && colors
-
 # ── components ─────────────────────────────────────────────────────────
 
 # Format: User (Blue) Host (Yellow) separated by Red slash
-local prompt_user_host='%B%F{blue}%n %B%F{red}/ %B%F{yellow}%m%f%b'
+local prompt_user_host="${COLOR[BOLD]}${COLOR[BLUE]}%n ${COLOR[RED]}/ ${COLOR[YELLOW]}%m${COLOR[RESET]}"
 
 # Format: Current Directory (Grey 242), Italicized
-# \e[3m = Start Italic, \e[23m = End Italic
-local prompt_current_dir='%{\e[3m%}%B%F{242}[%~]%f%b%{\e[23m%}'
+local prompt_current_dir="${COLOR[ITALIC]}${COLOR[DIM]}[%~]${COLOR[RESET]}"
 
 # Format: Arrow symbol changing color based on exit status
 # %(?.Success.Failure)
-local prompt_status_symbol='%(?.%B%F{green} .%F{red} )%f%b'
+local prompt_status_symbol="%(?.${COLOR[BOLD]}${COLOR[GREEN]} .${COLOR[RED]} )${COLOR[RESET]}"
 
 # ── assembly ───────────────────────────────────────────────────────────
 
@@ -139,7 +127,7 @@ PS1="${prompt_user_host} ${prompt_current_dir}${prompt_status_symbol} "
 ## Command shortcuts and modern replacements.
 ## Only loads if the feature flag is enabled.
 
-if [[ "${LOAD_CUSTOM_ALIASES:l}" == "Yes" ]]; then
+if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
 
     # ── core replacements ──────────────────────────────────────────────────
     # Check if modern alternatives exist before aliasing.
@@ -212,7 +200,7 @@ fi
 ## 3. Not already in Tmux?
 ## 4. Is this a terminal (stdin is tty)?
 
-if [[ "${ENABLE_AUTO_TMUX:l}" == "Yes" ]] && (( $+commands[tmux] )) && [[ -z "$TMUX" && -t 0 ]]; then
+if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" ]] && (( $+commands[tmux] )) && [[ -z "$TMUX" && -t 0 ]]; then
     # -A: Attach to existing session if it exists
     # -s: Session name ('b001')
     exec tmux new-session -A -s b001

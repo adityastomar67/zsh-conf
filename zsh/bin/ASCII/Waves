@@ -1,0 +1,67 @@
+#!/usr/bin/env zsh
+
+#  _    _
+# | |  | |
+# | |  | | __ ___   _____  ___
+# | |/\| |/ _` \ \ / / _ \/ __|
+# \  /\  / (_| |\ V /  __/\__ \
+#  \/  \/ \__,_| \_/ \___||___/
+#
+#  :: Minimal Color Test
+#  :: Renders a compact 2-row color palette (Standard vs Bright).
+#  :: Original Author: pfh
+#  :: Optimized for Zsh by replacing dynamic loops with constants.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Waves
+#      2. Run:             ./Waves
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# Escape Sequence
+typeset -r E=$'\e['
+
+# Reset
+typeset -r X="${E}0m"
+
+# Shape
+typeset -r B="▀■▄"
+
+# --- Standard Colors (Row 1) ---
+typeset -r R="${E}31m"   # Red
+typeset -r G="${E}32m"   # Green
+typeset -r Y="${E}33m"   # Yellow
+typeset -r L="${E}34m"   # Blue (L for Blue to avoid conflict with Bold)
+typeset -r M="${E}35m"   # Magenta
+typeset -r C="${E}36m"   # Cyan
+
+# --- Bright/Bold Colors (Row 2) ---
+typeset -r BR="${E}1;91m"
+typeset -r BG="${E}1;92m"
+typeset -r BY="${E}1;93m"
+typeset -r BL="${E}1;94m"
+typeset -r BM="${E}1;95m"
+typeset -r BC="${E}1;96m"
+
+# ==============================================================================
+# [2] MAIN EXECUTION
+# ==============================================================================
+
+main() {
+    print "" # Top Padding
+
+    # Row 1: Standard
+    # Row 2: Bright/Bold
+
+    cat << EOF
+ ${R}${B} ${G}${B} ${Y}${B} ${L}${B} ${M}${B} ${C}${B}
+ ${BR}${B} ${BG}${B} ${BY}${B} ${BL}${B} ${BM}${B} ${BC}${B}${X}
+EOF
+
+    print "" # Bottom Padding
+}
+
+main

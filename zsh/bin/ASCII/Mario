@@ -1,0 +1,71 @@
+#!/usr/bin/env zsh
+
+# ___  ___           _
+# |  \/  |          (_)
+# | .  . | __ _ _ __ _  ___
+# | |\/| |/ _` | '__| |/ _ \
+# | |  | | (_| | |  | | (_) |
+# \_|  |_/\__,_|_|  |_|\___/
+#
+#  :: Mario (8-bit)
+#  :: Renders the classic pixel art using ANSI codes.
+#  :: Original Author: Rob O'Leary
+#  :: Optimized for Zsh by Rob O'Leary (Modified)
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Mario
+#      2. Run:             ./Mario
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# ANSI Escape Start
+typeset -r ESC=$'\e['
+
+# Colors Used
+# S = Skin / Face (Bright Yellow)
+typeset -r S="${ESC}93m"
+
+# R = Red (Hat / Shirt)
+typeset -r R="${ESC}31m"
+
+# D = Dark / Hair / Overalls (Bright Black / Dark Gray)
+typeset -r D="${ESC}90m"
+
+# Reset
+typeset -r X="${ESC}0m"
+
+# ==============================================================================
+# [2] MAIN EXECUTION
+# ==============================================================================
+
+main() {
+    print "" # Top Padding
+
+    # Using 'cat' with variable expansion allow us to keep the art readable
+    # while injecting the high-speed constants defined above.
+    cat << EOF
+  ${S}                       ██████
+  ${R}           ████████    ${S}██████
+  ${R}    ████████████████${S}████
+  ${D}         ████${S}████${D}██${S}█  ${D}███████
+  ${D}      ██${S}█${D}██${S}██████${D}██${S}████${D}██████
+  ${D}      ██${S}██${D}███${S}██████${D}██${S}████${D}████
+  ${D}      ███${S}████████${D}████████
+  ${S}         █████████████${D}██
+  ${D}   ████████${R}██${D}█████${R}██${D}██
+  ${D} ████████████${R}██${D}█████${R}██      ${D}██
+  ${S}████${D}█████████${R}█████████      ${D}██
+  ${S}█████    ${R}██${D}██${R}███${S}██${R}██${S}██${R}███${D}█████
+  ${S} ██ ${D}██  ${R}█████████████████${D}█████
+  ${D}  ██████${R}█████████████████${D}█████
+  ${D}█████${R}█████████████
+  ${D}██   ${R}██████${X}
+EOF
+
+    print "" # Bottom Padding
+}
+
+main

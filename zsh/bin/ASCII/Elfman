@@ -1,0 +1,67 @@
+#!/usr/bin/env zsh
+
+#  _____ _  __
+# |  ___| |/ _|
+# | |__ | | |_ _ __ ___   __ _ _ __
+# |  __|| |  _| '_ ` _ \ / _` | '_ \
+# | |___| | | | | | | | | (_| | | | |
+# \____/|_|_| |_| |_| |_|\__,_|_| |_|
+#
+#  :: ANSI Character Art (The Dude)
+#  :: Original Author: thevdude
+#  :: Optimized for Zsh with efficient color definitions.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Elfman
+#      2. Run:             ./Elfman
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# Escape Sequence
+typeset -r ESC=$'\e['
+
+# Reset
+typeset -r RST="${ESC}0m"
+
+# Styles
+typeset -r BOLD="${ESC}1m"
+typeset -r NO_BOLD="${ESC}22m"
+
+# Colors (Only defining what is strictly used in the art to save memory)
+typeset -r W_BOLD="${BOLD}${ESC}97m"    # Bright White Bold
+typeset -r R_FG="${ESC}31m"             # Red Foreground
+typeset -r CY_FG="${ESC}36m"            # Cyan Foreground
+typeset -r BK_FG="${ESC}30m"            # Black Foreground
+
+# Backgrounds
+typeset -r R_BG="${ESC}41m"             # Red Background
+typeset -r CY_BG="${ESC}46m"            # Cyan Background
+typeset -r BK_BG="${ESC}40m"            # Black Background
+
+# ==============================================================================
+# [2] MAIN EXECUTION
+# ==============================================================================
+
+main() {
+    print "" # Top padding
+
+    # Using 'cat' with variable expansion allow us to keep the art readable
+    # while injecting the high-speed constants defined above.
+    cat << EOF
+ ${W_BOLD}    ▄▄▄${RST}
+ ${W_BOLD} ▄█████▄▄ ${RST}
+ ${W_BOLD}███${CY_BG}▀▀▀▀${BK_BG}▀${CY_BG}▀${BK_BG}▀${CY_BG}▀${RST}
+ ${W_BOLD}███${CY_BG}▄   ${NO_BOLD}${BK_FG}▀ ▀${RST}${CY_FG}▀${RST}
+ ${W_BOLD} ▄${CY_BG}  ${RST}${W_BOLD}█████▄ ${NO_BOLD}${R_FG}█▄${RST}
+ ${NO_BOLD}${R_FG}▀▀${RST}${BOLD}${R_BG}${W_BOLD}▄${CY_BG}▄   ${R_BG}▄▄▄${RST}${NO_BOLD}${R_FG}▀██▀${RST}
+ ${W_BOLD} ██▀▀▀██▀  ${NO_BOLD}${R_FG}▀${RST}
+ ${W_BOLD} ▀▀▀▀ ▀▀▀▀${RST}
+EOF
+
+    print "" # Bottom padding
+}
+
+main

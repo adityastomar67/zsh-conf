@@ -26,7 +26,6 @@
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
-#
 
 # 0. Safety Checks & Dependencies
 # ─────────────────────────────────────────────────────────────
@@ -34,10 +33,6 @@
 
 # Exit if the duration variable wasn't set by the parent script
 [[ -z "$total_duration_ms" ]] && return
-
-# Load color definitions if not already present
-# (Assuming the file from the previous step is saved as _ui.color.zsh)
-[[ -f "$ZSH_CONFIG_ROOT/lib/_ui.color" ]] && source "$ZSH_CONFIG_ROOT/lib/_ui.color"
 
 
 # 1. Performance Rating System
@@ -69,8 +64,9 @@ fi
 # ─────────────────────────────────────────────────────────────
 ## Draws the top box containing the total time and rating.
 
+clear
 # Top Border
-printf "\n${COLOR[DIM]}╭───────────────────────────────────────────────────╮${COLOR[RESET]}\n"
+printf "${COLOR[DIM]}╭───────────────────────────────────────────────────╮${COLOR[RESET]}\n"
 
 # Content Row (Dynamic based on Minimal Mode)
 if [[ "${ENABLE_MINIMAL_MODE:-$MINIMALIST}" == "Yes" ]]; then

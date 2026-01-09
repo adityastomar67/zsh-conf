@@ -1,0 +1,249 @@
+#!/usr/bin/env zsh
+
+#     ______   _       _
+#     |  ___| | |     | |
+#  ___| |_ ___| |_ ___| |__
+# |_  /  _/ _ \ __/ __| '_ \
+#  / /| ||  __/ || (__| | | |
+# /___\_| \___|\__\___|_| |_|
+#
+#  :: Pixel Art Fetch (z0mbi3 Style)
+#  :: Modified version of rxfetch.
+#  :: Optimized for Zsh with macOS & Linux support.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x zfetch
+#      2. Run:             ./zfetch
+
+# ==============================================================================
+# [1] SYSTEM INFO HELPERS
+# ==============================================================================
+
+get_os() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sw_vers -productName
+    else
+        # Source the file to get variables without spawning awk
+        [[ -f /etc/os-release ]] && source /etc/os-release && echo "${PRETTY_NAME}" || echo "Linux"
+    fi
+}
+
+get_kernel() {
+    uname -r
+}
+
+get_uptime() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS uptime format is different, simplify it
+        uptime | awk -F'(up |,| users)' '{print $2}' | xargs
+    else
+        uptime -p | sed 's/up //'
+    fi
+}
+
+get_pkgs() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # Check Brew or MacPorts
+        if command -v brew >/dev/null; then
+            echo "$(brew list --formula | wc -l) (brew)"
+        elif command -v port >/dev/null; then
+             echo "$(port installed | wc -l) (port)"
+        else
+             echo "0"
+        fi
+        return
+    fi
+
+    # Linux Package Managers
+    local -A managers=(
+        "xbps-install" "xbps-query -l"
+        "apk"          "apk search"
+        "pacman"       "pacman -Q"
+        "dnf"          "dnf list installed"
+        "rpm"          "rpm -qa"
+        "apt"          "apt list --installed"
+        "eopkg"        "eopkg li"
+        "nix"          "nix-env -qa --installed '*'"
+    )
+
+    for cmd query in ${(kv)managers}; do
+        if command -v "$cmd" >/dev/null; then
+            # Run query, count lines. Subtract 1 for apt header if needed.
+            local count=$(eval "$query" 2>/dev/null | wc -l)
+            [[ "$cmd" == "apt" ]] && ((count--))
+            echo "$count"
+            return
+        fi
+    done
+    echo "0"
+}
+
+get_shell() {
+    echo "${SHELL##*/}"
+}
+
+get_mem() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS Memory
+        local total=$(sysctl -n hw.memsize)
+        # Convert bytes to MB
+        echo "$(( total / 1024 / 1024 )) MB"
+    else
+        # Linux Memory
+        free --mega | awk 'NR == 2 { print $3" MB" }'
+    fi
+}
+
+get_disk() {
+    # Portable DF check
+    df -h / | awk 'NR==2 {print $3 " / " $2}'
+}
+
+get_wm() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "Aqua"
+        return
+    fi
+
+    # Linux WM/DE Detection
+    local wm="${XDG_CURRENT_DESKTOP#*:}"
+    [[ -z "$wm" ]] && wm="$DESKTOP_SESSION"
+
+    if [[ -z "$wm" && -n "$DISPLAY" ]]; then
+        # Try finding process names for common WMs
+        local wms=(sway kiwmi wayfire sowm catwm fvwm dwm 2bwm monsterwm tinywm xmonad bspwm i3)
+        for w in $wms; do
+            if pgrep -x "$w" >/dev/null; then
+                wm="$w"
+                break
+            fi
+        done
+    fi
+    echo "${wm:-Unknown}"
+}
+
+get_init() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "launchd"
+    elif pidof -q systemd; then
+        echo "systemd"
+    elif [[ -f '/sbin/openrc' ]]; then
+        echo "openrc"
+    elif [[ -f '/sbin/dinit' ]]; then
+        echo "dinit"
+    else
+        echo "init"
+    fi
+}
+
+# ==============================================================================
+# [2] MAIN RENDERING
+# ==============================================================================
+
+main() {
+    # --- Text Colors ---
+    local BLD=$'\e[1m'
+    local RST=$'\e[0m'
+    local C_LBL=$'\e[38;2;194;204;207m' # Label Color
+    local C_ACC=$'\e[33m'              # Icon Color (Yellow)
+    local C_VAL=$'\e[0m'               # Value Color
+
+    # --- Art Colors (TrueColor) ---
+    local c1=$'\e[38;2;177;196;195m';   local c2=$'\e[38;2;161;188;185m';   local c3=$'\e[38;2;148;182;175m'
+    local c4=$'\e[38;2;189;202;204m';   local c5=$'\e[38;2;191;203;205m';   local c6=$'\e[38;2;146;169;175m'
+    local c7=$'\e[38;2;89;125;137m';    local c8=$'\e[38;2;123;152;159m';   local c9=$'\e[38;2;179;197;197m'
+    local c10=$'\e[38;2;182;198;199m';  local c11=$'\e[38;2;190;203;204m';  local c12=$'\e[38;2;175;195;194m'
+    local c13=$'\e[38;2;200;207;211m';  local c14=$'\e[38;2;192;204;206m';  local c15=$'\e[38;2;183;199;200m'
+    local c16=$'\e[38;2;186;200;201m';  local c17=$'\e[38;2;86;108;140m';   local c18=$'\e[38;2;54;79;121m'
+    local c19=$'\e[38;2;53;78;120m';    local c20=$'\e[38;2;55;80;121m';    local c21=$'\e[38;2;57;81;122m'
+    local c22=$'\e[38;2;56;80;122m';    local c23=$'\e[38;2;54;79;120m';    local c24=$'\e[38;2;65;89;128m'
+    local c25=$'\e[38;2;192;204;205m';  local c26=$'\e[38;2;79;119;130m';   local c27=$'\e[38;2;89;123;137m'
+    local c28=$'\e[38;2;181;198;198m';  local c29=$'\e[38;2;183;200;200m';  local c30=$'\e[38;2;84;125;133m'
+    local c31=$'\e[38;2;83;124;132m';   local c32=$'\e[38;2;157;173;119m';  local c33=$'\e[38;2;180;188;115m'
+    local c34=$'\e[38;2;181;189;116m';  local c35=$'\e[38;2;180;189;116m';  local c36=$'\e[38;2;188;201;203m'
+    local c37=$'\e[38;2;170;181;117m';  local c38=$'\e[38;2;58;83;123m';    local c39=$'\e[38;2;59;84;123m'
+    local c40=$'\e[38;2;57;82;123m';    local c41=$'\e[38;2;50;75;119m';    local c42=$'\e[38;2;187;204;202m'
+    local c43=$'\e[38;2;190;202;205m';  local c44=$'\e[38;2;178;197;196m';  local c45=$'\e[38;2;183;200;199m'
+    local c46=$'\e[38;2;186;203;201m';  local c47=$'\e[38;2;58;83;125m';    local c48=$'\e[38;2;56;82;123m'
+    local c49=$'\e[38;2;150;162;116m';  local c50=$'\e[38;2;179;187;115m';  local c51=$'\e[38;2;205;225;163m'
+    local c52=$'\e[38;2;214;238;180m';  local c53=$'\e[38;2;214;239;181m';  local c54=$'\e[38;2;211;235;175m'
+    local c55=$'\e[38;2;179;186;113m';  local c56=$'\e[38;2;185;192;114m';  local c57=$'\e[38;2;48;74;123m'
+    local c58=$'\e[38;2;54;78;122m';    local c59=$'\e[38;2;86;128;134m';   local c60=$'\e[38;2;89;126;136m'
+    local c61=$'\e[38;2;194;204;207m';  local c62=$'\e[38;2;185;202;201m';  local c63=$'\e[38;2;55;80;123m'
+    local c64=$'\e[38;2;177;187;115m';  local c65=$'\e[38;2;211;234;173m';  local c66=$'\e[38;2;219;247;190m'
+    local c67=$'\e[38;2;195;210;140m';  local c68=$'\e[38;2;185;196;122m';  local c69=$'\e[38;2;184;192;118m'
+    local c70=$'\e[38;2;181;189;115m';  local c71=$'\e[38;2;182;190;116m';  local c72=$'\e[38;2;185;195;121m'
+    local c73=$'\e[38;2;189;199;127m';  local c74=$'\e[38;2;221;249;192m';  local c75=$'\e[38;2;223;252;195m'
+    local c76=$'\e[38;2;178;185;110m';  local c77=$'\e[38;2;187;194;115m';  local c78=$'\e[38;2;49;75;123m'
+    local c79=$'\e[38;2;61;82;127m';    local c80=$'\e[38;2;54;79;123m';    local c81=$'\e[38;2;178;187;115m'
+    local c82=$'\e[38;2;180;188;114m';  local c83=$'\e[38;2;130;124;56m';   local c84=$'\e[38;2;115;105;38m'
+    local c85=$'\e[38;2;114;103;37m';   local c86=$'\e[38;2;139;136;66m';   local c87=$'\e[38;2;173;179;105m'
+    local c88=$'\e[38;2;174;180;106m';  local c89=$'\e[38;2;167;171;98m';   local c90=$'\e[38;2;114;102;36m'
+    local c91=$'\e[38;2;111;99;33m';    local c92=$'\e[38;2;184;194;119m';  local c93=$'\e[38;2;188;195;115m'
+    local c94=$'\e[38;2;168;196;189m';  local c95=$'\e[38;2;171;193;192m';  local c96=$'\e[38;2;67;98;126m'
+    local c97=$'\e[38;2;64;95;126m';    local c98=$'\e[38;2;180;187;114m';  local c99=$'\e[38;2;81;57;34m'
+    local c100=$'\e[38;2;51;19;10m';    local c101=$'\e[38;2;107;83;77m';   local c102=$'\e[38;2;127;107;101m'
+    local c103=$'\e[38;2;126;111;77m';  local c104=$'\e[38;2;123;114;42m';  local c105=$'\e[38;2;112;100;36m'
+    local c106=$'\e[38;2;96;77;29m';    local c107=$'\e[38;2;98;81;37m';    local c108=$'\e[38;2;128;107;103m'
+    local c109=$'\e[38;2;121;100;94m';  local c110=$'\e[38;2;48;15;7m';     local c111=$'\e[38;2;42;7;3m'
+    local c112=$'\e[38;2;188;199;121m'; local c113=$'\e[38;2;188;194;115m'; local c114=$'\e[38;2;59;92;127m'
+    local c115=$'\e[38;2;70;97;129m';   local c116=$'\e[38;2;177;187;114m'; local c117=$'\e[38;2;179;187;114m'
+    local c118=$'\e[38;2;50;18;9m';     local c119=$'\e[38;2;66;36;29m';    local c120=$'\e[38;2;73;45;37m'
+    local c121=$'\e[38;2;94;74;39m';    local c122=$'\e[38;2;123;115;42m';  local c123=$'\e[38;2;139;135;64m'
+    local c124=$'\e[38;2;164;167;101m'; local c125=$'\e[38;2;150;153;94m';  local c126=$'\e[38;2;30;30;30m'
+    local c127=$'\e[38;2;31;28;28m';    local c128=$'\e[38;2;50;16;8m';     local c129=$'\e[38;2;191;193;117m'
+    local c130=$'\e[38;2;185;194;118m'; local c131=$'\e[38;2;186;196;119m'; local c132=$'\e[38;2;183;193;117m'
+    local c133=$'\e[38;2;106;111;68m';  local c134=$'\e[38;2;0;0;1m';       local c135=$'\e[38;2;0;0;0m'
+    local c136=$'\e[38;2;16;16;10m';    local c137=$'\e[38;2;189;197;120m'; local c138=$'\e[38;2;188;196;119m'
+    local c139=$'\e[38;2;192;199;118m'; local c140=$'\e[38;2;72;116;133m';  local c141=$'\e[38;2;82;122;136m'
+    local c142=$'\e[38;2;138;170;107m'; local c143=$'\e[38;2;178;187;114m'; local c144=$'\e[38;2;136;132;58m'
+    local c145=$'\e[38;2;121;114;40m';  local c146=$'\e[38;2;163;169;101m'; local c147=$'\e[38;2;221;247;187m'
+    local c148=$'\e[38;2;224;250;189m'; local c149=$'\e[38;2;222;249;188m'; local c150=$'\e[38;2;212;234;172m'
+    local c151=$'\e[38;2;119;110;36m';  local c152=$'\e[38;2;125;118;44m';  local c153=$'\e[38;2;165;209;157m'
+    local c154=$'\e[38;2;209;235;178m'; local c155=$'\e[38;2;61;65;50m';    local c156=$'\e[38;2;6;3;2m'
+    local c157=$'\e[38;2;3;0;0m';       local c158=$'\e[38;2;2;0;0m';       local c159=$'\e[38;2;190;193;118m'
+    local c160=$'\e[38;2;1;0;0m';       local c161=$'\e[38;2;3;4;4m';       local c162=$'\e[38;2;21;23;18m'
+    local c163=$'\e[38;2;213;239;181m'; local c164=$'\e[38;2;219;247;188m'; local c165=$'\e[38;2;40;2;0m'
+    local c166=$'\e[38;2;49;15;7m';     local c167=$'\e[38;2;49;16;8m';     local c168=$'\e[38;2;52;10;3m'
+    local c169=$'\e[38;2;0;4;3m';       local c170=$'\e[38;2;2;4;3m';       local c171=$'\e[38;2;164;184;139m'
+    local c172=$'\e[38;2;213;236;179m'; local c173=$'\e[38;2;230;88;84m';   local c174=$'\e[38;2;236;34;49m'
+    local c175=$'\e[38;2;235;32;48m';   local c176=$'\e[38;2;231;31;47m';   local c177=$'\e[38;2;144;19;29m'
+    local c178=$'\e[38;2;23;26;19m';    local c179=$'\e[38;2;211;236;179m'; local c180=$'\e[38;2;193;216;164m'
+    local c181=$'\e[38;2;3;4;3m';       local c182=$'\e[38;2;51;16;8m';     local c183=$'\e[38;2;48;15;8m'
+    local c184=$'\e[38;2;48;18;9m';     local c185=$'\e[38;2;51;7;1m';      local c186=$'\e[38;2;45;4;3m'
+    local c187=$'\e[38;2;41;11;8m';     local c188=$'\e[38;2;42;11;8m';     local c189=$'\e[38;2;40;14;7m'
+    local c190=$'\e[38;2;55;21;12m';    local c191=$'\e[38;2;179;190;143m'; local c192=$'\e[38;2;224;248;189m'
+    local c193=$'\e[38;2;237;161;133m'; local c194=$'\e[38;2;251;42;57m';   local c195=$'\e[38;2;255;122;135m'
+    local c196=$'\e[38;2;255;255;255m'; local c197=$'\e[38;2;248;248;243m'; local c198=$'\e[38;2;131;122;43m'
+    local c199=$'\e[38;2;121;114;41m';  local c200=$'\e[38;2;44;11;8m';     local c201=$'\e[38;2;35;6;8m'
+    local c202=$'\e[38;2;154;95;8m';    local c203=$'\e[38;2;34;5;8m';      local c204=$'\e[38;2;44;3;3m'
+    local c205=$'\e[38;2;163;91;2m';    local c206=$'\e[38;2;152;93;8m';    local c207=$'\e[38;2;151;93;8m'
+    local c208=$'\e[38;2;48;14;7m';     local c209=$'\e[38;2;46;12;7m';     local c210=$'\e[38;2;10;3;1m'
+    local c211=$'\e[38;2;37;12;6m';     local c212=$'\e[38;2;51;17;8m';     local c213=$'\e[38;2;65;17;11m'
+    local c214=$'\e[38;2;85;19;17m';    local c215=$'\e[38;2;102;56;27m';   local c216=$'\e[38;2;127;117;42m'
+    local c217=$'\e[38;2;113;106;37m';  local c218=$'\e[38;2;157;94;7m';    local c219=$'\e[38;2;149;89;7m'
+    local c220=$'\e[38;2;148;90;8m';    local c221=$'\e[38;2;158;98;8m';    local c222=$'\e[38;2;43;11;8m'
+
+    cat << EOF
+
+                   ${BLD}${c1}█${c2}█
+            ${c3}█${c4}█${c5}█${c4}█${c6}█${c7}█${c8}█${c9}█${c10}█${c11}█${c12}█
+      ${c13}█${c14}█  ${c15}█${c16}█${c17}█${c18}█${c19}█${c19}█${c20}█${c21}█${c22}█${c19}█${c19}█${c23}█${c24}█${c36}█${c25}█${c26}█${c27}█
+        ${c28}█${c29}█${c30}█${c31}█${c32}█${c33}█${c34}█${c34}█${c34}█${c34}█${c34}█${c34}█${c34}█${c35}█${c37}█${c38}█${c39}█${c40}█${c41}█${c42}█${c43}█
+      ${c5}█${c44}█${c45}█${c46}█${c47}█${c48}█${c49}█${c50}█${c51}█${c52}█${c53}█${c53}█${c53}█${c53}█${c53}█${c53}█${c54}█${c55}█${c56}█${c57}█${c58}█${c59}█${c60}█       ${C_LBL}os${C_VAL}     $(get_os)
+      ${c61}█${c62}█${c38}█${c63}█${c64}█${c34}█${c65}█${c66}█${c67}█${c68}█${c69}█${c70}█${c70}█${c70}█${c71}█${c72}█${c73}█${c74}█${c75}█${c76}█${c77}█${c78}█${c79}█       ${C_LBL}ker${C_VAL}    $(get_kernel)
+      ${c61}█${c62}█${c40}█${c80}█${c81}█${c82}█${c83}█${c84}█${c85}█${c84}█${c86}█${c87}█${c88}█${c88}█${c89}█${c90}█${c85}█${c85}█${c91}█${c92}█${c93}█${c78}█${c41}█${c94}█${c95}█     ${C_LBL}pkgs${C_VAL}   $(get_pkgs)
+        ${c96}█${c97}█${c81}█${c98}█${c99}█${c100}█${c101}█${c102}█${c103}█${c104}█${c105}█${c106}█${c107}█${c108}█${c109}█${c110}█${c111}█${c112}█${c113}█${c114}█${c115}█       ${C_LBL}sh${C_VAL}     $(get_shell)  ${C_ACC}󰮯 ${C_ACC} ${C_ACC}󰊠 ${C_ACC} ${C_ACC}󰊠 ${C_ACC} ${C_ACC}󰊠 ${C_ACC} ${C_ACC}󰊠 ${C_ACC} ${C_ACC}󰊠 ${C_ACC}
+          ${c116}█${c117}█${c99}█${c118}█${c119}█${c120}█${c121}█${c122}█${c123}█${c124}█${c125}█${c126}█${c127}█${c128}█${c111}█${c112}█${c129}█         ${C_LBL}ram${C_VAL}    $(get_mem)
+          ${c116}█${c70}█${c130}█${c131}█${c131}█${c132}█${c133}█${c134}█${c135}█${c135}█${c136}█${c137}█${c138}█${c131}█${c139}█${c140}█${c141}█         ${C_LBL}de/wm${C_VAL}  $(get_wm)
+            ${c142}█${c143}█${c144}█${c145}█${c146}█${c147}█${c148}█${c149}█${c150}█${c151}█${c152}█${c71}█${c159}█           ${C_LBL}init${C_VAL}   $(get_init)
+            ${c153}█${c154}█${c155}█${c156}█${c157}█${c158}█${c160}█${c135}█${c135}█${c161}█${c162}█${c163}█${c164}█${c165}█${c166}█${c167}█${c168}█       ${C_LBL}disk${C_VAL}   $(get_disk)
+          ${c169}█${c170}█${c171}█${c172}█${c173}█${c174}█${c175}█${c176}█${c177}█${c157}█${c178}█${c179}█${c180}█${c181}█${c181}█${c135}█${c135}█${c182}█${c183}█${c184}█${c185}█     ${C_LBL}up${C_VAL}    $(get_uptime)
+      ${c186}█${c187}█${c187}█${c188}█${c135}█${c135}█${c189}█${c190}█${c191}█${c192}█${c193}█${c194}█${c195}█${c196}█${c197}█${c198}█${c199}█${c135}█${c135}█${c200}█${c201}█${c202}█${c202}█${c203}█${c204}█
+    ${c205}█${c206}█${c207}█${c207}█${c207}█${c202}█${c208}█${c209}█${c210}█${c135}█${c211}█${c212}█${c213}█${c214}█${c215}█${c216}█${c217}█${c135}█${c135}█${c135}█${c135}█${c218}█${c219}█${c220}█${c220}█${c207}█${c221}█${c222}█${c168}█${RST}
+
+EOF
+}
+
+main

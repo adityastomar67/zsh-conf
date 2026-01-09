@@ -1,0 +1,102 @@
+#!/usr/bin/env zsh
+
+#  _____       _            _
+# /  __ \     | |          | |
+# | /  \/ ___ | | ___  _ __| |__   __ _ _ __
+# | |    / _ \| |/ _ \| '__| '_ \ / _` | '__|
+# | \__/\ (_) | | (_) | |  | |_) | (_| | |
+#  \____/\___/|_|\___/|_|  |_.__/ \__,_|_|
+#
+#  :: SMPTE Color Bars (Zsh Native Version)
+#  :: Renders standard TV test pattern bars.
+#  :: Highly optimized: Uses pure Zsh loops and ANSI codes.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Colorbar
+#      2. Run:             ./Colorbar
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# Spacing constants
+typeset -r MARGIN="           "
+typeset -r BLOCK_LG="        "  # 8 spaces
+typeset -r BLOCK_SM="  "        # 2 spaces
+typeset -r RESET=$'\e[0m'
+
+# ==============================================================================
+# [2] FUNCTIONS
+# ==============================================================================
+
+# Helper to print a colored block
+# $1 = ANSI Background Color Code (40-47)
+# $2 = Content (spaces)
+print_block() {
+    print -n $'\e['"$1m$2"
+}
+
+main() {
+    print "" # Top padding
+
+    # ---------------------------------------------------------
+    # SECTION 1: Top Bars (7 standard colors)
+    # Height: 14 lines
+    # Colors: White(7), Yellow(3), Cyan(6), Green(2), Magenta(5), Red(1), Blue(4)
+    # ---------------------------------------------------------
+    repeat 14; do
+        print -n "$MARGIN"
+        for c in 7 3 6 2 5 1 4; do
+            # ANSI Backgrounds are 40 + color_index
+            print_block "4${c}" "$BLOCK_LG"
+        done
+        print "$RESET"
+    done
+
+    # ---------------------------------------------------------
+    # SECTION 2: Middle Bars (Reverse blue/black pattern)
+    # Height: 2 lines
+    # Colors: Blue(4), Black(0), Magenta(5), Black(0), Cyan(6), Black(0), White(7)
+    # ---------------------------------------------------------
+    repeat 2; do
+        print -n "$MARGIN"
+        for c in 4 0 5 0 6 0 7; do
+            print_block "4${c}" "$BLOCK_LG"
+        done
+        print "$RESET"
+    done
+
+    # ---------------------------------------------------------
+    # SECTION 3: Bottom Bars (PLUGE / I-Q signals)
+    # Height: 5 lines
+    # Colors: Blocks of Blue, White, Magenta, and Black
+    # ---------------------------------------------------------
+    # Optimization: Instead of looping 28 times per line, we print chunks.
+    # Pattern from original: 5xBlue, 5xWhite, 5xMagenta, 13xBlack
+    repeat 5; do
+        print -n "$MARGIN"
+
+        # 5 blocks of Blue (5 * 2 spaces = 10 spaces)
+        print_block "44" "          "
+
+        # 5 blocks of White
+        print_block "47" "          "
+
+        # 5 blocks of Magenta
+        print_block "45" "          "
+
+        # 13 blocks of Black (13 * 2 spaces = 26 spaces)
+        print_block "40" "                          "
+
+        print "$RESET"
+    done
+
+    print "" # Bottom padding
+}
+
+# ==============================================================================
+# [3] EXECUTION
+# ==============================================================================
+
+main

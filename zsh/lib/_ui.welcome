@@ -26,7 +26,6 @@
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
-#
 
 # Wrap in an anonymous function to prevent variable leakage into the shell.
 # This ensures 'COLOR[RESET]', 'COLOR[CYAN]', etc., don't persist after this script runs.
@@ -36,9 +35,6 @@
     # ─────────────────────────────────────────────────────────────
     ## Define local style constants for consistent UI theming.
     ## We use 'typeset -r' to make them read-only constants.
-
-    # Load external color map if available
-    [[ -f "$ZSH_CONFIG_ROOT/lib/_ui.color" ]] && source "$ZSH_CONFIG_ROOT/lib/_ui.color"
 
 
     # ── cleanup operations ─────────────────────────────────────────────────
@@ -127,10 +123,10 @@
     # Detect OS for correct `sed` syntax (macOS requires an empty string for backup extension)
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS / BSD Sed
-        sed -i '' '\|source "\$ZDOTDIR/zsh/conf/_welcome\.ui"|d' "$ZDOTDIR/.zshrc"
+        sed -i '' '\|source "\ZSH_CONFIG_ROOT/lib/_welcome\.ui"|d' "$ZDOTDIR/.zshrc"
     else
         # GNU / Linux Sed
-        sed -i '\|source "\$ZDOTDIR/zsh/conf/_welcome\.ui"|d' "$ZDOTDIR/.zshrc"
+        sed -i '\|source "\ZSH_CONFIG_ROOT/lib/_welcome\.ui"|d' "$ZDOTDIR/.zshrc"
     fi
 
     # Refresh the shell to apply the clean state

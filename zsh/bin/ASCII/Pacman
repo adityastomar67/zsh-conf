@@ -1,0 +1,98 @@
+#!/usr/bin/env zsh
+
+# ______
+# | ___ \
+# | |_/ /_ _  ___ _ __ ___   __ _ _ __
+# |  __/ _` |/ __| '_ ` _ \ / _` | '_ \
+# | | | (_| | (__| | | | | | (_| | | | |
+# \_|  \__,_|\___|_| |_| |_|\__,_|_| |_|
+#
+#  :: Random Pacman Art
+#  :: Randomly renders either the Chase Scene or Detailed Ghosts.
+#  :: Optimized for Zsh.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Pacman
+#      2. Run:             ./Pacman
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# Escape Sequence
+typeset -r ESC=$'\e['
+
+# Reset
+typeset -r X="${ESC}0m"
+
+# --- Standard Colors ---
+typeset -r R="${ESC}31m"  # Red (Blinky)
+typeset -r G="${ESC}32m"  # Green
+typeset -r Y="${ESC}33m"  # Yellow (Pacman/Clyde)
+typeset -r B="${ESC}34m"  # Blue (Inky)
+typeset -r M="${ESC}35m"  # Magenta (Pinky)
+typeset -r C="${ESC}36m"  # Cyan (Inky/Clyde Alternate)
+typeset -r W="${ESC}97m"  # White (Eyes/Dots)
+typeset -r K="${ESC}30m"  # Black (Pupils/Background)
+
+# --- Bright/Bold Colors (For Chase Scene) ---
+typeset -r BR="${ESC}1;91m"
+typeset -r BG="${ESC}1;92m"
+typeset -r BY="${ESC}1;93m"
+typeset -r BB="${ESC}1;94m"
+typeset -r BM="${ESC}1;95m"
+typeset -r BC="${ESC}1;96m"
+typeset -r BW="${ESC}1;97m"
+
+# ==============================================================================
+# [2] ART DEFINITIONS
+# ==============================================================================
+
+# Variant A: The Chase Scene (Small Sprites)
+render_chase() {
+    cat << EOF
+    ${X}
+ ${BY}  ▄███████▄                ${BR}  ▄██████▄    ${BG}  ▄██████▄    ${BB}  ▄██████▄    ${BM}  ▄██████▄    ${BC}  ▄██████▄
+ ${BY}▄█████████▀▀               ${BR}▄${BW}█▀█${BR}██${BW}█▀█${BR}██▄  ${BG}▄█${BW}█ █${BG}██${BW}█ █${BG}█▄  ${BB}▄█${BW}█ █${BB}██${BW}█ █${BB}█▄  ${BM}▄█${BW}█ █${BM}██${BW}█ █${BM}█▄  ${BC}▄██${BW}█▀█${BC}██${BW}█▀█${BC}▄
+ ${BY}███████▀      ${BW}▄▄  ▄▄  ▄▄   ${BR}█${BW}▄▄█${BR}██${BW}▄▄█${BR}███  ${BG}██${BW}███${BG}██${BW}███${BG}██  ${BB}██${BW}███${BB}██${BW}███${BB}██  ${BM}██${BW}███${BM}██${BW}███${BM}██  ${BC}███${BW}█▄▄${BC}██${BW}█▄▄${BC}█
+ ${BY}███████▄      ${BW}▀▀  ▀▀  ▀▀   ${BR}████████████  ${BG}████████████  ${BB}████████████  ${BM}████████████  ${BC}████████████
+ ${BY}▀█████████▄▄               ${BR}██▀██▀▀██▀██  ${BG}██▀██▀▀██▀██  ${BB}██▀██▀▀██▀██  ${BM}██▀██▀▀██▀██  ${BC}██▀██▀▀██▀██
+ ${BY}  ▀███████▀                ${BR}▀   ▀  ▀   ▀  ${BG}▀   ▀  ▀   ▀  ${BB}▀   ▀  ▀   ▀  ${BM}▀   ▀  ▀   ▀  ${BC}▀   ▀  ▀   ▀
+${X}
+EOF
+}
+
+# Variant B: Detailed Ghosts (Large Sprites)
+render_ghosts() {
+    cat << EOF
+  ${R}    ██████        ${Y}    ██████        ${C}    ██████        ${M}    ██████
+  ${R}  ██████████      ${Y}  ██████████      ${C}  ██████████      ${M}  ██████████
+  ${R}██████████████    ${Y}██████████████    ${C}██████████████    ${M}██████████████
+  ${R}██${W}████${R}██${W}████${R}██    ${Y}██${W}████${Y}██${W}████${Y}██    ${C}██${W}█${K}██${W}█${C}██${W}█${K}██${W}█${C}██    ${M}██${W}████${M}██${W}████${M}██
+  ${R}██${W}█${K}██${W}█${R}██${W}█${K}██${W}█${R}██    ${Y}██${W}██${K}██${Y}██${W}██${K}██${Y}██    ${C}██${W}████${C}██${W}████${C}██    ${M}██${K}██${W}██${M}██${K}██${W}██${M}██
+  ${R}██████████████    ${Y}██████████████    ${C}██████████████    ${M}██████████████
+  ${R}██████████████    ${Y}██████████████    ${C}██████████████    ${M}██████████████
+  ${R}██  ██  ██  ██    ${Y}██  ██  ██  ██    ${C}██  ██  ██  ██    ${M}██  ██  ██  ██${X}
+EOF
+}
+
+# ==============================================================================
+# [3] MAIN EXECUTION
+# ==============================================================================
+
+main() {
+    print "" # Top Padding
+
+    # Zsh Random Logic:
+    # $(( RANDOM % 2 )) returns either 0 or 1.
+    if (( RANDOM % 2 )); then
+        render_chase
+    else
+        render_ghosts
+    fi
+
+    print "" # Bottom Padding
+}
+
+main

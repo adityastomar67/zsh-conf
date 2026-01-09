@@ -1,0 +1,66 @@
+#!/usr/bin/env zsh
+
+#  _____
+# |_   _|
+#   | | __ _  ___ ___
+#   | |/ _` |/ __/ _ \
+#   | | (_| | (_| (_) |
+#   \_/\__,_|\___\___/
+#
+#  :: Pixel Art Taco
+#  :: Renders a 256-color taco in the terminal.
+#  :: Original Author: xero <x@xero.nu>
+#  :: Optimized for Zsh by abstracting ANSI sequences.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Taco
+#      2. Run:             ./Taco
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# Escape Sequence Start
+typeset -r E=$'\e['
+
+# 256-Color Helpers
+# Usage: ${F}16m = Foreground Color 16
+# Usage: ${B}223m = Background Color 223
+typeset -r F="${E}38;5;"
+typeset -r B="${E}48;5;"
+
+# Reset
+typeset -r X="${E}0m"
+
+# ==============================================================================
+# [2] MAIN EXECUTION
+# ==============================================================================
+
+main() {
+    print "" # Top Padding
+
+    # We use explicit variable expansion for the codes.
+    # This renders the art cleanly while keeping the code readable.
+
+    cat << EOF
+${X}
+             ${F}16m▄▄▄▄${B}16m ${F}220m▄${X}${F}16m▄ ▄${B}16m${F}28m▄▄${X}${F}16m▄▄▄
+         ▄${B}16m${F}94m▄${F}208m▄${F}94m▄${B}94m${F}220m▄${B}166m ${B}208m▄${B}94m${F}16m▄▄${B}16m${F}94m▄▄▄▄▄▄▄${B}28m${F}16m▄▄${B}16m ${X}
+      ▄▄${B}16m${F}94m▄${B}220m▄ ${B}94m${F}220m▄${B}166m ${B}220m${F}16m▄${B}16m${F}94m▄▄${B}94m${F}220m▄▄${B}220m ${F}100m▄ ${B}94m${F}220m▄${B}220m ${F}100m▄ ${B}94m  ${F}220m▄${B}16m${F}94m▄${X}${F}16m▄
+   ▄${B}16m${F}166m▄▄${B}220m${F}94m▄${F}166m▄  ▄${F}16m▄${B}16m${F}94m▄${B}94m${F}220m▄${B}220m${F}100m▄   ${F}94m▄   ${B}94m${F}220m▄${B}220m   ${F}100m▄ ${B}94m${F}220m▄${B}16m${F}94m▄${X}${F}16m▄
+   ▀${B}166m▄${B}220m${F}94m▄${F}28m▄${B}94m▄${B}166m${F}88m▄${B}220m${F}52m▄${F}16m▄${B}16m${F}94m▄${B}94m${F}220m▄${B}220m    ${B}100m▄${B}220m  ${B}100m▄${B}220m  ${F}100m▄   ▄ ${B}94m ${B}16m ${X}
+  ${F}16m▄${B}16m${F}22m▄${B}40m▄${B}94m ${B}208m${F}40m▄${B}40m ${B}88m▄${B}52m▄${B}16m ${B}94m ${B}220m ${B}100m${F}220m▄${B}220m  ${B}94m▄${B}220m ${B}100m▄${B}220m   ${F}100m▄  ${B}94m${F}220m▄${B}220m  ${F}100m▄${B}100m${F}94m▄${B}16m ${X}
+  ${B}16m ${B}40m${F}22m▄${B}22m${F}40m▄▄${B}40m${F}88m▄${B}88m${F}52m▄${B}52m${F}40m▄${B}16m ${B}94m ${B}220m${F}100m▄    ${B}100m${F}220m▄${B}220m   ${B}100m▄${B}220m  ${B}100m▄${B}220m${F}100m▄▄${B}100m${F}94m▄▄${B}94m ${B}16m ${X}
+${F}16m▄${B}16m${F}28m▄${B}40m${F}22m▄${B}88m${F}52m▄▄${B}40m${F}22m▄${F}88m▄${F}52m▄${F}28m▄${B}16m ${B}94m ${B}220m   ${B}100m${F}220m▄${B}220m${F}94m▄ ${F}100m▄  ▄▄${B}100m${F}94m▄▄${B}94m ${F}16m▄▄${B}16m${F}240m▄▄${B}240m ${X}${F}243m▄
+ ${B}16m ${F}233m▄${B}22m${F}58m▄${B}40m ${F}233m▄${B}52m▄▄${B}16m ${B}94m ${B}220m ${B}94m${F}220m▄${B}220m${F}100m▄   ▄▄${B}100m${F}94m▄▄${B}94m ${F}16m▄▄${B}16m${F}240m▄▄${B}240m ${F}243m▄▄${X}▀▀
+ ${F}16m▀${B}58m▄${B}233m ${B}58m${F}233m▄ ${B}233m ${B}58m▄${B}16m ${B}94m ${B}220m  ${F}100m▄▄${B}100m${F}94m▄▄${B}94m ${F}16m▄▄${B}16m${F}240m▄▄${B}240m ${F}243m▄▄${X}▀▀
+  ${B}16m ${B}58m${F}233m▄${B}233m${F}58m▄  ${B}58m${F}16m▄${B}16m${F}100m▄${B}94m▄${B}100m${F}94m▄▄${B}94m ${F}16m▄▄${B}16m${F}240m▄▄${B}240m ${F}243m▄▄${X}▀▀
+   ${B}16m${F}240m▄▄${B}233m${F}16m▄${B}58m▄${B}16m ${B}94m▄▄▄${B}16m${F}240m▄▄${B}240m ${F}243m▄▄${X}▀▀
+  ▀${F}240m▀▀${B}240m${F}243m▄▄▄▄▄▄${X}${F}240m▀${F}243m▀▀                   ${X}
+EOF
+
+    print "" # Bottom Padding
+}
+
+main

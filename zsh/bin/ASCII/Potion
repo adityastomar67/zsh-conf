@@ -1,0 +1,54 @@
+#!/usr/bin/env zsh
+
+# ______     _   _
+# | ___ \   | | (_)
+# | |_/ /__ | |_ _  ___  _ __
+# |  __/ _ \| __| |/ _ \| '_ \
+# | | | (_) | |_| | (_) | | | |
+# \_|  \___/ \__|_|\___/|_| |_|
+#
+#  :: Magic Potion
+#  :: Renders an RPG-style flask using ANSI colors.
+#  :: Optimized for Zsh using static constants.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Potion
+#      2. Run:             ./Potion
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+typeset -r E=$'\e['
+typeset -r X="${E}0m"
+
+# Colors
+typeset -r W="${E}97m"   # White (Glass Reflection)
+typeset -r K="${E}30m"   # Black (Outline/Cork)
+typeset -r R="${E}31m"   # Red (Liquid Dark)
+typeset -r M="${E}91m"   # Bright Red (Liquid Light)
+typeset -r B="${E}33m"   # Brown (Cork/Top)
+
+# ==============================================================================
+# [2] MAIN EXECUTION
+# ==============================================================================
+
+main() {
+    print ""
+    cat << EOF
+       ${K}▄▄▄▄${X}
+      ${K}█${B}████${K}█${X}
+      ${K}█${B}████${K}█${X}
+     ${K}▄█${X}    ${K}█▄${X}
+    ${K}█${X}      ${W}▀${K}█${X}
+    ${K}█${R}██████${K}█${X}
+    ${K}█${R}██${M}██${R}████${K}█${X}
+    ${K}█${R}██${M}██${R}████${K}█${X}
+    ${K}█${R}██${M}██${R}████${K}█${X}
+     ${K}▀██████▀${X}
+EOF
+    print ""
+}
+
+main

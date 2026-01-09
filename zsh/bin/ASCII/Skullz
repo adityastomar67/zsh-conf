@@ -1,0 +1,83 @@
+#!/usr/bin/env zsh
+
+#  _____ _          _ _
+# /  ___| |        | | |
+# \ `--.| | ___   _| | |____
+#  `--. \ |/ / | | | | |_  /
+# /\__/ /   <| |_| | | |/ /
+# \____/|_|\_\\__,_|_|_/___|
+#
+#  :: Random Skulls
+#  :: Randomly renders either the Standard or Detailed skull variant.
+#  :: Original Author: pyratebeard / pfh
+#  :: Optimized for Zsh with random selection logic.
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. Make executable: chmod +x Skullz
+#      2. Run:             ./Skullz
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# Escape Sequence
+typeset -r E=$'\e['
+
+# Reset
+typeset -r X="${E}0m"
+
+# --- Bold/Bright Colors ---
+typeset -r BR="${E}1;31m"  # Red
+typeset -r BG="${E}1;32m"  # Green
+typeset -r BY="${E}1;33m"  # Yellow
+typeset -r BB="${E}1;34m"  # Blue
+typeset -r BM="${E}1;35m"  # Magenta
+typeset -r BC="${E}1;36m"  # Cyan
+
+# ==============================================================================
+# [2] ART DEFINITIONS
+# ==============================================================================
+
+# Variant A: Standard (Solid Blocks)
+render_standard() {
+    cat << EOF
+${BR}  ▄█████▄  ${BG}  ▄█████▄  ${BY}  ▄█████▄  ${BB}  ▄█████▄  ${BM}  ▄█████▄  ${BC}  ▄█████▄
+${BR} ▄███████▄ ${BG} ▄███████▄ ${BY} ▄███████▄ ${BB} ▄███████▄ ${BM} ▄███████▄ ${BC} ▄███████▄
+${BR} ██  █  ██ ${BG} ██  █  ██ ${BY} ██  █  ██ ${BB} ██  █  ██ ${BM} ██  █  ██ ${BC} ██  █  ██
+${BR}  ███████  ${BG}  ███████  ${BY}  ███████  ${BB}  ███████  ${BM}  ███████  ${BC}  ███████
+${BR}   █ █ █   ${BG}   █ █ █   ${BY}   █ █ █   ${BB}   █ █ █   ${BM}   █ █ █   ${BC}   █ █ █
+${X}
+EOF
+}
+
+# Variant B: Detailed (Shaded/Dotted)
+render_detailed() {
+    cat << EOF
+${BR}  ▄█████▄  ${BG}  ▄█████▄  ${BY}  ▄█████▄  ${BB}  ▄█████▄  ${BM}  ▄█████▄  ${BC}  ▄█████▄
+${BR} ▄███████▄ ${BG} ▄███████▄ ${BY} ▄███████▄ ${BB} ▄███████▄ ${BM} ▄███████▄ ${BC} ▄███████▄
+${BR}░██ ░█ ░██ ${BG}░██ ░█ ░██ ${BY}░██ ░█ ░██ ${BB}░██ ░█ ░██ ${BM}░██ ░█ ░██ ${BC}░██ ░█ ░██
+${BR}░░███████  ${BG}░░███████  ${BY}░░███████  ${BB}░░███████  ${BM}░░███████  ${BC}░░███████
+${BR} ░░█░█░█   ${BG} ░░█░█░█   ${BY} ░░█░█░█   ${BB} ░░█░█░█   ${BM} ░░█░█░█   ${BC} ░░█░█░█
+${BR}  ░ ░ ░    ${BG}  ░ ░ ░    ${BY}  ░ ░ ░    ${BB}  ░ ░ ░    ${BM}  ░ ░ ░    ${BC}  ░ ░ ░
+${X}
+EOF
+}
+
+# ==============================================================================
+# [3] MAIN EXECUTION
+# ==============================================================================
+
+main() {
+    print "" # Top Padding
+
+    # Zsh Random Logic:
+    # $(( RANDOM % 2 )) returns either 0 or 1.
+    if (( RANDOM % 2 )); then
+        render_standard
+    else
+        render_detailed
+    fi
+}
+
+main

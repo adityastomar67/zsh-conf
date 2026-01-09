@@ -27,7 +27,6 @@
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
-#
 
 # 0. Safety Check & Environment Restoration
 # ─────────────────────────────────────────────────────────────
@@ -49,7 +48,7 @@ fi
 
 if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" && -z "$TMUX" ]]; then
     # Only load if we are NOT already inside a Tmux session or Tmux is enabled by user.
-    [[ -f "$ZSH_CONFIG_ROOT/conf.d/tmux.zsh" ]] && source "$ZSH_CONFIG_ROOT/conf.d/tmux.zsh"
+    [[ -f "$ZSH_CONFIG_ROOT/plugins/tmux.zsh" ]] && source "$ZSH_CONFIG_ROOT/plugins/tmux.zsh"
 fi
 
 
@@ -65,13 +64,10 @@ fi
 typeset -a core_modules
 core_modules=(
     "env"       # Environment variables overrides
-    "opts"      # Zsh setopt configurations
-    "plugs"     # Plugin manager initialization
-    "keys"      # Key bindings
+    "options"   # Zsh setopt configurations
+    "hooks"     # Plugin manager initialization
+    "keybinds"  # Key bindings
     "prompt"    # Prompt logic
-    "theme"     # Color schemes
-    "nvim"      # Neovim integration
-    "#icons"    # Icon definitions (if applicable)
 )
 
 for module in "${core_modules[@]}"; do
@@ -85,8 +81,8 @@ done
 
 typeset -a aux_modules
 aux_modules=(
-    "alias"     # Command shortcuts
-    "function"  # Utility functions
+    "aliases"     # Command shortcuts
+    "functions"   # Utility functions
 )
 
 for module in "${aux_modules[@]}"; do

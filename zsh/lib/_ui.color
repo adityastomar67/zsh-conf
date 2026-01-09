@@ -26,7 +26,6 @@
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
-#
 
 # Data Structure Definition
 # ─────────────────────────────────────────────────────────────
@@ -102,7 +101,7 @@ COLOR[BG_B_WHITE]=$'\e[107m'
 
 function preview_ansi_colors() {
     # Zsh Print: %B(Bold) %F{blue}(Color) ... %f(end color) %b(end bold)
-    print -P "%B%F{blue}:: ZSH Color Map Preview ::%f%b"
+    print -P "${COLOR[BOLD]}${COLOR[BLUE]}:: ZSH Color Map Preview ::${COLOR[RESET]}"
 
     # Define logical groups for display iteration
     local -a standard_keys=(BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE)

@@ -21,15 +21,29 @@
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
-#
 
-# 1. Interactive Session Guard
+# 0. Interactive Session Guard
 # ─────────────────────────────────────────────────────────────
 ## We immediately check if the shell is interactive. If it's a background
 ## process (like scp, sftp, or a script), we exit to prevent errors and
 ## speed up connections.
 
 [[ $- != *i* ]] && return
+
+
+# 1. Initializations
+# ─────────────────────────────────────────────────────────────
+## We immediately loads the necessary functions in the shell so we don't
+## need to source them again and again in our config and make the code bloated.
+
+# Add your custom functions folder to fpath
+fpath=("$ZSH_CONFIG_ROOT/lib" $fpath)
+
+# Load color definitions if not already present
+autoload -Uz _ui.color && _ui.color
+
+# Load utils definitions
+autoload -Uz _core.utils && _core.utils
 
 
 # 2. Benchmarking Initialization
@@ -44,7 +58,7 @@ zmodload zsh/datetime
 local _startup_timer_start=$EPOCHREALTIME
 
 # Load the zprof module if benchmarking is explicitly requested
-[[ "$ZSH_BENCHMARK" == "Yes" ]] && zmodload zsh/zprof 2>/dev/null
+[[ "${ZSH_BENCHMARK:l}" == "yes" ]] && zmodload zsh/zprof 2>/dev/null
 
 
 # 3. Core Configuration Loader
@@ -55,7 +69,7 @@ local _startup_timer_start=$EPOCHREALTIME
 # ── profile selection ──────────────────────────────────────────────────
 
 # Check if "Minimal Mode" is enabled (Useful for older hardware or root users)
-[[ "$ENABLE_MINIMAL_MODE" == "Yes" ]] && RC="$ZSH_CONFIG_ROOT/zshrc.mini" || RC="$ZSH_CONFIG_ROOT/zshrc"
+[[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]] && RC="$ZSH_CONFIG_ROOT/zshrc.mini" || RC="$ZSH_CONFIG_ROOT/zshrc"
 
 
 # ── execution ──────────────────────────────────────────────────────────
@@ -64,8 +78,8 @@ if [[ -r "$RC" ]]; then
     source "$RC"
 else
     # !!! CRITICAL: Configuration file missing
-    printf "\n\033[0;31m[ERROR] Critical: Config not found at %s\033[0m\n" "$RC"
-    printf "Please try reinstalling the configuration.\n\n"
+    echo "${COLOR[BOLD]}${COLOR[RED]}[ERROR]${COLOR[RESET]}${COLOR[RED]} Critical: ${COLOR[DIM]}Config not found at ${COLOR[UNDERLINE]}${RC}${COLOR[RESET]}"
+    echo "Please try re-installing the configuration.\n"
     return
 fi
 
@@ -75,9 +89,7 @@ fi
 ## Adds visual flair to the terminal startup.
 ## Randomly selects between color scripts or motivational quotes if enabled.
 
-#
-
-if [[ "$ENABLE_FANCY_STARTUP" == "Yes" ]]; then
+if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
     local -a available_visual_commands=()
 
     # Check for installed visualization tools
@@ -103,16 +115,15 @@ fi
 ## This section is reserved for YOUR custom settings.
 ## Anything defined here will override the managed configuration above.
 
-# ------------------------------------------------------------------------------
-# Custom Aliases
+# ── Custom Aliases ──────────────────────────────────────────────────
 # alias myip="curl http://ipecho.net/plain; echo"
 
-# ------------------------------------------------------------------------------
-# Environment Variables
+
+# ── Environment Vaiables ─────────────────────────────────────────────
 # export PATH="$PATH:$HOME/my-custom-bin"
 
-# ------------------------------------------------------------------------------
-# Function Overrides
+
+# ── Function Overrides ───────────────────────────────────────────────
 
 
 # ------------------------------------------------------------------------------
@@ -123,7 +134,7 @@ fi
 ## Calculates the total execution time and displays the results.
 ## This block must be the very last thing in the file.
 
-if [[ "$ZSH_BENCHMARK" == "Yes" ]]; then
+if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
     # 1. STOP THE CLOCK
     #    We capture time immediately to exclude the UI rendering logic from the score.
     local _startup_timer_end=$EPOCHREALTIME
@@ -138,7 +149,8 @@ if [[ "$ZSH_BENCHMARK" == "Yes" ]]; then
         source "$BENCH_UI"
     else
         # ---- SAFE: Fallback if UI file is missing
-        echo "Benchmark UI file not found at: $BENCH_UI"
-        echo "Total startup time: ${total_duration_ms}ms"
+        clear
+        printf "${COLOR[BOLD]}${COLOR[RED]}Benchmark UI file not found at: ${COLOR[DIM]}$BENCH_UI${COLOR[RESET]}\n"
+        printf "${COLOR[YELLOW]}Total startup time: ${COLOR[CYAN]}%6.2f ${COLOR[YELLOW]}ms${COLOR[RESET]}\n\n" ${total_duration_ms}
     fi
 fi
