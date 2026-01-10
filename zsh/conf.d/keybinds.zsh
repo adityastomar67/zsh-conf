@@ -38,6 +38,8 @@
 # Load the Zsh Terminal Info module
 zmodload zsh/terminfo
 
+# Load the 'complist' module to enable keybindings inside the menu.
+zmodload zsh/complist
 
 # ── key code definitions ───────────────────────────────────────────────
 
@@ -146,19 +148,36 @@ bindkey '^[OB' down-line-or-beginning-search
 [[ -n "${key_map[BackTab]}" ]] && bindkey -- "${key_map[BackTab]}" reverse-menu-complete
 
 # ── vi-mode navigation ─────────────────────────────────────────────────
-# Load the 'complist' module to enable keybindings inside the menu.
-zmodload zsh/complist
+if [[ "${ENABLE_VI_MODE:l}" == "yes" ]]; then
 
-# Bind Vi keys (hjkl) for moving around the completion grid.
-# This is significantly faster than using arrow keys.
-bindkey -M menuselect 'h' vi-backward-char         # Left
-bindkey -M menuselect 'j' vi-down-line-or-history  # Down
-bindkey -M menuselect 'k' vi-up-line-or-history    # Up
-bindkey -M menuselect 'l' vi-forward-char          # Right
+    # ── 1. Core Activation ─────────────────────────────────────────────────
+    bindkey -v
+    export KEYTIMEOUT=1
 
-# Menu Control Keys
-bindkey -M menuselect '^[' send-break              # Escape: Cancel menu
-bindkey -M menuselect '^M' accept-line             # Enter: Accept selection
+    # ── 2. Command Line Fixes ──────────────────────────────────────────────
+    # 'bindkey -v' breaks standard Ctrl keys. We restore them here.
+
+    bindkey '^?' backward-delete-char                  # Backspace
+    bindkey '^h' backward-delete-char                  # Ctrl + H
+    bindkey '^w' backward-kill-word                    # Ctrl + W
+    bindkey '^r' history-incremental-search-backward   # Ctrl + R
+
+    # ── 3. Menu Navigation (hjkl) ──────────────────────────────────────────
+    # These bindings only exist in the 'menuselect' keymap (the tab menu).
+
+    bindkey -M menuselect 'h' vi-backward-char         # Left
+    bindkey -M menuselect 'j' vi-down-line-or-history  # Down
+    bindkey -M menuselect 'k' vi-up-line-or-history    # Up
+    bindkey -M menuselect 'l' vi-forward-char          # Right
+
+    # ── 4. Menu Control ────────────────────────────────────────────────────
+
+    # Escape: Cancel menu and return to typing
+    bindkey -M menuselect '^[' send-break
+
+    # Enter: Accept the currently highlighted selection (Explicit definition)
+    bindkey -M menuselect '^M' accept-line
+fi
 
 
 # Custom Widgets & Macros

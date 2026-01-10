@@ -32,7 +32,7 @@
 ## Note: This just loads the functions; keybindings are handled elsewhere.
 
 # Load the function definitions from Zsh's function path
-autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search add-zsh-hook
 
 # Register them as ZLE widgets so they can be bound to keys
 zle -N up-line-or-beginning-search
@@ -104,4 +104,27 @@ if (( ${+terminfo[smkx]} && ${+terminfo[rmkx]} )); then
     # Register the hooks
     add-zle-hook-widget zle-line-init   _enable_app_mode
     add-zle-hook-widget zle-line-finish _disable_app_mode
+fi
+
+# ........................[  4. Fast Rehash (Arch)  ]........................ #
+
+# -------------------------------------------------------------------------
+# [OPTIMIZATION] Arch Linux Fast Rehash
+# Uses zmodload to avoid spawning 'date' subshells in precmd
+# -------------------------------------------------------------------------
+if [[ -f /etc/arch-release ]]; then
+    zmodload zsh/stat 2>/dev/null
+    typeset -g _pacman_trigger="/var/cache/zsh/pacman"
+    typeset -g _pacman_last_mtime=0
+
+    rehash_precmd() {
+        [[ -f "$_pacman_trigger" ]] || return
+        local -a st
+        zstat -A st +mtime "$_pacman_trigger" 2>/dev/null
+        if (( st[1] > _pacman_last_mtime )); then
+            rehash
+            _pacman_last_mtime=$st[1]
+        fi
+    }
+    add-zsh-hook -Uz precmd rehash_precmd
 fi

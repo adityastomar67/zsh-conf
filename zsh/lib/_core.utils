@@ -133,3 +133,15 @@ function _safe_edit() {
         "$EDITOR" "$file"
     fi
 }
+
+# Temporary Offline Config File
+if [[ "${TEMP_OFFLINE_CONFIG:l}" == "yes" ]]; then
+
+    # Store path in a local variable to ensure consistency
+    local temp_file="$HOME/.TEMP_RC"
+
+    # 1. Check if file exists; if not, create it with a header
+    if [[ ! -f "$temp_file" ]]; then
+        print "# Put temporary/offline aliases here. Not tracked by Git." > "$temp_file"
+    fi
+fi

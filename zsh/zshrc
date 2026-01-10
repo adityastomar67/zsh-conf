@@ -160,13 +160,4 @@ fi
 ) &! # The '&!' operator disowns the job immediately
 
 
-# 5. Vi-Mode Activation
-# ─────────────────────────────────────────────────────────────
-## Enables Vim-style keybindings for the command line.
 
-if [[ "${ENABLE_VI_MODE:l}" == "yes" ]]; then
-    bindkey -v
-
-    # Reduce delay when switching modes (Esc key latency)
-    export KEYTIMEOUT=1
-fi

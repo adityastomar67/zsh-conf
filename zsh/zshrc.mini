@@ -107,18 +107,22 @@ zstyle ':completion:*' menu select
 
 # ── components ─────────────────────────────────────────────────────────
 
-# Format: User (Blue) Host (Yellow) separated by Red slash
-local prompt_user_host="${COLOR[BOLD]}${COLOR[BLUE]}%n ${COLOR[RED]}/ ${COLOR[YELLOW]}%m${COLOR[RESET]}"
+# Note: We group adjacent colors (Bold + Blue) into a single %{...%} wrapper for cleanliness.
 
-# Format: Current Directory (Grey 242), Italicized
-local prompt_current_dir="${COLOR[ITALIC]}${COLOR[DIM]}[%~]${COLOR[RESET]}"
+# Format: User (Blue) Host (Yellow) separated by Red slash
+local prompt_user_host="%{${COLOR[BOLD]}${COLOR[BLUE]}%}%n %{${COLOR[RED]}%}/ %{${COLOR[YELLOW]}%}%m%{${COLOR[RESET]}%}"
+
+# Format: Current Directory (Grey), Italicized
+local prompt_current_dir="%{${COLOR[ITALIC]}${COLOR[DIM]}%}[%~]%{${COLOR[RESET]}%}"
 
 # Format: Arrow symbol changing color based on exit status
-# %(?.Success.Failure)
-local prompt_status_symbol="%(?.${COLOR[BOLD]}${COLOR[GREEN]} .${COLOR[RED]} )${COLOR[RESET]}"
+# Logic: %(?.Success.Failure)
+# We must wrap the colors INSIDE the conditional branches.
+local prompt_status_symbol="%(?.%{${COLOR[BOLD]}${COLOR[GREEN]}%} .%{${COLOR[RED]}%} )%{${COLOR[RESET]}%}"
 
 # ── assembly ───────────────────────────────────────────────────────────
 
+# We use simple double quotes here because the heavy lifting was done above.
 PS1="${prompt_user_host} ${prompt_current_dir}${prompt_status_symbol} "
 
 
