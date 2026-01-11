@@ -31,22 +31,14 @@
 [[ $- != *i* ]] && return
 
 
-# 1. Initializations
+# 0.5 Load User Configuration Early
 # ─────────────────────────────────────────────────────────────
-## We immediately loads the necessary functions in the shell so we don't
-## need to source them again and again in our config and make the code bloated.
-
-# Add your custom functions folder to fpath
-fpath=("$ZSH_CONFIG_ROOT/lib" $fpath)
-
-# Load color definitions if not already present
-autoload -Uz _ui.color && _ui.color
-
-# Load utils definitions
-autoload -Uz _core.utils && _core.utils
+## We source the user.conf file here to ensure critical environment variables
+## are available even in non-login shells that might skip user.conf in zshenv.
+source "$ZDOTDIR/user.conf"
 
 
-# 2. Benchmarking Initialization
+# 1. Benchmarking Initialization
 # ─────────────────────────────────────────────────────────────
 ## If profiling is enabled in .zshenv, we start the timer here.
 ## We use Zsh's internal datetime module for nanosecond precision.
@@ -61,15 +53,28 @@ local _startup_timer_start=$EPOCHREALTIME
 [[ "${ZSH_BENCHMARK:l}" == "yes" ]] && zmodload zsh/zprof 2>/dev/null
 
 
+# 2. Initializations
+# ─────────────────────────────────────────────────────────────
+## We immediately loads the necessary functions in the shell so we don't
+## need to source them again and again in our config and make the code bloated.
+
+# Add custom function folders to fpath (Order: Specific -> Generic -> System)
+fpath=("$ZSH_CONFIG_ROOT/lib/functions" "$ZSH_CONFIG_ROOT/lib" $fpath)
+
+# Load utils definitions
+autoload -Uz _core.utils && _core.utils
+
+
 # 3. Core Configuration Loader
 # ─────────────────────────────────────────────────────────────
 ## Determines which configuration profile to load (Minimal vs Full)
 ## and sources the actual logic files.
 
 # ── profile selection ──────────────────────────────────────────────────
-
+echo $ENABLE_MINIMAL_MODE
 # Check if "Minimal Mode" is enabled (Useful for older hardware or root users)
 [[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]] && RC="$ZSH_CONFIG_ROOT/zshrc.mini" || RC="$ZSH_CONFIG_ROOT/zshrc"
+echo "Sourcing configuration profile: ${RC:t}"
 
 
 # ── execution ──────────────────────────────────────────────────────────
@@ -118,17 +123,46 @@ fi
 # ── Custom Aliases ──────────────────────────────────────────────────
 # alias myip="curl http://ipecho.net/plain; echo"
 
-
 # ── Environment Vaiables ─────────────────────────────────────────────
 # export PATH="$PATH:$HOME/my-custom-bin"
 
 
 # ── Function Overrides ───────────────────────────────────────────────
 
+# ------------------------------------------------------------------------------
+# Debugging Alias
+# ------------------------------------------------------------------------------
+# Usage: Type 'debug-start' (or 'log') to spawn a subshell that records
+#        its own startup process to a file.
+#        Type 'exit' to stop logging and return to your normal shell.
+
+function _zsh_debug_startup() {
+    # 1. Define Log Location
+    #    Uses your config path, defaults to ~/.config/zsh-conf if unset
+    # local log_dir="${ZSH_CONFIG_ROOT:-$HOME/.config/zsh-conf}"
+    # local log_file="$log_dir/zsh-startup.log"
+    local log_file="$HOME/.config/zsh-conf/zsh-startup.log"
+
+    # 2. Safety: Ensure directory exists (prevents 'no such file' errors)
+    [[ -d "$log_dir" ]] || mkdir -p "$log_dir"
+
+    # 3. User Feedback
+    print -P "%F{yellow}🚧 Spawning Debug Shell...%f"
+    print -P "   Output redirected to: %U$log_file%u"
+    print -P "   Type %B'exit'%b to finish recording."
+
+    # 4. Launch Debug Shell
+    #    -x : xtrace (print commands as they execute)
+    #    -v : verbose (print input lines as they are read)
+    #    2> : Redirect STDERR (where debug logs go) to the file
+    zsh -xv 2> "$log_file"
+}
+
+# The Alias
+alias logg='_zsh_debug_startup'
 
 # --------------------------------------------------------------------------
 
-[[ -r "$HOME/.TEMP_RC" ]] && source "$HOME/.TEMP_RC"
 
 # 6. Benchmarking Report
 # ─────────────────────────────────────────────────────────────

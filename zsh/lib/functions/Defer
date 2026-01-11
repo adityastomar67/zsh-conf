@@ -1,0 +1,143 @@
+# ------------------------------------------------------------------------------
+# ZSH-DEFER UTILITY (Fixed)
+# ------------------------------------------------------------------------------
+# Based on romkatv/zsh-defer
+# Fixes: Removed invalid spaces in variable assignments, fixed math logic.
+
+# 1. Option Hygiene
+'builtin' 'local' '-a' '_saved_zsh_opts'
+[[ ! -o 'aliases'         ]] || _saved_zsh_opts+=('aliases')
+[[ ! -o 'sh_glob'         ]] || _saved_zsh_opts+=('sh_glob')
+[[ ! -o 'no_brace_expand' ]] || _saved_zsh_opts+=('no_brace_expand')
+'builtin' 'setopt' 'no_aliases' 'no_sh_glob' 'brace_expand'
+
+# 2. Global State
+typeset -ga ZSH_DEFER_QUEUE
+
+# 3. Shim for Autosuggestions
+function _zsh_defer_reset_autosuggestions() {
+    unsetopt warn_nested_var
+    orig_buffer=
+    orig_postdisplay=
+}
+zle -N zsh-defer-reset-autosuggestions_ _zsh_defer_reset_autosuggestions
+
+# 4. Scheduling Logic
+function _zsh_defer_schedule() {
+    local fd
+    if [[ $1 == 0 ]]; then
+        exec {fd}</dev/null
+    else
+        zmodload zsh/zselect
+        exec {fd}< <(zselect -t $1)
+    fi
+    zle -F $fd _zsh_defer_worker
+}
+
+function _zsh_defer_worker() {
+    emulate -L zsh
+    zle -F $1
+    exec {1}>&-
+
+    while (( $#ZSH_DEFER_QUEUE && !KEYS_QUEUED_COUNT && !PENDING )); do
+        # FIX: Removed spaces around '='
+        local delay="${ZSH_DEFER_QUEUE[1]%% *}"
+        local task="${ZSH_DEFER_QUEUE[1]#* }"
+
+        if [[ $delay == 0 ]]; then
+            _zsh_defer_executor $task
+            shift ZSH_DEFER_QUEUE
+        else
+            _zsh_defer_schedule $delay
+            ZSH_DEFER_QUEUE[1]="0 $task"
+            return 0
+        fi
+    done
+    (( $#ZSH_DEFER_QUEUE )) && _zsh_defer_schedule 0
+    return 0
+}
+zle -N _zsh_defer_worker
+
+# 5. Execution Logic
+function _zsh_defer_executor() {
+    # FIX: Removed spaces around '='
+    local flags="${1%% *}"
+    local command="${1#* }"
+    local current_dir="${(%):-%/}"
+    local -i fd_stdout=-1
+    local -i fd_stderr=-1
+
+    [[ $flags == *1* ]] && exec {fd_stdout}>&1 1>/dev/null
+    [[ $flags == *2* ]] && exec {fd_stderr}>&2 2>/dev/null
+
+    {
+        () {
+            if [[ $flags == *c* ]]; then
+                eval $command
+            else
+                "${(@Q)${(z)command}}"
+            fi
+        }
+
+        emulate -L zsh
+        local hook
+        local -a hooks_to_run
+        [[ $flags == *d* && ${(%):-%/} != $current_dir ]] && hooks_to_run+=($chpwd $chpwd_functions)
+        [[ $flags == *m* ]] && hooks_to_run+=($precmd $precmd_functions)
+
+        for hook in $hooks_to_run; do
+            (( $+functions[$hook] )) || continue
+            $hook
+            emulate -L zsh
+        done
+
+        [[ $flags == *s* && $+ZSH_AUTOSUGGEST_STRATEGY    == 1 ]] && zle zsh-defer-reset-autosuggestions_
+        [[ $flags == *z* && $+_ZSH_HIGHLIGHT_PRIOR_BUFFER == 1 ]] && _ZSH_HIGHLIGHT_PRIOR_BUFFER=
+        [[ $flags == *p* ]] && zle reset-prompt
+        [[ $flags == *r* ]] && zle -R
+
+    } always {
+        (( fd_stdout >= 0 )) && exec 1>&$fd_stdout {fd_stdout}>&-
+        (( fd_stderr >= 0 )) && exec 2>&$fd_stderr {fd_stderr}>&-
+    }
+}
+
+# 6. Public API
+function zsh-defer() {
+    emulate -L zsh -o extended_glob
+    local default_flags="12dmszpr"
+    local -i delay_time
+    local active_flags=$default_flags
+    local command_str opt OPTARG match mbegin mend
+
+    while getopts ":hc:t:a$default_flags" opt; do
+        case $opt in
+            c) active_flags+=c; command_str=$OPTARG ;;
+            t)
+               zmodload zsh/mathfunc
+               # FIX: Used proper arithmetic evaluation
+               (( delay_time = ceil(OPTARG * 100) ))
+               ;;
+            a) [[ $active_flags == *c* ]] && active_flags=c || active_flags= ;;
+            +a) [[ $active_flags == *c* ]] && active_flags=c$default_flags || active_flags=$default_flags ;;
+            ?) [[ $active_flags == (#b)(*)$opt(*) ]] && active_flags=$match[1]$match[2] ;;
+            +?) [[ $active_flags != *${opt:1}* ]] && active_flags+=${opt:1} ;;
+            *) return 1 ;;
+        esac
+    done
+
+    if [[ $active_flags != *c* ]]; then
+        command_str="${(@q)@[OPTIND,-1]}"
+    fi
+
+    [[ $active_flags == *p* && $+RPS1 == 0 ]] && RPS1=
+    (( $#ZSH_DEFER_QUEUE )) || _zsh_defer_schedule 0
+    ZSH_DEFER_QUEUE+="$delay_time $active_flags $command_str"
+}
+
+# 7. Cleanup & Aliases
+(( ${#_saved_zsh_opts} )) && setopt ${_saved_zsh_opts[@]}
+'builtin' 'unset' '_saved_zsh_opts'
+
+# Allow calling it as 'defer' (User preference)
+alias defer='zsh-defer'

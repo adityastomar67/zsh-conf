@@ -25,7 +25,7 @@
 #
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
-
+echo "Sourced _ui.benchmark..."
 
 # 0. Safety Checks & Dependencies
 # ─────────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ fi
 printf "${COLOR[DIM]}╭───────────────────────────────────────────────────╮${COLOR[RESET]}\n"
 
 # Content Row (Dynamic based on Minimal Mode)
-if [[ "${ENABLE_MINIMAL_MODE:-$MINIMALIST}" == "Yes" ]]; then
+if [[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]]; then
     printf "${COLOR[DIM]}│${COLOR[RESET]}  ZSH ${COLOR[YELLOW]}[MINIMAL]${COLOR[RESET]}    ${label_color}%-16s${COLOR[RESET]}    ${label_color}%6.2f ms${COLOR[RESET]}  ${COLOR[DIM]}│${COLOR[RESET]}\n" \
         "$performance_label" \
         "$total_duration_ms"

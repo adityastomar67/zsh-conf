@@ -62,14 +62,11 @@ function launch_tmux_interactive_session() {
 
     # ── guards ─────────────────────────────────────────────────────────────
 
-    # 1. Recursive Guard: Don't run if we are already inside a Tmux session.
-    [[ -n "$TMUX" ]] && return
-
-    # 2. Interactivity Guard: Don't run in scripts, pipes, or scp connections.
+    # 1. Interactivity Guard: Don't run in scripts, pipes, or scp connections.
     #    -t 0 checks if File Descriptor 0 (Stdin) is a terminal.
     [[ ! -t 0 ]] && return
 
-    # 3. Emulator Guard: Don't run inside IDE terminals (VSCode, IntelliJ).
+    # 2. Emulator Guard: Don't run inside IDE terminals (VSCode, IntelliJ).
     #    These often handle their own scrolling/multiplexing.
     if [[ -n "$VSCODE_INJECTION" || -n "$TERMINAL_EMULATOR" ]]; then
         return

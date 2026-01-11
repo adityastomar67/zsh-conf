@@ -25,7 +25,153 @@
 #
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
+echo "Loading core utilities from _core.utils..."
 
+# Load the completion initializer function
+autoload -Uz compinit
+
+# Load color definitions if not already present
+autoload -Uz _ui.color && _ui.color
+
+# Load the Defer utility for lazy loading
+autoload -Uz Defer && Defer
+
+# Plugin Manager Logic
+# ─────────────────────────────────────────────────────────────
+function plug() {
+
+    # 1. Environment Preparation
+    # Ensure the storage directory exists before trying to clone into it.
+    if [[ ! -d "$ZPLUGIN_STORAGE_DIR" ]]; then
+        mkdir -p "$ZPLUGIN_STORAGE_DIR"
+    fi
+
+    # 2. Input Resolution
+    # If arguments are passed to the function, use them.
+    # Otherwise, fall back to the global 'ZPLUGINS' array defined in config.
+    local -a plugin_targets
+    if (( $# > 0 )); then
+        plugin_targets=("$@")
+    else
+        plugin_targets=("${ZPLUGINS[@]}")
+    fi
+
+    # 3. Processing Loop
+    local repo_identifier plugin_name local_path entry_point
+    local enable_deferral=0
+
+    for repo_identifier in "${plugin_targets[@]}"; do
+
+        # ── control flags ──────────────────────────────────────────────────────
+
+        # Check if the current item is the 'defer' keyword.
+        # This toggles lazy-loading for the *next* plugin in the list.
+        if [[ "$repo_identifier" == "defer" ]]; then
+            enable_deferral=1
+            continue
+        fi
+
+        # ── installation logic ─────────────────────────────────────────────────
+
+        # Extract the repo name (tail) from the identifier
+        # Ex: "zsh-users/zsh-autosuggestions" -> "zsh-autosuggestions"
+        plugin_name="${repo_identifier:t}"
+        local_path="$ZPLUGIN_STORAGE_DIR/$plugin_name"
+
+        # If the folder doesn't exist, clone it from GitHub
+        if [[ ! -d "$local_path" ]]; then
+            # Using 'print' is safer than echo in Zsh
+            print ":: Installing plugin: $plugin_name..."
+
+            # --depth 1: Shallow clone to save bandwidth and disk space
+            git clone --depth 1 --quiet "https://github.com/${repo_identifier}.git" "$local_path"
+        fi
+
+        # ── entry point resolution ─────────────────────────────────────────────
+
+        # We need to guess which file to source. We look for standard Zsh plugin
+        # naming conventions in order of likelihood.
+        # (N) = Nullglob: Returns empty string if no match found.
+
+        local -a potential_entry_points=(
+            # Exact matches for plugin name
+            "$local_path/${plugin_name}.plugin.zsh"(N)
+            "$local_path/${plugin_name}.zsh"(N)
+            "$local_path/${plugin_name}.sh"(N)
+            "$local_path/${plugin_name}.zsh-theme"(N)
+
+            # Catch-all wildcards
+            "$local_path"/*.plugin.zsh(N)
+            "$local_path"/*.zsh(N)
+        )
+
+        # Select the first valid match
+        entry_point="${potential_entry_points[2]}"
+
+        # ── execution ──────────────────────────────────────────────────────────
+
+        if [[ -f "$entry_point" ]]; then
+            if (( enable_deferral )); then
+                # Lazy Load: Schedule execution for when the shell is idle.
+                # Requires the 'zsh-defer' utility loaded previously.
+                echo "Deferred loading of plugin: $entry_point"
+                Defer source "$entry_point"
+            else
+                # Eager Load: Execute immediately.
+                echo "Loaded plugin: $plugin_name"
+                source "$entry_point"
+            fi
+        fi
+
+        # Reset flag for the next iteration
+        enable_deferral=0
+    done
+}
+
+# Ensure Cache Directory Exists
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/eval-cache"
+[[ -d "$CACHE_DIR" ]] || mkdir -p "$CACHE_DIR"
+
+_eval_cache() {
+    local name="$1"
+    local cmd="$2"
+    local mode="${3:-defer}"
+
+    local cache_file="$CACHE_DIR/${name}.zsh"
+    local binary="$commands[$name]"
+
+    # 1. Validation: If binary is missing, stop.
+    if [[ -z "$binary" ]]; then
+        return
+    fi
+
+    # 2. Invalidation Logic: Missing cache OR Binary is newer than cache
+    if [[ ! -e "$cache_file" || "$binary" -nt "$cache_file" ]]; then
+        # Atomic Write: Write to a temp file first, then move it.
+        # This prevents reading a half-written file if you open multiple tabs.
+        local tmp_file="${cache_file}.$$"
+
+        # Run command, capture stdout. Only save if command succeeds.
+        if eval "$cmd" > "$tmp_file"; then
+            mv -f "$tmp_file" "$cache_file"
+            # Background compilation so it doesn't block startup
+            zcompile "$cache_file" &!
+        else
+            rm -f "$tmp_file"
+            return 1 # Fail silently or log error
+        fi
+    fi
+
+    # 3. Loading Logic
+    if [[ "$mode" == "immediate" ]]; then
+        source "$cache_file"
+    elif (( $+functions[zsh-defer] )); then
+        zsh-defer source "$cache_file"
+    else
+        # Fallback if zsh-defer is missing
+        source "$cache_file"
+    fi
+}
 
 # Path Construction
 # ─────────────────────────────────────────────────────────────
@@ -116,7 +262,7 @@ function _safe_edit() {
     # 1. Check if file exists
     if [[ ! -f "$file" ]]; then
         # Use colors if available (from your $C array), otherwise plain text
-        echo "${C[RED]:-Error:} File not found at ${C[YELLOW]:-}$file${C[RESET]:-}"
+        echo "${COLOR[RED]:-Error:} File not found at ${COLOR[YELLOW]:-}$file${COLOR[RESET]:-}"
         return 1
     fi
 
@@ -138,10 +284,15 @@ function _safe_edit() {
 if [[ "${TEMP_OFFLINE_CONFIG:l}" == "yes" ]]; then
 
     # Store path in a local variable to ensure consistency
-    local temp_file="$HOME/.TEMP_RC"
+    local temp_file="$HOME/User-Overrides.zsh"
 
     # 1. Check if file exists; if not, create it with a header
     if [[ ! -f "$temp_file" ]]; then
         print "# Put temporary/offline aliases here. Not tracked by Git." > "$temp_file"
     fi
+fi
+
+# Guard: Only execute if 'RandomWall' is found in PATH or defined as a function
+if [[ "${ENABLE_WALLPAPER_SYNC:l}" == "yes" ]] && is_installed RandomWall; then
+    Defer RandomWall
 fi

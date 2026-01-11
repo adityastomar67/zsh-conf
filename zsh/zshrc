@@ -31,11 +31,11 @@
 # 0. Safety Check & Environment Restoration
 # ─────────────────────────────────────────────────────────────
 ## In some non-login shells (e.g., executing a script, some IDE terminals),
-## .zshenv might be skipped. We ensure critical variables are loaded here.
+## user.conf might be skipped. We ensure critical variables are loaded here.
 
 if [[ -z "$ZSH_CONFIG_ROOT" ]]; then
-    # Fallback if .zshenv wasn't sourced (e.g., specific non-login shells)
-    [[ -f "${ZDOTDIR:-$HOME/.config/zsh-conf}/.zshenv" ]] && source "${ZDOTDIR:-$HOME/.config/zsh-conf}/.zshenv"
+    # Fallback if user.conf wasn't sourced (e.g., specific non-login shells)
+    [[ -f "${ZDOTDIR:-$HOME/.config/zsh-conf}/user.conf" ]] && source "${ZDOTDIR:-$HOME/.config/zsh-conf}/user.conf"
 fi
 
 
@@ -73,28 +73,25 @@ core_modules=(
 for module in "${core_modules[@]}"; do
     # Source if file exists
     [[ -f "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh" ]] && source "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh"
+    echo "Loaded core module: ${module}.zsh"
 done
 
 # ------------------------------------------------------------------------------
 # Auxiliary Modules
 # These are sourced silently to prevent startup noise from minor tools.
 
-typeset -a aux_modules
-aux_modules=(
-    "aliases"     # Command shortcuts
-    "functions"   # Utility functions
-)
+function _load_aux_stuff() {
+    local aux_modules=("aliases" "functions")
 
-for module in "${aux_modules[@]}"; do
-    # Source silently (&> /dev/null)
-    [[ -f "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh" ]] && source "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh" &> /dev/null
-done
+    for module in "${aux_modules[@]}"; do
+        local target="$ZSH_CONFIG_ROOT/conf.d/${module}.zsh"
+        [[ -f "$target" ]] && source "$target"
+        echo "Loaded auxiliary module: ${module}.zsh"
+    done
+}
 
-# ------------------------------------------------------------------------------
-# Cleanup
-# Unset variables to keep the global namespace clean.
-
-unset core_modules aux_modules module
+# Defer the whole operation
+zsh-defer _load_aux_stuff
 
 
 # 3. Private Configuration
@@ -102,7 +99,7 @@ unset core_modules aux_modules module
 ## Loads work-specific or private settings that are ignored by Git.
 
 if [[ "${LOAD_PRIVATE_CONFIG:l}" == "yes" ]]; then
-    [[ -f "$ZSH_CONFIG_ROOT/User-Overrides.zsh" ]] && source "$ZSH_CONFIG_ROOT/User-Overrides.zsh" &> /dev/null
+    [[ -f "$HOME/User-Overrides.zsh" ]] && source "$HOME/User-Overrides.zsh" &> /dev/null
 fi
 
 
@@ -111,53 +108,50 @@ fi
 ## Zsh can compile text scripts into bytecode (.zwc) for faster parsing.
 ## This block runs in a background subshell to avoid slowing down startup.
 
-#
+# (
+#     # Set safe options for the background job (prevent alias expansion, etc.)
+#     setopt LOCAL_OPTIONS NO_ALIASES null_glob extended_glob
 
-(
-    # Set safe options for the background job (prevent alias expansion, etc.)
-    setopt LOCAL_OPTIONS NO_ALIASES null_glob extended_glob
+#     # Define a lockfile to prevent multiple instances running simultaneously
+#     local lock_file="/tmp/zsh_compiling_$USER.lock"
 
-    # Define a lockfile to prevent multiple instances running simultaneously
-    local lock_file="/tmp/zsh_compiling_$USER.lock"
+#     # Check if lock exists (compilation already running). If so, exit.
+#     if [[ -f "$lock_file" ]]; then
+#         return
+#     fi
 
-    # Check if lock exists (compilation already running). If so, exit.
-    if [[ -f "$lock_file" ]]; then
-        return
-    fi
+#     # Create the lock file
+#     : >| "$lock_file"
 
-    # Create the lock file
-    : >| "$lock_file"
+#     # Function: try_compile
+#     # Compiles a file ONLY if the source is newer than the existing .zwc file.
+#     function try_compile() {
+#         local file="$1"
+#         local compiled="${file}.zwc"
 
-    # Function: try_compile
-    # Compiles a file ONLY if the source is newer than the existing .zwc file.
-    function try_compile() {
-        local file="$1"
-        local compiled="${file}.zwc"
+#         # Logic:
+#         # 1. File must exist.
+#         # 2. Compiled version doesn't exist OR Source is newer (-nt) than Compiled.
+#         if [[ -f "$file" && ( ! -f "$compiled" || "$file" -nt "$compiled" ) ]]; then
+#             zcompile "$file"
+#         fi
+#     }
 
-        # Logic:
-        # 1. File must exist.
-        # 2. Compiled version doesn't exist OR Source is newer (-nt) than Compiled.
-        if [[ -f "$file" && ( ! -f "$compiled" || "$file" -nt "$compiled" ) ]]; then
-            zcompile "$file"
-        fi
-    }
+#     # 1. Compile Configuration Modules in conf.d
+#     # Note: Assuming $module_path was meant to point to the conf directory
+#     local config_dir="$ZSH_CONFIG_ROOT/conf.d"
+#     for config_file in "$config_dir"/*.zsh; do
+#         try_compile "$config_file"
+#     done
 
-    # 1. Compile Configuration Modules in conf.d
-    # Note: Assuming $module_path was meant to point to the conf directory
-    local config_dir="$ZSH_CONFIG_ROOT/conf.d"
-    for config_file in "$config_dir"/*.zsh; do
-        try_compile "$config_file"
-    done
+#     # 2. Compile Main RC files
+#     try_compile "$HOME/.zshrc"
+#     try_compile "${ZDOTDIR:-$HOME}/.zshrc"
+#     try_compile "$ZSH_COMPLETION_DUMP"
 
-    # 2. Compile Main RC files
-    try_compile "$HOME/.zshrc"
-    try_compile "${ZDOTDIR:-$HOME}/.zshrc"
+#     # Cleanup: Remove the lock file so it can run next time
+#     # ---- NOTE: Changed 'rmdir' to 'rm' because we created a file, not a dir.
+#     rm -f "$lock_file"
 
-    # Cleanup: Remove the lock file so it can run next time
-    # ---- NOTE: Changed 'rmdir' to 'rm' because we created a file, not a dir.
-    rm -f "$lock_file"
-
-) &! # The '&!' operator disowns the job immediately
-
-
+# ) &! # The '&!' operator disowns the job immediately
 

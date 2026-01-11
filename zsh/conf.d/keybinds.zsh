@@ -50,17 +50,17 @@ typeset -g -A key_map
 # Logic:
 # 1. Try to get the code from 'terminfo' (best practice).
 # 2. If 'terminfo' fails (returns empty), fallback (':-') to standard ANSI codes.
-key_map[Up]          = "${terminfo[kcuu1]:-^[[A}"      # Arrow Up
-key_map[Down]        = "${terminfo[kcud1]:-^[[B}"      # Arrow Down
-key_map[Left]        = "${terminfo[kcub1]:-^[[D}"      # Arrow Left
-key_map[Right]       = "${terminfo[kcuf1]:-^[[C}"      # Arrow Right
-key_map[Home]        = "${terminfo[khome]:-^[[H}"      # Home (Fn+Left)
-key_map[End]         = "${terminfo[kend]:-^[[F}"       # End (Fn+Right)
-key_map[Insert]      = "${terminfo[kich1]:-^[[2~}"     # Insert
-key_map[Delete]      = "${terminfo[kdch1]:-^[[3~}"     # Forward Delete
-key_map[BackTab]     = "${terminfo[kcbt]:-^[[Z}"       # Shift + Tab
-key_map[Ctrl-Left]   = "${terminfo[kLFT5]:-^[[1;5D}"   # Ctrl + Left
-key_map[Ctrl-Right]  = "${terminfo[kRIT5]:-^[[1;5C}"   # Ctrl + Right
+key_map[Up]="${terminfo[kcuu1]:-^[[A}"      # Arrow Up
+key_map[Down]="${terminfo[kcud1]:-^[[B}"      # Arrow Down
+key_map[Left]="${terminfo[kcub1]:-^[[D}"      # Arrow Left
+key_map[Right]="${terminfo[kcuf1]:-^[[C}"      # Arrow Right
+key_map[Home]="${terminfo[khome]:-^[[H}"      # Home (Fn+Left)
+key_map[End]="${terminfo[kend]:-^[[F}"       # End (Fn+Right)
+key_map[Insert]="${terminfo[kich1]:-^[[2~}"     # Insert
+key_map[Delete]="${terminfo[kdch1]:-^[[3~}"     # Forward Delete
+key_map[BackTab]="${terminfo[kcbt]:-^[[Z}"       # Shift + Tab
+key_map[Ctrl-Left]="${terminfo[kLFT5]:-^[[1;5D}"   # Ctrl + Left
+key_map[Ctrl-Right]="${terminfo[kRIT5]:-^[[1;5C}"   # Ctrl + Right
 
 # ── standard editing fixes ─────────────────────────────────────────────
 
@@ -82,6 +82,8 @@ bindkey "^W" backward-kill-word
 
 # Spacebar: Expand history aliases (e.g., !! -> last command) immediately.
 bindkey " "  magic-space
+
+bindkey '^I' complete-word
 
 
 # Navigation & Cursor Movement
