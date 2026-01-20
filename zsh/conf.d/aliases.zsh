@@ -75,6 +75,18 @@ if [[ "$detected_os" == "Linux" ]]; then
 fi
 
 # ------------------------------------------------------------------------------
+# Map 'history' to the underlying 'fc' command with a custom format
+# -l: list
+# -t: time format (takes the string arguments)
+alias history="fc -l -t '%Y/%m/%d %H:%M:%S:   '"
+
+# ----------------------------------------------------------------------------
+# Man Page Fuzzy Finder
+# Uses fzf to search and preview man pages interactively.
+# Requires 'fzf' to be installed.
+is_installed fzf && alias man="fzf-man"
+
+# ------------------------------------------------------------------------------
 # Safety Nets
 # Force interactive mode (-i) to prompt before destructive actions.
 alias mv="mv -i"
@@ -110,14 +122,6 @@ alias which='type -a' # 'type -a' is more robust in Zsh than 'which'
 # Navigation & Directories
 # ─────────────────────────────────────────────────────────────
 ## Shortcuts for moving around the file system.
-
-# ------------------------------------------------------------------------------
-# Relative Movement
-alias ..="cd ../"
-alias ...="cd ../../"
-alias ....="cd ../../../"
-alias .....="cd ../../../../"
-alias ......="cd ../../../../../"
 
 # ------------------------------------------------------------------------------
 # Quick Jumps
@@ -335,7 +339,7 @@ if is_installed git; then
     alias gd="git diff"
     alias glg="git log --stat"
     alias glo="git log --oneline --decorate"
-    alias glog="git log --oneline --decorate --graph"
+    # alias glog="git log --oneline --decorate --graph"
     # Pretty Log: Shows hash, refs, message, relative time, and author in colors
     alias glol="git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ar) %C(bold blue)<%an>%Creset'"
 

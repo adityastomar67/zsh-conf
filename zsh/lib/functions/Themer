@@ -14,7 +14,7 @@
 
 # ........................[  1. Theme Logic  ]........................ #
 
-setup_theme_sh() {
+() {
 
     local bin_dir="$HOME/.local/bin"
     local theme_bin="$bin_dir/theme.sh"
@@ -58,14 +58,6 @@ setup_theme_sh() {
     bindkey '^O' _last_theme
 }
 
-
-# ........................[  3. Execution  ]........................ #
-
-# Run the setup function
-[[ "$OPT_THEME" == "Yes" ]] && setup_theme_sh
-
-# Cleanup functions from global namespace
-unfunction setup_theme_sh
 
 
 

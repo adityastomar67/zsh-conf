@@ -35,21 +35,20 @@
 ## We prioritize a large history size with aggressive de-duplication to
 ## keep the history file useful and clean.
 
+# ── history options ────────────────────────────────────────────────────
+
+setopt EXTENDED_HISTORY          # Save timestamp and duration (:start:elapsed;command)
+setopt SHARE_HISTORY             # Share history immediately across running tabs/panes
+setopt EXTENDED_GLOB             # Enable advanced pattern matching (needed for IGNORE)
+
 # File location and size limits
-# HISTFILE="${ZDOTDIR:-$HOME/.cache}/zhistory"
-HISTFILE="${ZDOTDIR:-$HOME/.cache}/zhistory"
+HISTFILE="$ZSH_CACHE/zhistory"
 HISTSIZE=50000
 SAVEHIST=50000
 
 # Pattern to ignore specific commands from history.
 # Requires 'EXTENDED_GLOB' to handle the '(...|...)' syntax.
 HISTORY_IGNORE="(ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
-
-# ── history options ────────────────────────────────────────────────────
-
-setopt EXTENDED_HISTORY          # Save timestamp and duration (:start:elapsed;command)
-setopt SHARE_HISTORY             # Share history immediately across running tabs/panes
-setopt EXTENDED_GLOB             # Enable advanced pattern matching (needed for IGNORE)
 
 # ── duplication control ────────────────────────────────────────────────
 
@@ -62,36 +61,32 @@ setopt HIST_SAVE_NO_DUPS         # Do not write duplicate entries to the disk fi
 setopt HIST_REDUCE_BLANKS        # Trim extra whitespace before saving
 
 
-# Completion System & Plugins
+# Completion Engine Initialization
 # ─────────────────────────────────────────────────────────────
+## Smart caching logic for `compinit`.
+## Re-running `compinit` on every shell start is slow. We only run it fully once every 24 hours.
 
-# 1. Define Dump Path
-ZSH_COMPLETION_DUMP="${ZDOTDIR:-$HOME}/.zcompdump"
+_comp_options+=(globdots)
 
-# 2. Load the compinit function
-autoload -Uz compinit
+# Glob Logic:
+# #q : Start glob qualifiers
+# N  : Nullglob (don't error if file missing)
+# .  : Plain files only
+# mh : Modification time in hours
+# +24: Older than 24 hours
+if [[ -n "$ZSH_COMPLETION_DUMP"(#qN.mh+24) ]]; then
 
-# 3. THE BYPASS TRICK:
-#    We define a dummy 'compaudit' function.
-#    When compinit calls it to scan your drive, it returns immediately with success (0).
-#    This saves the ~10-15ms I/O penalty.
-compaudit() { return 0 }
-
-# 4. Initialize
-#    -d : Dump location
-#    -C : Use cache if possible (skip checks)
-#    We don't need -u anymore because we tricked the audit itself.
-if [[ -n "$ZSH_COMPLETION_DUMP"(#qN.mh+20) ]]; then
-   compinit -d "$ZSH_COMPLETION_DUMP"
-   # Compile it in the background for faster read next time
-   zcompile "$ZSH_COMPLETION_DUMP" &!
+    # Scenario A: Cache is old or missing. Rebuild.
+    # -i: Ignore insecure directories (don't ask user)
+    # -u: Use insecure directories (silently)
+    # -d: Dump path
+    compinit -i -u -d "$ZSH_COMPLETION_DUMP"
 else
-   compinit -C -d "$ZSH_COMPLETION_DUMP"
-fi
 
-# 5. Cleanup
-#    Remove the dummy function so we don't break anything else (rare).
-unfunction compaudit
+    # Scenario B: Cache is fresh. Fast Load.
+    # -C: Skip ALL security checks, trust the dump file
+    compinit -C -d "$ZSH_COMPLETION_DUMP"
+fi
 
 # Compile for speed
 if [[ ! -f "$ZSH_COMPLETION_DUMP.zwc" || "$ZSH_COMPLETION_DUMP" -nt "$ZSH_COMPLETION_DUMP.zwc" ]]; then
@@ -149,12 +144,12 @@ if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
     # Check if modern alternatives exist before aliasing.
 
     # Cat -> Bat (Syntax highlighting)
-    if (( $+commands[bat] )); then
+    if is_installed bat; then
         alias cat="bat --theme=TwoDark"
     fi
 
     # Ls -> Eza (Icons, Git status)
-    if (( $+commands[eza] )); then
+    if is_installed eza; then
         alias ls='eza --icons=always --color=always -a'
         alias ll='eza --icons=always --color=always -la'
     else
@@ -162,7 +157,7 @@ if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
     fi
 
     # Vim -> Neovim
-    if (( $+commands[nvim] )); then
+    if is_installed nvim; then
         alias v='nvim'
         alias vim='nvim'
     fi
@@ -217,7 +212,7 @@ fi
 ## 3. Not already in Tmux?
 ## 4. Is this a terminal (stdin is tty)?
 
-if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" ]] && (( $+commands[tmux] )) && [[ -z "$TMUX" && -t 0 ]]; then
+if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" ]] && is_installed tmux && [[ -z "$TMUX" && -t 0 ]]; then
     # -A: Attach to existing session if it exists
     # -s: Session name ('b001')
     exec tmux new-session -A -s b001

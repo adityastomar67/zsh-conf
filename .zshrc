@@ -31,51 +31,48 @@
 [[ $- != *i* ]] && return
 
 
-# 0.5 Load User Configuration Early
+# Load User Configuration Early
 # ─────────────────────────────────────────────────────────────
 ## We source the user.conf file here to ensure critical environment variables
 ## are available even in non-login shells that might skip user.conf in zshenv.
 source "$ZDOTDIR/user.conf"
 
 
-# 1. Benchmarking Initialization
+# Benchmarking Initialization
 # ─────────────────────────────────────────────────────────────
 ## If profiling is enabled in .zshenv, we start the timer here.
 ## We use Zsh's internal datetime module for nanosecond precision.
 
-# Load the datetime module to access $EPOCHREALTIME
-zmodload zsh/datetime
-
-# Capture the wall-clock start time
-local _startup_timer_start=$EPOCHREALTIME
-
 # Load the zprof module if benchmarking is explicitly requested
-[[ "${ZSH_BENCHMARK:l}" == "yes" ]] && zmodload zsh/zprof 2>/dev/null
+if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
+    # Load the datetime module to access $EPOCHREALTIME
+    zmodload zsh/datetime
 
+    # Capture the wall-clock start time
+    _startup_timer_start=$EPOCHREALTIME
 
-# 2. Initializations
+    # Load the zprof module for later profiling report
+    zmodload zsh/zprof 2>/dev/null
+fi
+
+# Initializations
 # ─────────────────────────────────────────────────────────────
 ## We immediately loads the necessary functions in the shell so we don't
 ## need to source them again and again in our config and make the code bloated.
-
-# Add custom function folders to fpath (Order: Specific -> Generic -> System)
-fpath=("$ZSH_CONFIG_ROOT/lib/functions" "$ZSH_CONFIG_ROOT/lib" $fpath)
 
 # Load utils definitions
 autoload -Uz _core.utils && _core.utils
 
 
-# 3. Core Configuration Loader
+# Core Configuration Loader
 # ─────────────────────────────────────────────────────────────
 ## Determines which configuration profile to load (Minimal vs Full)
 ## and sources the actual logic files.
 
 # ── profile selection ──────────────────────────────────────────────────
-echo $ENABLE_MINIMAL_MODE
+
 # Check if "Minimal Mode" is enabled (Useful for older hardware or root users)
 [[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]] && RC="$ZSH_CONFIG_ROOT/zshrc.mini" || RC="$ZSH_CONFIG_ROOT/zshrc"
-echo "Sourcing configuration profile: ${RC:t}"
-
 
 # ── execution ──────────────────────────────────────────────────────────
 
@@ -83,22 +80,24 @@ if [[ -r "$RC" ]]; then
     source "$RC"
 else
     # !!! CRITICAL: Configuration file missing
-    echo "${COLOR[BOLD]}${COLOR[RED]}[ERROR]${COLOR[RESET]}${COLOR[RED]} Critical: ${COLOR[DIM]}Config not found at ${COLOR[UNDERLINE]}${RC}${COLOR[RESET]}"
+    echo \
+        "${COLOR[BOLD]}${COLOR[RED]}[ERROR]${COLOR[RESET]}${COLOR[RED]} Critical: ${COLOR[DIM]}Config not found at ${COLOR[UNDERLINE]}${RC}${COLOR[RESET]}"
     echo "Please try re-installing the configuration.\n"
     return
 fi
 
 
-# 4. Terminal Decorations
+# Terminal Decorations
 # ─────────────────────────────────────────────────────────────
 ## Adds visual flair to the terminal startup.
 ## Randomly selects between color scripts or motivational quotes if enabled.
 
 if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
+    ZSH_BENCHMARK="No" # Disable benchmark during visuals
     local -a available_visual_commands=()
 
     # Check for installed visualization tools
-    (( $+commands[ColorScript] )) && available_visual_commands+=( "ColorScript -r" )
+    (( $+commands[ColorScript] )) && available_visual_commands+=( "ColorScript --random" )
     (( $+commands[motivate] ))    && available_visual_commands+=( "motivate" )
 
     # Select and execute a random visual if any are found
@@ -115,56 +114,16 @@ if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
 fi
 
 
-# 5. User Overrides
+# User Overrides
 # ─────────────────────────────────────────────────────────────
 ## This section is reserved for YOUR custom settings.
 ## Anything defined here will override the managed configuration above.
+## Loads work-specific or private settings that are custom to every different user and ignored by Git.
 
-# ── Custom Aliases ──────────────────────────────────────────────────
-# alias myip="curl http://ipecho.net/plain; echo"
-
-# ── Environment Vaiables ─────────────────────────────────────────────
-# export PATH="$PATH:$HOME/my-custom-bin"
+[[ -f "$HOME/User-Overrides.zsh" ]] && source "$HOME/User-Overrides.zsh" &> /dev/null
 
 
-# ── Function Overrides ───────────────────────────────────────────────
-
-# ------------------------------------------------------------------------------
-# Debugging Alias
-# ------------------------------------------------------------------------------
-# Usage: Type 'debug-start' (or 'log') to spawn a subshell that records
-#        its own startup process to a file.
-#        Type 'exit' to stop logging and return to your normal shell.
-
-function _zsh_debug_startup() {
-    # 1. Define Log Location
-    #    Uses your config path, defaults to ~/.config/zsh-conf if unset
-    # local log_dir="${ZSH_CONFIG_ROOT:-$HOME/.config/zsh-conf}"
-    # local log_file="$log_dir/zsh-startup.log"
-    local log_file="$HOME/.config/zsh-conf/zsh-startup.log"
-
-    # 2. Safety: Ensure directory exists (prevents 'no such file' errors)
-    [[ -d "$log_dir" ]] || mkdir -p "$log_dir"
-
-    # 3. User Feedback
-    print -P "%F{yellow}🚧 Spawning Debug Shell...%f"
-    print -P "   Output redirected to: %U$log_file%u"
-    print -P "   Type %B'exit'%b to finish recording."
-
-    # 4. Launch Debug Shell
-    #    -x : xtrace (print commands as they execute)
-    #    -v : verbose (print input lines as they are read)
-    #    2> : Redirect STDERR (where debug logs go) to the file
-    zsh -xv 2> "$log_file"
-}
-
-# The Alias
-alias logg='_zsh_debug_startup'
-
-# --------------------------------------------------------------------------
-
-
-# 6. Benchmarking Report
+# Benchmarking Report
 # ─────────────────────────────────────────────────────────────
 ## Calculates the total execution time and displays the results.
 ## This block must be the very last thing in the file.
@@ -186,6 +145,7 @@ if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
         # ---- SAFE: Fallback if UI file is missing
         clear
         printf "${COLOR[BOLD]}${COLOR[RED]}Benchmark UI file not found at: ${COLOR[DIM]}$BENCH_UI${COLOR[RESET]}\n"
-        printf "${COLOR[YELLOW]}Total startup time: ${COLOR[CYAN]}%6.2f ${COLOR[YELLOW]}ms${COLOR[RESET]}\n\n" ${total_duration_ms}
+        printf "${COLOR[YELLOW]}Total startup time: ${COLOR[CYAN]}%6.2f ${COLOR[YELLOW]}ms${COLOR[RESET]}\n\n" \
+            ${total_duration_ms}
     fi
 fi

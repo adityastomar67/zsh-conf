@@ -25,7 +25,7 @@
 #
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
-echo "Sourced _ui.color..."
+
 
 # Data Structure Definition
 # ─────────────────────────────────────────────────────────────
@@ -47,6 +47,7 @@ COLOR[BLINK]=$'\e[5m'      # Slow blink (often disabled by users)
 COLOR[REVERSE]=$'\e[7m'    # Swap foreground and background
 COLOR[HIDDEN]=$'\e[8m'     # Text is present but invisible (passwords)
 COLOR[STRIKE]=$'\e[9m'     # Strikethrough
+COLOR[NEWLINE]=$'\x0A'
 
 # ── 2. standard foreground ─────────────────────────────────────────────
 # Basic text colors supported by almost all terminals.

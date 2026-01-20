@@ -1,3 +1,5 @@
+#!/usr/bin/env zsh
+
 #    ░█░█░█▀▀░█░█░░░█▀▄░▀█▀░█▀█░█▀▄░█▀▀░░░░▀▀█░█▀▀░█░█
 #    ░█▀▄░█▀▀░░█░░░░█▀▄░░█░░█░█░█░█░▀▀█░░░░▄▀░░▀▀█░█▀█
 #    ░▀░▀░▀▀▀░░▀░░░░▀▀░░▀▀▀░▀░▀░▀▀░░▀▀▀░▀░░▀▀▀░▀▀▀░▀░▀
@@ -23,54 +25,56 @@
 # Usage Notes
 #   - MacOS Users: Ensure your terminal sends 'Esc+' for the Option key to use
 #     Alt/Meta bindings.
-#   - Key Conflicts: If 'Ctrl+Arrow' switches desktops, disable that system
-#     shortcut in OS settings or remap in the terminal emulator.
 #
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
+
 # System Initialization
 # ─────────────────────────────────────────────────────────────
-## We need to load the terminfo module to communicate with the terminal
+## We load the terminfo module to communicate with the terminal
 ## emulator correctly. This allows us to ask "what is the code for Key X?"
 ## instead of hardcoding raw ANSI escape sequences that might vary.
 
 # Load the Zsh Terminal Info module
 zmodload zsh/terminfo
 
-# Load the 'complist' module to enable keybindings inside the menu.
+# Load the 'complist' module to enable keybindings inside the completion menu.
 zmodload zsh/complist
 
+
 # ── key code definitions ───────────────────────────────────────────────
+
+#
 
 # Define a global associative array to map human-readable key names
 # to their specific terminal codes.
 typeset -g -A key_map
 
 # Logic:
-# 1. Try to get the code from 'terminfo' (best practice).
+# 1. Try to get the code from 'terminfo' (best practice for portability).
 # 2. If 'terminfo' fails (returns empty), fallback (':-') to standard ANSI codes.
-key_map[Up]="${terminfo[kcuu1]:-^[[A}"      # Arrow Up
-key_map[Down]="${terminfo[kcud1]:-^[[B}"      # Arrow Down
-key_map[Left]="${terminfo[kcub1]:-^[[D}"      # Arrow Left
-key_map[Right]="${terminfo[kcuf1]:-^[[C}"      # Arrow Right
-key_map[Home]="${terminfo[khome]:-^[[H}"      # Home (Fn+Left)
-key_map[End]="${terminfo[kend]:-^[[F}"       # End (Fn+Right)
-key_map[Insert]="${terminfo[kich1]:-^[[2~}"     # Insert
-key_map[Delete]="${terminfo[kdch1]:-^[[3~}"     # Forward Delete
-key_map[BackTab]="${terminfo[kcbt]:-^[[Z}"       # Shift + Tab
-key_map[Ctrl-Left]="${terminfo[kLFT5]:-^[[1;5D}"   # Ctrl + Left
-key_map[Ctrl-Right]="${terminfo[kRIT5]:-^[[1;5C}"   # Ctrl + Right
+key_map[Up]="${terminfo[kcuu1]:-^[[A}"
+key_map[Down]="${terminfo[kcud1]:-^[[B}"
+key_map[Left]="${terminfo[kcub1]:-^[[D}"
+key_map[Right]="${terminfo[kcuf1]:-^[[C}"
+key_map[Home]="${terminfo[khome]:-^[[H}"
+key_map[End]="${terminfo[kend]:-^[[F}"
+key_map[Insert]="${terminfo[kich1]:-^[[2~}"
+key_map[Delete]="${terminfo[kdch1]:-^[[3~}"
+key_map[BackTab]="${terminfo[kcbt]:-^[[Z}"
+key_map[Ctrl-Left]="${terminfo[kLFT5]:-^[[1;5D}"
+key_map[Ctrl-Right]="${terminfo[kRIT5]:-^[[1;5C}"
+
 
 # ── standard editing fixes ─────────────────────────────────────────────
 
-# Make sure the Backspace key works as expected (delete to left).
-# ^? is the standard ASCII code for Backspace.
-bindkey "^?" backward-delete-char
+# Standard Backspace logic (delete character to the left).
+# We use the $DEL variable (defined in zle.zsh) which handles autopair logic.
+bindkey "^?" "$DEL"
+bindkey "^H" "$DEL"
 
-# Legacy compatibility for Backspace (Ctrl + H).
-bindkey "^H" backward-delete-char
-
+# Buffer Deletion Commands:
 # Ctrl + U: Clear the entire line to the left of the cursor.
 bindkey "^U" backward-kill-line
 
@@ -80,16 +84,16 @@ bindkey "^K" kill-line
 # Ctrl + W: Delete the previous word (stops at separators defined in $WORDCHARS).
 bindkey "^W" backward-kill-word
 
-# Spacebar: Expand history aliases (e.g., !! -> last command) immediately.
-bindkey " "  magic-space
+# magic-space: Expand history aliases (e.g., !! -> last command) immediately upon space.
+bindkey " " magic-space
 
+# Ensure Tab triggers completion.
 bindkey '^I' complete-word
 
 
 # Navigation & Cursor Movement
 # ─────────────────────────────────────────────────────────────
 ## Bindings for moving the cursor efficiently across the command line.
-## We use the 'key_map' defined above to ensure portability.
 
 # ------------------------------------------------------------------------------
 # Character & Word Jumping
@@ -99,7 +103,6 @@ bindkey '^I' complete-word
 [[ -n "${key_map[Right]}" ]] && bindkey -- "${key_map[Right]}" forward-char
 
 # Move one word at a time (Ctrl + Left/Right)
-# Note: On macOS, this often requires unbinding Mission Control shortcuts.
 [[ -n "${key_map[Ctrl-Left]}" ]]  && bindkey -- "${key_map[Ctrl-Left]}"  backward-word
 [[ -n "${key_map[Ctrl-Right]}" ]] && bindkey -- "${key_map[Ctrl-Right]}" forward-word
 
@@ -115,23 +118,20 @@ bindkey '^I' complete-word
 
 # Deletion Logic
 # ─────────────────────────────────────────────────────────────
-## Standardizing how text is removed when using Delete keys.
 
-# Delete the character under the cursor (Forward Delete / Fn+Backspace)
+# Delete the character under the cursor (Forward Delete)
 [[ -n "${key_map[Delete]}" ]] && bindkey -- "${key_map[Delete]}" delete-char
 
 # Delete from cursor to end of word (Ctrl + Delete)
-# Hardcoded ANSI sequence often required for this specific combo.
 bindkey '^[[3;5~' kill-word
 
 
 # Smart History Search
 # ─────────────────────────────────────────────────────────────
-## Upgrades the Up/Down arrow keys. Instead of just cycling history blindly,
-## this filters history based on what you have already typed.
-## Example: Type "npm", press Up -> shows only previous "npm" commands.
+## Upgrades arrows to "history substring search".
+## Example: Type "git", press Up -> filters for previous "git" commands.
 
-# Bind to standard ANSI Up/Down codes (fallback)
+# Bind to standard ANSI Up/Down codes (fallbacks)
 bindkey '^[[A' up-line-or-beginning-search
 bindkey '^[OA' up-line-or-beginning-search
 bindkey '^[[B' down-line-or-beginning-search
@@ -144,68 +144,68 @@ bindkey '^[OB' down-line-or-beginning-search
 
 # Menu Selection System
 # ─────────────────────────────────────────────────────────────
-## Configuration for the completion menu (triggered when you press Tab).
+## Configuration for the tab completion menu.
 
 # Shift + Tab: Cycle backwards through the completion menu.
 [[ -n "${key_map[BackTab]}" ]] && bindkey -- "${key_map[BackTab]}" reverse-menu-complete
 
 # ── vi-mode navigation ─────────────────────────────────────────────────
+#
+
 if [[ "${ENABLE_VI_MODE:l}" == "yes" ]]; then
 
-    # ── 1. Core Activation ─────────────────────────────────────────────────
+    # 1. Activate Vi-Mode
     bindkey -v
-    export KEYTIMEOUT=1
+    export KEYTIMEOUT=1 # Reduce delay when switching modes
 
-    # ── 2. Command Line Fixes ──────────────────────────────────────────────
-    # 'bindkey -v' breaks standard Ctrl keys. We restore them here.
+    # 2. Restore standard Ctrl keys lost by 'bindkey -v'
+    bindkey '^?' "$DEL"
+    bindkey '^h' "$DEL"
+    bindkey '^w' backward-kill-word
+    bindkey '^r' history-incremental-search-backward
 
-    bindkey '^?' backward-delete-char                  # Backspace
-    bindkey '^h' backward-delete-char                  # Ctrl + H
-    bindkey '^w' backward-kill-word                    # Ctrl + W
-    bindkey '^r' history-incremental-search-backward   # Ctrl + R
-
-    # ── 3. Menu Navigation (hjkl) ──────────────────────────────────────────
-    # These bindings only exist in the 'menuselect' keymap (the tab menu).
-
+    # 3. Menu Navigation (hjkl) inside the completion menu
     bindkey -M menuselect 'h' vi-backward-char         # Left
     bindkey -M menuselect 'j' vi-down-line-or-history  # Down
     bindkey -M menuselect 'k' vi-up-line-or-history    # Up
     bindkey -M menuselect 'l' vi-forward-char          # Right
 
-    # ── 4. Menu Control ────────────────────────────────────────────────────
-
-    # Escape: Cancel menu and return to typing
-    bindkey -M menuselect '^[' send-break
-
-    # Enter: Accept the currently highlighted selection (Explicit definition)
-    bindkey -M menuselect '^M' accept-line
+    # 4. Menu Control
+    bindkey -M menuselect '^[' send-break  # Escape: Cancel menu
+    bindkey -M menuselect '^M' accept-line # Enter: Accept selection
 fi
 
 
 # Custom Widgets & Macros
 # ─────────────────────────────────────────────────────────────
-## Advanced functions mapped to specific keystrokes to speed up workflow.
+## Advanced functions mapped to specific keystrokes.
 
-# ------------------------------------------------------------------------------
-# Widget: Edit Command Line
-# Opens the current command buffer in your default $EDITOR (Vim, Nano, Code).
-# Useful for writing complex loops or editing long commands.
+# Edit Command Line: Opens current buffer in $EDITOR (Vim/Nano).
+bindkey '^e' edit-command-line
 
-bindkey '^e' edit-command-line  # Ctrl + E
+# Smart Sudo Toggle: Toggles 'sudo' at start of line (Esc, Esc, Esc).
+bindkey "\e\e\e" toggle_sudo_prefix
 
-# ------------------------------------------------------------------------------
-# Widget: Smart Sudo Toggle
-# Toggles 'sudo' at the beginning of the command line.
-# If line is empty, it retrieves the LAST command and prepends sudo.
+# Magic Dot: Typing '...' becomes '../..'.
+bindkey '.' magic_dot_expansion
 
-bindkey "\e\e\e" toggle_sudo_prefix  # Esc, Esc, Esc (Triple Escape)
+# Magic Enter: Context-aware enter (runs ls or git status on empty line).
+bindkey '^M' magic_enter
 
-# ------------------------------------------------------------------------------
-# Widget: Autosuggest Acceptance
-# If zsh-autosuggestions is installed, map Ctrl + Space to accept the suggestion.
+# Fancy Ctrl-Z: Toggles between background and foreground jobs.
+bindkey '^Z' fancy_ctrl_z
 
-# ---- NOTE: Check OS settings if Ctrl+Space conflicts with input switching.
-if [[ -n "${aliases[zsh-autosuggestions]}" || -f "$ZSH_AUTOSUGGEST_MANUAL_REBIND" ]]; then
-    bindkey '^ ' autosuggest-accept
-fi
+# Copy Buffer: Alt+c copies current command line to clipboard.
+bindkey '^[c' copy_buffer_to_clipboard
 
+# Git FZF Fixup: Alt+f to select a commit to fixup.
+bindkey '^[f' git_fzf_fixup
+
+# Docker Connect: Alt+s to select and connect to a running container.
+bindkey '^[s' docker_connect_widget
+
+# Keybinding: Alt + p (for 'Popup')
+bindkey '^[p' ftmux
+
+# Autosuggest Acceptance: Ctrl + Space.
+bindkey '^ ' autosuggest-accept

@@ -1,54 +1,96 @@
 #!/usr/bin/env zsh
+
 #    ░█▀▀░█▀█░█▀▄░█▀▀░░░░█░█░▀█▀░▀█▀░█░░░█▀▀
 #    ░█░░░█░█░█▀▄░█▀▀░░░░█░█░░█░░░█░░█░░░▀▀█
 #    ░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀░░▀▀▀░░▀░░▀▀▀░▀▀▀░▀▀▀
 
 # ------------------------------------------------------------------------------
 # File Purpose
-#   This script handles the initialization of the shell environment, specifically
-#   managing the executable search path ($PATH) and providing global utility
-#   functions used by other configuration modules.
+#   This is the core utility library for the Zsh configuration. It provides
+#   fundamental functions for plugin management, caching, path manipulation,
+#   and lazy loading.
 #
 # Problems Solved
-#   - Prevents duplicate entries in $PATH (slows down command lookups).
-#   - Automatically resolves relative paths (e.g., ".scripts" -> "/home/user/.scripts").
-#   - Provides a cached "is_installed" check to optimize startup speed when
-#     configuring aliases or plugins conditionally.
+#   - Manages the $PATH variable (preventing duplicates).
+#   - Provides a lightweight plugin manager (`plug`).
+#   - Speeds up external tool initialization via caching (`_eval_cache`).
+#   - Provides safe file editing wrappers.
 #
 # Features / Responsibilities
-#   - Unique Path Enforcement.
-#   - Dynamic Path Expansion.
-#   - Command Availability Caching.
+#   - `plug()`: Git-based plugin manager.
+#   - `is_installed()`: Cached command checker.
+#   - `_eval_cache()`: Output cacher for slow init commands.
+#   - Path / Fpath construction.
 #
 # Usage Notes
-#   - Relies on 'USER_PATH_ENTRIES' being defined in 'env.zsh'.
+#   - This file should be sourced very early in .zshrc.
+#   - Depends on `_ui.color` for colored output.
 #
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
-echo "Loading core utilities from _core.utils..."
 
-# Load the completion initializer function
+# Initialization & Autoloads
+# ─────────────────────────────────────────────────────────────
+## Load essential functions from the $fpath so they are available immediately.
+
+# Load the completion system (but don't init it yet, that happens in opts.zsh)
 autoload -Uz compinit
 
-# Load color definitions if not already present
+# Load color definitions (UI helpers)
 autoload -Uz _ui.color && _ui.color
 
-# Load the Defer utility for lazy loading
+# Load the 'Defer' utility if available (Lazy Loading)
+# Note: Ensure a file named 'zsh-defer' or 'Defer' exists in your $fpath
 autoload -Uz Defer && Defer
 
-# Plugin Manager Logic
+# Load custom modules based on config flags
+if [[ "${ENABLE_MULTI_NEOVIM:l}" == "yes" ]]; then
+    autoload -Uz MultiVim && MultiVim
+fi
+
+if [[ "${ENABLE_THEME_SH_INTEGRATION:l}" == "yes" ]]; then
+    autoload -Uz Themer && Themer
+fi
+
+if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
+    autoload -Uz PrettyAlias
+fi
+
+
+# Plugin Manager (Plug)
 # ─────────────────────────────────────────────────────────────
+## A lightweight function to clone and source Zsh plugins from GitHub.
+
+
+
+# ------------------------------------------------------------------------------
+# Function: plug
+# Description:
+#   A lightweight plugin manager. It clones Git repositories to a local storage
+#   directory and sources their initialization scripts.
+#
+#   It supports "lazy loading" via the 'defer' keyword. If 'defer' is passed,
+#   the *next* plugin in the list will be loaded only when the shell is idle.
+#
+# Arguments:
+#   $@ (list) : A list of strings representing "user/repo" or the "defer" keyword.
+#               If no arguments are passed, it uses the global $ZPLUGINS array.
+#
+# Usage:
+#   plug "zsh-users/zsh-syntax-highlighting" "defer" "zsh-users/zsh-autosuggestions"
+# ------------------------------------------------------------------------------
 function plug() {
+    # 1. Safety & Options
+    # Ensure globs behave predictably inside this function
+    emulate -L zsh
+    setopt localoptions extendedglob nullglob
 
-    # 1. Environment Preparation
-    # Ensure the storage directory exists before trying to clone into it.
-    if [[ ! -d "$ZPLUGIN_STORAGE_DIR" ]]; then
-        mkdir -p "$ZPLUGIN_STORAGE_DIR"
-    fi
+    # 2. Environment Preparation
+    # ZPLUGIN_STORAGE_DIR is defined in env.zsh
+    [[ -d "$ZPLUGIN_STORAGE_DIR" ]] || mkdir -p "$ZPLUGIN_STORAGE_DIR"
 
-    # 2. Input Resolution
-    # If arguments are passed to the function, use them.
-    # Otherwise, fall back to the global 'ZPLUGINS' array defined in config.
+    # 3. Input Resolution
+    # Use arguments if provided, otherwise fallback to global ZPLUGINS array
     local -a plugin_targets
     if (( $# > 0 )); then
         plugin_targets=("$@")
@@ -56,109 +98,126 @@ function plug() {
         plugin_targets=("${ZPLUGINS[@]}")
     fi
 
-    # 3. Processing Loop
+    # 4. Processing Loop
     local repo_identifier plugin_name local_path entry_point
     local enable_deferral=0
 
     for repo_identifier in "${plugin_targets[@]}"; do
 
         # ── control flags ──────────────────────────────────────────────────────
-
-        # Check if the current item is the 'defer' keyword.
-        # This toggles lazy-loading for the *next* plugin in the list.
+        # Check for 'defer' keyword to lazy-load the NEXT plugin
         if [[ "$repo_identifier" == "defer" ]]; then
             enable_deferral=1
             continue
         fi
 
         # ── installation logic ─────────────────────────────────────────────────
-
-        # Extract the repo name (tail) from the identifier
-        # Ex: "zsh-users/zsh-autosuggestions" -> "zsh-autosuggestions"
+        # Extract name: "user/repo" -> "repo"
         plugin_name="${repo_identifier:t}"
         local_path="$ZPLUGIN_STORAGE_DIR/$plugin_name"
 
-        # If the folder doesn't exist, clone it from GitHub
         if [[ ! -d "$local_path" ]]; then
-            # Using 'print' is safer than echo in Zsh
-            print ":: Installing plugin: $plugin_name..."
-
-            # --depth 1: Shallow clone to save bandwidth and disk space
+            echo "${COLOR[BLUE]}:: Installing plugin:${COLOR[RESET]} $plugin_name..."
             git clone --depth 1 --quiet "https://github.com/${repo_identifier}.git" "$local_path"
         fi
 
         # ── entry point resolution ─────────────────────────────────────────────
+        # Heuristic search for the init file.
+        # (N) = nullglob: Return nothing if no match
+        # (.) = plain files only: Ignore directories
 
-        # We need to guess which file to source. We look for standard Zsh plugin
-        # naming conventions in order of likelihood.
-        # (N) = Nullglob: Returns empty string if no match found.
+        local -a candidates=(
+            # 1. Exact match (Best) -> plugin-name.plugin.zsh or plugin-name.zsh
+            $local_path/${plugin_name}.(plugin.zsh|zsh|sh|zsh-theme)(N.)
 
-        local -a potential_entry_points=(
-            # Exact matches for plugin name
-            "$local_path/${plugin_name}.plugin.zsh"(N)
-            "$local_path/${plugin_name}.zsh"(N)
-            "$local_path/${plugin_name}.sh"(N)
-            "$local_path/${plugin_name}.zsh-theme"(N)
-
-            # Catch-all wildcards
-            "$local_path"/*.plugin.zsh(N)
-            "$local_path"/*.zsh(N)
+            # 2. Generic match (Fallback) -> *.plugin.zsh or init.zsh
+            $local_path/*.(plugin.zsh|zsh|sh|zsh-theme)(N.)
         )
 
-        # Select the first valid match
-        entry_point="${potential_entry_points[2]}"
+        # Pick the first valid file found
+        entry_point="${candidates[1]}"
 
         # ── execution ──────────────────────────────────────────────────────────
-
-        if [[ -f "$entry_point" ]]; then
+        if [[ -n "$entry_point" ]]; then
             if (( enable_deferral )); then
-                # Lazy Load: Schedule execution for when the shell is idle.
-                # Requires the 'zsh-defer' utility loaded previously.
-                echo "Deferred loading of plugin: $entry_point"
-                Defer source "$entry_point"
+                # Lazy Load
+                # Ensure we call the function correctly (lowercase 'zsh-defer')
+                if (( $+functions[zsh-defer] )); then
+                    zsh-defer source "$entry_point"
+                else
+                    # Fallback if zsh-defer isn't loaded
+                    source "$entry_point"
+                fi
             else
-                # Eager Load: Execute immediately.
-                echo "Loaded plugin: $plugin_name"
+                # Eager Load
                 source "$entry_point"
             fi
+        else
+            echo "${COLOR[RED]}[ERROR]${COLOR[RESET]} Could not find init file for: $plugin_name"
         fi
 
-        # Reset flag for the next iteration
+        # Reset flag for next iteration
         enable_deferral=0
     done
 }
 
+
+# Eval Cache (Startup Optimization)
+# ─────────────────────────────────────────────────────────────
+## Caches the output of slow initialization commands (like 'starship init zsh').
+## Saves ~100-300ms on startup.
+
 # Ensure Cache Directory Exists
-CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/eval-cache"
+CACHE_DIR="${ZSH_CACHE:-$HOME/.cache/zsh-cache}/eval-cache"
 [[ -d "$CACHE_DIR" ]] || mkdir -p "$CACHE_DIR"
 
+# ------------------------------------------------------------------------------
+# Function: _eval_cache
+# Description:
+#   Executes a command and caches its output to a file. On subsequent runs,
+#   it sources the cache file instead of running the slow command, unless
+#   the binary has been updated (modification time check).
+#
+# Arguments:
+#   $1 (name) : The command name (e.g., "starship"). Used for the cache filename.
+#   $2 (cmd)  : The full initialization command to run (e.g., "starship init zsh").
+#   $3 (mode) : "immediate" to source right away, or "defer" to lazy load.
+#
+# Usage:
+#   _eval_cache "zoxide" "zoxide init zsh" "defer"
+# ------------------------------------------------------------------------------
 _eval_cache() {
     local name="$1"
     local cmd="$2"
     local mode="${3:-defer}"
 
     local cache_file="$CACHE_DIR/${name}.zsh"
+    # Access the 'commands' hash directly to check for binary existence
     local binary="$commands[$name]"
 
-    # 1. Validation: If binary is missing, stop.
+    # 1. Validation: If binary is missing, stop immediately.
     if [[ -z "$binary" ]]; then
         return
     fi
 
-    # 2. Invalidation Logic: Missing cache OR Binary is newer than cache
+    # 2. Invalidation Logic:
+    #    Rebuild if: Cache missing OR Binary is newer than Cache file
     if [[ ! -e "$cache_file" || "$binary" -nt "$cache_file" ]]; then
-        # Atomic Write: Write to a temp file first, then move it.
-        # This prevents reading a half-written file if you open multiple tabs.
+
+        # Atomic Write Strategy:
+        # Write to a temp file first, then move it. This prevents race conditions
+        # if you open multiple terminal tabs simultaneously.
         local tmp_file="${cache_file}.$$"
 
-        # Run command, capture stdout. Only save if command succeeds.
+        # Run command. Only save if successful.
         if eval "$cmd" > "$tmp_file"; then
             mv -f "$tmp_file" "$cache_file"
-            # Background compilation so it doesn't block startup
+
+            # Background compilation (async) to speed up future loads
             zcompile "$cache_file" &!
         else
             rm -f "$tmp_file"
-            return 1 # Fail silently or log error
+            return 1
         fi
     fi
 
@@ -168,109 +227,107 @@ _eval_cache() {
     elif (( $+functions[zsh-defer] )); then
         zsh-defer source "$cache_file"
     else
-        # Fallback if zsh-defer is missing
         source "$cache_file"
     fi
 }
 
+
 # Path Construction
 # ─────────────────────────────────────────────────────────────
-## We construct the system $PATH and $FPATH (function path) here.
-## Using specific Zsh flags ensures these arrays remain clean and efficient.
+## We construct the system $PATH and $FPATH here.
 
 # 1. Global Uniqueness
-# typeset -g : Global scope (vars persist after this script ends).
-# typeset -U : Unique (automatically removes duplicates).
+# typeset -U : Automatically removes duplicates from these arrays
 typeset -gU path fpath
 
 # 2. Dynamic Path Injection
-# Iterate through the array defined in env.zsh (USER_PATH_ENTRIES).
-# Default to empty array if variable is unset.
+# Iterate through USER_PATH_ENTRIES defined in env.zsh
 for directory_entry in "${USER_PATH_ENTRIES[@]}"; do
 
-    # Path Resolution Logic:
-    # If the entry does NOT start with a slash (/), assume it is relative
-    # to the user's home directory.
+    # Resolve relative paths (start without /) to Home
     if [[ "$directory_entry" != /* ]]; then
         directory_entry="$HOME/$directory_entry"
     fi
 
-    # Existence Check:
-    # Only add the directory to the $PATH if it actually exists on disk.
-    # This prevents "command not found" errors and useless stat calls.
+    # Only add if directory actually exists
     if [[ -d "$directory_entry" ]]; then
         path+=("$directory_entry")
     fi
 done
-
-# Cleanup local loop variable
 unset directory_entry
 
 
-# Global Helpers & Caching
+# Command Caching
 # ─────────────────────────────────────────────────────────────
-## Utility functions required by the rest of the configuration.
-
-# ------------------------------------------------------------------------------
-# Caching Mechanism
-# We use an associative array to store the result of 'command -v' checks.
-# This prevents checking the filesystem multiple times for the same binary
-# (e.g., checking if 'git' exists 50 times during startup).
+## Optimizes `command -v` checks by caching results in memory.
 
 typeset -gA COMMAND_AVAILABILITY_CACHE
 
 # ------------------------------------------------------------------------------
 # Function: is_installed
 # Description:
-#   Checks if a command exists in the $PATH. Returns 0 (true) or 1 (false).
-#   Uses caching to speed up repeated checks.
+#   Checks if a command exists in the $PATH. It caches the result in a global
+#   associative array (`COMMAND_AVAILABILITY_CACHE`) to prevent redundant
+#   filesystem lookups during shell startup.
+#
+# Arguments:
+#   $1 (command_name) : The name of the binary to check (e.g., "nvim").
+#
+# Returns:
+#   0 if installed, 1 if missing.
 #
 # Usage:
 #   if is_installed "nvim"; then ... fi
+# ------------------------------------------------------------------------------
 
+## TODO: Need to try this
+# if (( $+commands[nvim] )); then
+#     echo "Neovim is ready"
+# fi
 function is_installed() {
     local command_name="$1"
 
     # 1. Check Cache
-    # If key exists in the hash map, return the stored exit code immediately.
     if [[ -n "${COMMAND_AVAILABILITY_CACHE[$command_name]}" ]]; then
         return "${COMMAND_AVAILABILITY_CACHE[$command_name]}"
     fi
 
     # 2. System Check
-    # 'command -v' is the POSIX standard for checking executable existence.
-    # &>/dev/null suppresses output (we only care about the exit code).
     command -v "$command_name" &>/dev/null
     local exit_code=$?
 
-    # 3. Update Cache
-    # Store the result (0 or 1) in the global map for next time.
+    # 3. Update Cache & Return
     COMMAND_AVAILABILITY_CACHE[$command_name]=$exit_code
-
-    # 4. Return Result
     return $exit_code
 }
 
+
+# File Helpers
+# ─────────────────────────────────────────────────────────────
+
 # ------------------------------------------------------------------------------
-# Safe Edit Function
-# Checks if the file exists before attempting to open it.
+# Function: _safe_edit
+# Description:
+#   Wraps the default editor to provide safety checks. It ensures the target
+#   file exists before opening and handles sudo elevation if requested.
+#   It specifically uses `visudo` if the target is /etc/sudoers.
+#
+# Arguments:
+#   $1 (file)          : The file path to edit.
+#   $2 (sudo_required) : "true" to run with sudo, empty otherwise.
 # ------------------------------------------------------------------------------
 function _safe_edit() {
     local file="$1"
     local sudo_required="$2"
 
-    # 1. Check if file exists
     if [[ ! -f "$file" ]]; then
-        # Use colors if available (from your $C array), otherwise plain text
         echo "${COLOR[RED]:-Error:} File not found at ${COLOR[YELLOW]:-}$file${COLOR[RESET]:-}"
         return 1
     fi
 
-    # 2. Open file
     if [[ "$sudo_required" == "true" ]]; then
-        # Use standard 'visudo' for sudoers to ensure syntax checking
         if [[ "$file" == "/etc/sudoers" ]]; then
-            echo "Using system 'visudo' for safety..."
+            echo "Using 'visudo' for safety..."
             sudo visudo
         else
             sudo "$EDITOR" "$file"
@@ -280,19 +337,38 @@ function _safe_edit() {
     fi
 }
 
-# Temporary Offline Config File
-if [[ "${TEMP_OFFLINE_CONFIG:l}" == "yes" ]]; then
 
-    # Store path in a local variable to ensure consistency
-    local temp_file="$HOME/User-Overrides.zsh"
+# Final Integrations
+# ─────────────────────────────────────────────────────────────
 
-    # 1. Check if file exists; if not, create it with a header
-    if [[ ! -f "$temp_file" ]]; then
-        print "# Put temporary/offline aliases here. Not tracked by Git." > "$temp_file"
-    fi
+# Temporary Offline Config
+# Creates a placeholder file for non-git-tracked aliases if requested.
+local temp_file="$HOME/User-Overrides.zsh"
+if [[ ! -f "$temp_file" ]]; then
+    cat > "$temp_file" <<'EOF'
+## Put temporary/offline config here. Not tracked by Git.
+## NOTE: This file is auto-created if missing. and will be auto-loaded.
+
+
+# ── Custom Aliases ──────────────────────────────────────────────────
+# alias myip="curl http://ipecho.net/plain; echo"
+
+# ── Environment Vaiables ─────────────────────────────────────────────
+# export PATH="$PATH:$HOME/my-custom-bin"
+
+# ── Function Overrides ───────────────────────────────────────────────
+# eval "$(/opt/homebrew/bin/brew shellenv)"
+# Create a function that wraps the native alias command
+
+# --------------------------------------------------------------------------
+
+EOF
 fi
 
-# Guard: Only execute if 'RandomWall' is found in PATH or defined as a function
+# Wallpaper Sync
+# Lazy load the wallpaper randomizer if the binary exists.
 if [[ "${ENABLE_WALLPAPER_SYNC:l}" == "yes" ]] && is_installed RandomWall; then
-    Defer RandomWall
+    zsh-defer RandomWall
 fi
+
+

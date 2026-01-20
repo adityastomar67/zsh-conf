@@ -28,7 +28,7 @@
 # ------------------------------------------------------------------------------
 
 
-# 0. Safety Check & Environment Restoration
+# Safety Check & Environment Restoration
 # ─────────────────────────────────────────────────────────────
 ## In some non-login shells (e.g., executing a script, some IDE terminals),
 ## user.conf might be skipped. We ensure critical variables are loaded here.
@@ -39,20 +39,18 @@ if [[ -z "$ZSH_CONFIG_ROOT" ]]; then
 fi
 
 
-# 1. Feature: Auto-Tmux Integration
+# Feature: Auto-Tmux Integration
 # ─────────────────────────────────────────────────────────────
 ## conditionally launches Tmux. We use the ':l' modifier to lowercase the
 ## variable for case-insensitive comparison ("Yes" == "yes").
 
-#
-
-if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" && -z "$TMUX" ]]; then
+if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" ]] && is_installed tmux && [[ -z "$TMUX" && -t 0 ]]; then
     # Only load if we are NOT already inside a Tmux session or Tmux is enabled by user.
-    [[ -f "$ZSH_CONFIG_ROOT/plugins/tmux.zsh" ]] && source "$ZSH_CONFIG_ROOT/plugins/tmux.zsh"
+    [[ -f "$ZSH_CONFIG_ROOT/plugins/tmux" ]] && source "$ZSH_CONFIG_ROOT/plugins/tmux"
 fi
 
 
-# 2. Module Loading System
+# Module Loading System
 # ─────────────────────────────────────────────────────────────
 ## Iterates through distinct configuration files.
 ## We separate them into "Core" (Essential) and "Auxiliary" (Nice to have).
@@ -73,7 +71,6 @@ core_modules=(
 for module in "${core_modules[@]}"; do
     # Source if file exists
     [[ -f "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh" ]] && source "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh"
-    echo "Loaded core module: ${module}.zsh"
 done
 
 # ------------------------------------------------------------------------------
@@ -86,7 +83,6 @@ function _load_aux_stuff() {
     for module in "${aux_modules[@]}"; do
         local target="$ZSH_CONFIG_ROOT/conf.d/${module}.zsh"
         [[ -f "$target" ]] && source "$target"
-        echo "Loaded auxiliary module: ${module}.zsh"
     done
 }
 
@@ -94,64 +90,153 @@ function _load_aux_stuff() {
 zsh-defer _load_aux_stuff
 
 
-# 3. Private Configuration
-# ─────────────────────────────────────────────────────────────
-## Loads work-specific or private settings that are ignored by Git.
-
-if [[ "${LOAD_PRIVATE_CONFIG:l}" == "yes" ]]; then
-    [[ -f "$HOME/User-Overrides.zsh" ]] && source "$HOME/User-Overrides.zsh" &> /dev/null
-fi
-
-
-# 4. Background Optimization (Zcompile)
+# Background Optimization (Zcompile)
 # ─────────────────────────────────────────────────────────────
 ## Zsh can compile text scripts into bytecode (.zwc) for faster parsing.
 ## This block runs in a background subshell to avoid slowing down startup.
 
-# (
-#     # Set safe options for the background job (prevent alias expansion, etc.)
-#     setopt LOCAL_OPTIONS NO_ALIASES null_glob extended_glob
+# Detach immediately
+# ( ... ) - runs in a subshell.
+# &!      - runs in background and disowns the process (suppresses "job finished" messages).
+(
 
-#     # Define a lockfile to prevent multiple instances running simultaneously
-#     local lock_file="/tmp/zsh_compiling_$USER.lock"
+    # Safety & Globbing Options
+    # ─────────────────────────────────────────────────────────────
+    # LOCAL_OPTIONS: Changes don't leak (redundant in subshell but good practice).
+    # NO_ALIASES:    Prevent alias expansion from breaking paths.
+    # null_glob:     Arrays remain empty if no files match (don't error).
+    # extended_glob: Allow recursive globbing (**).
+    setopt LOCAL_OPTIONS NO_ALIASES null_glob extended_glob
 
-#     # Check if lock exists (compilation already running). If so, exit.
-#     if [[ -f "$lock_file" ]]; then
-#         return
-#     fi
+    # Disable tracing explicitly (just in case)
+    unsetopt xtrace verbose
 
-#     # Create the lock file
-#     : >| "$lock_file"
+    # Redirect ALL output (stdout & stderr) to the void.
+    #    This swallows echo, print, errors, AND shell tracing.
+    exec >/dev/null 2>&1
 
-#     # Function: try_compile
-#     # Compiles a file ONLY if the source is newer than the existing .zwc file.
-#     function try_compile() {
-#         local file="$1"
-#         local compiled="${file}.zwc"
+    # Atomic Locking
+    # ─────────────────────────────────────────────────────────────
+    # We use `mkdir` because it is an atomic operation on POSIX systems.
+    # Two processes cannot create the same directory at the exact same instant.
+    # If it fails, another compiler instance is already running.
 
-#         # Logic:
-#         # 1. File must exist.
-#         # 2. Compiled version doesn't exist OR Source is newer (-nt) than Compiled.
-#         if [[ -f "$file" && ( ! -f "$compiled" || "$file" -nt "$compiled" ) ]]; then
-#             zcompile "$file"
-#         fi
-#     }
+    local lock_dir="/tmp/zsh_compiling_$USER.lock"
 
-#     # 1. Compile Configuration Modules in conf.d
-#     # Note: Assuming $module_path was meant to point to the conf directory
-#     local config_dir="$ZSH_CONFIG_ROOT/conf.d"
-#     for config_file in "$config_dir"/*.zsh; do
-#         try_compile "$config_file"
-#     done
+    if ! mkdir "$lock_dir" 2>/dev/null; then
+        return 0
+    fi
 
-#     # 2. Compile Main RC files
-#     try_compile "$HOME/.zshrc"
-#     try_compile "${ZDOTDIR:-$HOME}/.zshrc"
-#     try_compile "$ZSH_COMPLETION_DUMP"
+    # Ensure lock is removed on exit, even if the script crashes
+    trap "rmdir '$lock_dir'" EXIT
 
-#     # Cleanup: Remove the lock file so it can run next time
-#     # ---- NOTE: Changed 'rmdir' to 'rm' because we created a file, not a dir.
-#     rm -f "$lock_file"
 
-# ) &! # The '&!' operator disowns the job immediately
+    # Compiler Logic
+    # ─────────────────────────────────────────────────────────────
+
+    function try_compile() {
+        local source_file="$1"
+        local compiled_file="${source_file}.zwc"
+
+        # Logic:
+        # 1. Source file must exist (-f).
+        # 2. AND ( Compiled file doesn't exist OR Source is newer than Compiled ).
+        if [[ -f "$source_file" && ( ! -f "$compiled_file" || "$source_file" -nt "$compiled_file" ) ]]; then
+
+            # zcompile flags:
+            # -U: Don't expand aliases in the sourced file (safety).
+            # >/dev/null: Silence output (we are in background).
+            zcompile -U "$source_file" >/dev/null 2>&1
+        fi
+    }
+
+
+    # Target Definitions
+    # ─────────────────────────────────────────────────────────────
+    # Build a list of all files that should be compiled.
+
+    local -a files_to_compile
+
+    # ── A. Core Dotfiles ─────────────────────────────────────────────────
+
+    files_to_compile+=(
+        "$HOME/.zshrc"
+        "$HOME/.zshenv"
+        "$ZSH_CONFIG_ROOT"/zshrc
+        "$ZSH_CONFIG_ROOT"/zshrc.mini
+        "${ZDOTDIR:-$HOME/.config/zsh-conf}/.zshrc"
+        "${ZDOTDIR:-$HOME/.config/zsh-conf}/.zshenv"
+        "$ZSH_COMPLETION_DUMP"
+    )
+
+    # ── B. Framework Core (Flat structure) ────────────────────────────────
+
+    # Match all files recursively, BUT exclude (*.zwc)
+    # (N.) means: Nullglob (no error if empty) AND Plain files only (no directories)
+    files_to_compile+=(
+        "$ZSH_CONFIG_ROOT"/conf.d/*.zsh(N)
+        "$ZSH_CONFIG_ROOT"/lib/*~*.zwc(N.)
+        "$ZSH_CONFIG_ROOT"/lib/functions/*~*.zwc(N.)
+    )
+
+    # ── C. Plugins (Recursive structure) ──────────────────────────────────
+
+    # We need to find .zsh files deep inside plugin directories.
+    # We also explicitly look for .plugin.zsh to be safe.
+    files_to_compile+=(
+        "$ZSH_CONFIG_ROOT"/plugins/*~*.zwc(N.)
+        "$ZPLUGIN_STORAGE_DIR"/**/*.zsh(N)
+        "$ZPLUGIN_STORAGE_DIR"/**/*.plugin.zsh(N)
+    )
+
+
+    # Execution Loop
+    # ─────────────────────────────────────────────────────────────
+
+    for file in "${files_to_compile[@]}"; do
+        try_compile "$file"
+    done
+
+
+    # EXECUTION: DIRECTORY DIGEST (MULTI-FOLDER)
+    # ─────────────────────────────────────────────────────────────
+    # Compiles specific directories into .zwc files for faster autoloading.
+
+    # 1. Define the directories you want to compile
+    #    (Paths relative to ZSH_CONFIG_ROOT or absolute paths)
+    local compile_dirs=(
+        "${ZSH_CONFIG_ROOT}/conf.d/annexes"
+        "${ZSH_CONFIG_ROOT}/plugins/annexes"
+    )
+
+    # 2. Loop through them
+    for func_dir in $compile_dirs; do
+        # Skip if directory doesn't exist
+        [[ -d "$func_dir" ]] || continue
+
+        # Define the target digest file (e.g., folder.zwc)
+        local digest_file="${func_dir}.zwc"
+
+        # Find the single newest file in the folder to compare timestamps
+        # (.om[1]) = regular files (.), ordered by mod time (om), take 1st ([1])
+        local newest_src
+        newest_src=( "$func_dir"/*(.om[1]) )
+
+        # 3. Check Condition:
+        #    - If digest doesn't exist OR
+        #    - If the newest source file is newer (-nt) than the digest
+        if [[ -n "$newest_src" && ( ! -f "$digest_file" || "$newest_src" -nt "$digest_file" ) ]]; then
+
+            # Compile!
+            # -U: No aliases expansion
+            # -z: Mark as autoloadable functions (Crucial for fpath)
+            # -M: Map the file into memory (optional, often safer to omit in auto-scripts)
+            zcompile -U -z "$digest_file" "$func_dir"/*(.N) >/dev/null 2>&1
+
+            # Optional: Print status (useful for debugging startup time)
+            # echo "Compiled digest: $digest_file"
+        fi
+    done
+
+) &!
 

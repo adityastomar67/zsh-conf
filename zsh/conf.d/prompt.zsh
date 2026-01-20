@@ -27,6 +27,7 @@
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
+#
 
 # 1. Shared Utilities
 # ─────────────────────────────────────────────────────────────
@@ -54,7 +55,9 @@ function get_random_prompt_symbol() {
 #   Returns 0 (true) if untracked files exist, 1 (false) otherwise.
 function check_git_untracked_status() {
     # Guard: Git must be installed
-    is_installed git || return 1
+    if (( ! $+commands[git] )); then
+        return 1
+    fi
 
     # Check if inside work tree to avoid errors
     if [[ $(git rev-parse --is-inside-work-tree 2>/dev/null) == 'true' ]]; then
@@ -66,7 +69,121 @@ function check_git_untracked_status() {
 }
 
 
-# 2. Theme: 'Z'
+# 2. Theme: 'Neon'
+# ─────────────────────────────────────────────────────────────
+## A high-contrast, cyberpunk-inspired theme.
+
+function theme_neon_setup() {
+    # ── vcs_info setup ─────────────────────────────────────────────────────
+    zstyle ':vcs_info:*' enable git
+    zstyle ':vcs_info:*' check-for-changes true
+    # %b: Branch, %u: Unstaged, %c: Staged
+    zstyle ':vcs_info:git:*' formats " %F{201} %b%f %F{red}%u%c%f"
+    zstyle ':vcs_info:git:*' actionformats " %F{201} %b|%a%f %F{red}%u%c%f"
+
+    # Hook to auto-update git info
+    add-zsh-hook precmd vcs_info
+
+    # ── construction ───────────────────────────────────────────────────────
+
+    # 1. Directory: Cyan text on Black background
+    #    %1~ shows only the current folder name, %~ shows full path.
+    local p_dir="%K{black}%F{51}  %1~ %f%k"
+
+    # 2. Arrow separator
+    local p_arrow="%F{51}%f"
+
+    # 3. User info: Pink
+    local p_user="%F{213}%n%f"
+
+    # 4. Prompt Symbol: Neon Green lightning
+    local p_symbol="%B%F{154}⚡%f%b"
+
+    # ── assembly ───────────────────────────────────────────────────────────
+
+    # Left: [ DIR > ] User [Git] Symbol
+    PS1="${p_dir}${p_arrow} ${p_user}\${vcs_info_msg_0_} ${p_symbol} "
+
+    # Right: Time in dim purple
+    RPROMPT="%F{240} %*%f"
+}
+
+
+# 3. Theme: 'Bubble'
+# ─────────────────────────────────────────────────────────────
+## A rounded, "pill" style theme using Zsh's 256-color support.
+
+function theme_bubble_setup() {
+    # ── vcs_info setup ─────────────────────────────────────────────────────
+    zstyle ':vcs_info:*' enable git
+    zstyle ':vcs_info:*' check-for-changes true
+    # Formats: Branch name in bold
+    zstyle ':vcs_info:git:*' formats "%B%F{black} %b%f%b"
+    # Action formats (rebase/merge)
+    zstyle ':vcs_info:git:*' actionformats "%B%F{black} %b|%a%f%b"
+
+    add-zsh-hook precmd vcs_info
+
+    # ── construction ───────────────────────────────────────────────────────
+
+    # Module 1: Directory (Blue Pill)
+    #  (Blue FG) + (Blue BG / White Text) +  (Blue FG)
+    local m_dir="%F{75}%K{75}%F{0} %~ %f%k%F{75}%f"
+
+    # Module 2: Git (Green Pill) - Only shows if git exists
+    # We use a trick: Inject the Pill coloring logic INTO vcs_info.
+    # If not in a git repo, vcs_info returns empty, so no empty green pill appears.
+    zstyle ':vcs_info:git:*' formats "%F{78}%K{78}%F{0} %b%f%k%F{78}%f"
+
+    # Module 3: Prompt Character (Conditional Arrow)
+    # %(?.Success.Failure)
+    local m_char="%(?.%F{green}❯%f.%F{red}❯%f)"
+
+    # ── assembly ───────────────────────────────────────────────────────────
+
+    PS1="${m_dir} \${vcs_info_msg_0_} ${m_char} "
+    RPROMPT="%F{240}%n@%m%f"
+}
+
+
+# 4. Theme: 'Orbit'
+# ─────────────────────────────────────────────────────────────
+## A two-line prompt with connecting lines, resembling a spaceship HUD.
+
+function theme_orbit_setup() {
+    # ── vcs_info setup ─────────────────────────────────────────────────────
+    zstyle ':vcs_info:*' enable git
+    zstyle ':vcs_info:*' check-for-changes true
+    zstyle ':vcs_info:git:*' formats " on %F{magenta} %b%f %c%u"
+
+    add-zsh-hook precmd vcs_info
+
+    # ── construction ───────────────────────────────────────────────────────
+
+    # Top Left Corner
+    local c_top="%F{blue}╭─%f"
+    # Bottom Left Corner
+    local c_bot="%F{blue}╰─%f"
+    # Connecting Dash
+    local c_dash="%F{blue}─%f"
+
+    # Info Segments
+    local s_os="%F{white} %f"
+    local s_dir="%B%F{blue}%~%f%b"
+    local s_arrow="%B%(?.%F{green}›%f.%F{red}›%f)%b"
+
+    # ── assembly ───────────────────────────────────────────────────────────
+
+    # Line 1: ╭─   ~/path/to/dir on  main
+    # Line 2: ╰─ ›
+    PS1=$'\n'"${c_top}${c_dash} ${s_os}${s_dir}\${vcs_info_msg_0_}"$'\n'"${c_bot} ${s_arrow} "
+
+    # RPROMPT: Execution time or timestamp
+    RPROMPT="%F{238}[%T]%f"
+}
+
+
+# 5. Theme: 'Z'
 # ─────────────────────────────────────────────────────────────
 ## A minimalist theme heavily reliant on Zsh's built-in `vcs_info` module.
 ## Focuses on speed and low visual noise.
@@ -113,7 +230,7 @@ function theme_z_setup() {
 }
 
 
-# 3. Theme: '10k' (Custom Power User)
+# 6. Theme: '10k' (Custom Power User)
 # ─────────────────────────────────────────────────────────────
 ## A complex, feature-rich theme designed to mimic Powerlevel10k features
 ## manually. Handles window titles, execution timers, and auto-ls.
@@ -343,17 +460,24 @@ function theme_10k_setup() {
 }
 
 
-# 4. Theme: 'Gh0st'
+# 7. Theme: 'Gh0st'
 # ─────────────────────────────────────────────────────────────
 ## A sleek, modern prompt using manual Git status checking (no vcs_info).
 ## Features custom icons and a clean path view.
+
+
 
 function theme_gh0st_setup() {
 
     # ── git status helper ──────────────────────────────────────────────────
     # Manually calculates git branch and dirty status.
+    # Note: We use manual calculation instead of vcs_info for stricter control
+    # over icon placement and color.
 
     function _gh0st_git_status() {
+        # Check if git is installed
+        (( $+commands[git] )) || return
+
         # Get the branch name (try symbolic-ref first, fall back to hash)
         local ref
         ref=$(command git symbolic-ref --quiet HEAD 2> /dev/null) || \
@@ -368,7 +492,7 @@ function theme_gh0st_setup() {
         fi
 
         # Dirty Check (Optimized)
-        local status_symbol="${COLOR[GREEN]} ✓${COLOR[RESET]}"
+        local status_symbol="%{${COLOR[GREEN]}%} ✓%{${COLOR[RESET]}%}"
 
         # --porcelain: machine readable output
         # -unormal: standard untracked file checking
@@ -380,15 +504,30 @@ function theme_gh0st_setup() {
     }
 
     # ── directory helper ───────────────────────────────────────────────────
-    # Note: Currently unused in PS1 but kept for future customization.
+    # Evaluated dynamically at prompt draw time
 
     function _gh0st_dir_icon() {
         if [[ "$PWD" == "$HOME" ]]; then
-            echo "${COLOR[BOLD]}${COLOR[BLACK]}${COLOR[RESET]}"
+            # FIX: Wrapped colors in %{ ... %}
+            echo "%{${COLOR[BOLD]}${COLOR[BLACK]}%}%{${COLOR[RESET]}%}"
         else
-            echo "${COLOR[BOLD]}${COLOR[CYAN]}${COLOR[RESET]}"
+            # FIX: Wrapped colors in %{ ... %}
+            echo "%{${COLOR[BOLD]}${COLOR[CYAN]}%}%{${COLOR[RESET]}%}"
         fi
     }
+
+    # ── precmd hook ────────────────────────────────────────────────────────
+    # Because we are not using vcs_info, we must manually trigger the git check
+    # before every prompt redraw.
+
+    function _gh0st_precmd() {
+        # Capture the output of the git function into a global variable
+        GH0ST_GIT_INFO=$(_gh0st_git_status)
+
+        # Capture directory icon
+        GH0ST_DIR_ICON=$(_gh0st_dir_icon)
+    }
+    add-zsh-hook precmd _gh0st_precmd
 
     # ── final assembly ─────────────────────────────────────────────────────
 
@@ -404,32 +543,37 @@ function theme_gh0st_setup() {
 
     # 2. Directory
     #    Using GREY for the brackets and path.
-    local p_dir="%{${COLOR[BOLD]}${COLOR[GREY]}%}[%~]%{${COLOR[RESET]}%}"
+    local p_dir="%{${COLOR[ITALIC]}${COLOR[GREY]}%}[%~]%{${COLOR[RESET]}%}"
 
     # 3. VCS (Git)
-    #    This variable is populated automatically by the vcs_info function.
-    local p_vcs='${vcs_info_msg_0_}'
+    #    Referencing the global variable updated in precmd.
+    #    Using simple $VAR inside PS1 works because PROMPT_SUBST is on.
+    local p_vcs='${GH0ST_GIT_INFO}'
 
     # 4. Status Symbol (Conditional)
     #    Syntax: %(?.Success.Failure)
     #    - Success: Green $prompt_symbol icon
-    #    - Failure: Red Double Arrows ()
-    local p_status="%(?.%{${COLOR[BOLD]}${COLOR[GREEN]}%}${prompt_symbol}.%{${COLOR[RED]}%})%{${COLOR[RESET]}%}"
+    #    - Failure: Red $prompt_symbol icon
+    local p_status="%(?.%{${COLOR[BOLD]}${COLOR[GREEN]}%}${prompt_symbol}.%{${COLOR[RED]}%}${prompt_symbol})%{${COLOR[RESET]}%}"
 
 
     # ── FINAL EXPORT ───────────────────────────────────────────────────────
+    # Note: We use ${GH0ST_DIR_ICON} variable, populated by the hook.
 
-    PS1="${_gh0st_dir_icon} ${p_user} ${p_sep} ${p_host} ${p_dir}${p_vcs} ${p_status} "
+    PS1='${GH0ST_DIR_ICON} '"${p_user} ${p_sep} ${p_host} ${p_dir}${p_vcs} ${p_status} "
 }
 
 
-# 5. Initialization Logic
+# 8. Initialization Logic
 # ─────────────────────────────────────────────────────────────
 ## Selects the theme based on the environment variable.
 
 case "$PROMPT_THEME" in
-    "gh0st") theme_gh0st_setup ;;
-    "z")     theme_z_setup     ;;
-    "10k")   theme_10k_setup   ;;
-    *)       return            ;;
+    "gh0st")  theme_gh0st_setup  ;;
+    "z")      theme_z_setup      ;;
+    "10k")    theme_10k_setup    ;;
+    "neon")   theme_neon_setup   ;;
+    "bubble") theme_bubble_setup ;;
+    "orbit")  theme_orbit_setup  ;;
+    *)        return             ;;
 esac

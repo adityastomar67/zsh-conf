@@ -1,5 +1,3 @@
-#!/usr/bin/env zsh
-
 #    ░█▀█░█▀█░▀█▀░▀█▀░█▀█░█▀█░█▀▀░░░░▀▀█░█▀▀░█░█
 #    ░█░█░█▀▀░░█░░░█░░█░█░█░█░▀▀█░░░░▄▀░░▀▀█░█▀█
 #    ░▀▀▀░▀░░░░▀░░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀░░▀▀▀░▀▀▀░▀░▀
@@ -7,31 +5,31 @@
 # ------------------------------------------------------------------------------
 # File Purpose
 #   This file configures the core Zsh options (setopt), history behavior,
-#   completion engine, and initializes external tools like Starship and Zoxide.
+#   completion engine, and initializes external tools.
 #
 # Problems Solved
 #   - Optimizes history storage (deduplication, timestamps).
 #   - Configures "sane defaults" for file globbing and navigation.
-#   - Sets up the completion system with a smart caching strategy to speed up load.
-#   - Lazy-loads external tools to reduce startup latency.
+#   - Sets up the completion system with a smart caching strategy.
+#   - Configures fzf-tab for rich, interactive completions.
 #
 # Features / Responsibilities
 #   - `setopt` definitions.
 #   - History file management.
 #   - Autosuggestion tweaking.
 #   - Compinit (Completion) caching logic.
-#   - External tool initialization (Starship, Atuin, Zoxide).
+#   - Fzf-Tab previews.
 #
 # Usage Notes
 #   - Sourced during startup.
-#   - Requires `_eval_cache` function (from lib/_core.utils) for tool init.
+#   - Requires `_eval_cache` function (from lib/_core.utils).
 #
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
-# Basic Permissions & Input
+
+# 1. Basic Permissions & Input
 # ─────────────────────────────────────────────────────────────
-## Standard file creation masks and word delimiters.
 
 # umask 022: User has full access, group/others have read/execute only.
 umask 022
@@ -41,9 +39,8 @@ umask 022
 WORDCHARS='|-.'
 
 
-# Navigation Options
+# 2. Navigation Options
 # ─────────────────────────────────────────────────────────────
-## options to make moving directories faster.
 
 setopt AUTO_CD              # Typing 'dir' becomes 'cd dir'
 setopt AUTO_LIST            # Automatically list choices on ambiguous completion
@@ -51,11 +48,8 @@ setopt AUTO_PARAM_SLASH     # Tab completing a directory appends a slash
 setopt LIST_PACKED          # Minimize space in completion lists
 
 
-# Completion Behavior
+# 3. Completion Behavior
 # ─────────────────────────────────────────────────────────────
-## Modernizing the tab completion experience.
-
-
 
 setopt COMPLETE_IN_WORD     # Allow completion from within a word/cursor position
 setopt GLOB_COMPLETE        # Show autocompletion menu for globs
@@ -64,18 +58,17 @@ setopt EXTENDED_GLOB        # Use '#', '~', and '^' for advanced matching
 setopt GLOB_DOTS            # Allow globbing to match hidden files (dotfiles)
 setopt ALWAYS_TO_END        # Move cursor to end of word after completion
 
-# Disable standard menu completion behavior in favor of fzf-tab/external plugins
+# Disable standard menu completion behavior in favor of fzf-tab
 unsetopt MENU_COMPLETE
 
 # Corrections & Safety
 unsetopt FLOWCONTROL        # Disable Ctrl+S/Ctrl+Q output freezing
 unsetopt NOMATCH            # Don't error if a glob has no matches (pass to command)
-unsetopt CORRECT            # Disable "Did you mean..?" spelling correction (often annoying)
+unsetopt CORRECT            # Disable "Did you mean..?" spelling correction
 
 
-# History Configuration
+# 4. History Configuration
 # ─────────────────────────────────────────────────────────────
-## High-performance history settings.
 
 setopt SHARE_HISTORY             # Share history between open terminals immediately
 setopt INC_APPEND_HISTORY_TIME   # Append to history file as soon as command finishes
@@ -86,17 +79,13 @@ setopt HIST_REDUCE_BLANKS        # Remove superfluous blanks
 setopt HIST_VERIFY               # Show command with substitutions before executing
 
 # Paths & Limits
-HISTFILE="${ZDOTDIR:-$HOME/.cache}/zhistory"
+HISTFILE="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-cache/zhistory"
 HISTSIZE=50000
 SAVEHIST=50000
-
-# Formatting
-HISTTIMEFORMAT="%Y/%m/%d %H:%M:%S:   "
-HIST_STAMPS="mm/dd/yyyy"
-export HISTORY_IGNORE="(ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
+export HISTORY_IGNORE="(zsh|clear|ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
 
 
-# Job Control & Feedback
+# 5. Job Control & Feedback
 # ─────────────────────────────────────────────────────────────
 
 setopt NOTIFY                  # Report status of background jobs immediately
@@ -106,9 +95,8 @@ setopt INTERACTIVE_COMMENTS    # Allow comments (#) in interactive shell
 setopt NOBEEP                  # No beep on error
 
 
-# Autosuggestions Config
+# 6. Autosuggestions Config
 # ─────────────────────────────────────────────────────────────
-## Tweaking the zsh-autosuggestions plugin variables.
 
 # Async Mode: Prevents lagging while typing large commands
 ZSH_AUTOSUGGEST_USE_ASYNC="true"
@@ -116,37 +104,33 @@ ZSH_AUTOSUGGEST_USE_ASYNC="true"
 # Strategy: Try history first, then completion engine
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 
-# Styling: Blue text on grey background, bold
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=blue,bg=242,bold"
+# Styling: Grey text (240 is standard dark grey)
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=240"
 
 # Performance limits
-ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
-
-# Manual Rebind: Allows us to map custom keys (like Ctrl+Space) in `keys.zsh`
-export ZSH_AUTOSUGGEST_MANUAL_REBIND=1
+ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=200
 
 
-# Completion Engine Initialization
+# 7. Completion Engine Initialization
 # ─────────────────────────────────────────────────────────────
+
 ## Smart caching logic for `compinit`.
-## Re-running `compinit` on every shell start is slow. We only run it fully
-## once every 20 hours.
-
-# Ensure completion can see dotfiles
-export ZSH_COMPLETION_DUMP="${ZDOTDR:-$HOME/.cache}/zcompdump"
-
+# Allow completion to match dotfiles
 _comp_options+=(globdots)
+
+# Ensure cache dump location is defined
+# ZSH_COMPLETION_DUMP="${ZDOTDIR:-$HOME}/.zcompdump"
 
 # Glob Logic:
 # #q : Start glob qualifiers
 # N  : Nullglob (don't error if file missing)
 # .  : Plain files only
 # mh : Modification time in hours
-# +20: Older than 20 hours
+# +24: Older than 24 hours
 
-if [[ -n "$ZSH_COMPLETION_DUMP"(#qN.mh+20) ]]; then
+if [[ -n "$ZSH_COMPLETION_DUMP"(#qN.mh+24) ]]; then
     # Scenario A: Cache is old or missing. Rebuild.
-    # -i: Ignore insecure directories (don't ask user)
+    # -i: Ignore insecure directories
     # -u: Use insecure directories (silently)
     # -d: Dump path
     compinit -i -u -d "$ZSH_COMPLETION_DUMP"
@@ -157,25 +141,92 @@ else
 fi
 
 
-# Tool Initialization (Eval Cache)
+# 8. Zstyle Configuration
 # ─────────────────────────────────────────────────────────────
-## Initialize external binaries. We use `_eval_cache` to cache the output
-## of their init commands (which rarely change), saving ~100ms+ on startup.
-echo "Initializing external tools..."
+## Visuals and behavior for the completion menu.
+
+# ── Matching Strategy ──
+# 1. Exact match
+# 2. Case insensitive (a=A)
+# 3. Partial matching (f-b -> foo-bar)
+zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+
+# ── Caching ──
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path "${ZSH_CACHE}"
+
+# ── Grouping & Sorting ──
+zstyle ':completion:*' group-name ''       # Enable grouping
+zstyle ':completion:*' list-dirs-first true # Directories on top
+zstyle ':completion:*' verbose yes         # Show descriptions
+
+# ── Interaction ──
+zstyle ':completion:*' menu select         # Allow arrow key selection
+
+# ── Visual Styling ──
+# Group Descriptions (Magenta Arrow -> Bold Text)
+zstyle ':completion:*:*:*:*:descriptions' format \
+    "${COLOR[MAGENTA]} ${COLOR[BOLD]}%d${COLOR[DIM]}${COLOR[RESET]}"
+
+# Corrections ("Did you mean...")
+zstyle ':completion:*:*:*:*:corrections' format \
+    "${COLOR[YELLOW]} %d${COLOR[RESET]}"
+
+# System Messages
+zstyle ':completion:*:*:*:*:messages' format \
+    "${COLOR[BLUE]} %d${COLOR[RESET]}"
+
+# Warnings ("No matches")
+zstyle ':completion:*:*:*:*:warnings' format \
+    "${COLOR[RED]} No Matches Found${COLOR[RESET]}"
+
+# Default Fallback
+# zstyle ':completion:*' format \
+#     "${COLOR[B_YELLOW]}Suggesting: %d${COLOR[RESET]}"
+
+
+# 9. Fzf-Tab Configuration
+# ─────────────────────────────────────────────────────────────
+## Configuration for the fzf-tab plugin (rich previews).
+
+# ── Behavior ──
+# Trigger fzf on path completion automatically
+zstyle ':fzf-tab:*' continuous-trigger '/'
+
+# ── Styling ──
+# Inherits FZF_DEFAULT_OPTS, but forces 40% height
+zstyle ':fzf-tab:*' fzf-flags --height=40% --layout=reverse
+
+# ── Context-Aware Previews ──
+
+# 'cd': Preview directory contents using eza
+zstyle ':fzf-tab:complete:cd:*' fzf-preview \
+    'eza -1 --icons=always --color=always --group-directories-first $realpath'
+
+# 'systemctl': Preview service status
+zstyle ':fzf-tab:complete:systemctl-*:*' fzf-preview \
+    'SYSTEMD_COLORS=1 systemctl status $word'
+
+# 'command': Preview man page or file content
+zstyle ':fzf-tab:complete:(-command-):*' fzf-preview \
+    '[[ -n $builtins[$word] ]] && man $word || bat --color=always --style=plain $realpath 2>/dev/null'
+
+
+# 10. Tool Initialization
+# ─────────────────────────────────────────────────────────────
+
+# Install Plugins (if ZPLUGINS array is set)
 plug
 
 # 1. Starship (Prompt)
-#    MUST be 'immediate' so the prompt is ready before the shell draws.
-is_installed starship && _eval_cache "starship" "starship init zsh" "immediate"
+is_installed starship  && _eval_cache "starship" "starship init zsh" "immediate"
 
 # 2. Zoxide (Smart Navigation)
-#    Safe to defer (aliases load milliseconds after prompt).
-is_installed zoxide && _eval_cache "zoxide" "zoxide init zsh" "defer"
+is_installed zoxide    && _eval_cache "zoxide" "zoxide init zsh" "defer"
 
 # 3. Atuin (Magic History)
-#    Safe to defer (keybindings load milliseconds after prompt).
-is_installed atuin && _eval_cache "atuin" "atuin init zsh" "defer"
+is_installed atuin     && _eval_cache "atuin" "atuin init zsh" "defer"
 
 # 4. Dircolors (LS Colors)
-#    Often slow to generate, perfect for caching.
 is_installed dircolors && _eval_cache "dircolors" "dircolors -b" "immediate"
+

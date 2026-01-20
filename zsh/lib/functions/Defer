@@ -138,6 +138,3 @@ function zsh-defer() {
 # 7. Cleanup & Aliases
 (( ${#_saved_zsh_opts} )) && setopt ${_saved_zsh_opts[@]}
 'builtin' 'unset' '_saved_zsh_opts'
-
-# Allow calling it as 'defer' (User preference)
-alias defer='zsh-defer'

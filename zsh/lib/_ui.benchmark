@@ -25,7 +25,7 @@
 #
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
-echo "Sourced _ui.benchmark..."
+
 
 # 0. Safety Checks & Dependencies
 # ─────────────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ if [[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]]; then
         "$performance_label" \
         "$total_duration_ms"
 else
-    printf "${COLOR[DIM]}│${COLOR[RESET]}  ZSH BENCHMARK    ${label_color}%-16s${COLOR[RESET]}    ${label_color}%6.2f ms${COLOR[RESET]}  ${COLOR[DIM]}│${COLOR[RESET]}\n" \
+    printf "${COLOR[DIM]}│${COLOR[RESET]}  ZSH BENCHMARK        ${label_color}%-16s${COLOR[RESET]} ${label_color}%6.2f ms${COLOR[RESET]} ${COLOR[DIM]}│${COLOR[RESET]}\n" \
         "$performance_label" \
         "$total_duration_ms"
 fi
@@ -83,13 +83,41 @@ fi
 printf "${COLOR[DIM]}╰───────────────────────────────────────────────────╯${COLOR[RESET]}\n"
 
 
+
+# # 2. Header Rendering [OPTION 2]
+# # ─────────────────────────────────────────────────────────────
+# # We use REVERSE mode (\e[7m) to make the header look like a solid bar.
+
+# # Top Border
+# printf "${COLOR[DIM]}╭───────────────────────────────────────────────────╮${COLOR[RESET]}\n"
+
+# # Prepare the "Big" looking text
+# # \033[1m = Bold, \033[7m = Reverse (Invert colors)
+# local style_big="\033[1;7m"
+
+# if [[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]]; then
+#     printf "${COLOR[DIM]}│${COLOR[RESET]} ${style_big} ZSH [MINI] ${COLOR[RESET]}      ${label_color}%-16s${COLOR[RESET]}    ${label_color}%6.2f ms${COLOR[RESET]}  ${COLOR[DIM]}│${COLOR[RESET]}\n" \
+#         "$performance_label" \
+#         "$total_duration_ms"
+# else
+#     # I added extra spaces inside " Z S H " to make it wider
+#     printf "${COLOR[DIM]}│${COLOR[RESET]} ${style_big} Z S H  B E N C H ${COLOR[RESET]}  ${label_color}%-16s${COLOR[RESET]}    ${label_color}%6.2f ms${COLOR[RESET]}  ${COLOR[DIM]}│${COLOR[RESET]}\n" \
+#         "$performance_label" \
+#         "$total_duration_ms"
+# fi
+
+# # Bottom Border
+# printf "${COLOR[DIM]}╰───────────────────────────────────────────────────╯${COLOR[RESET]}\n"
+
+
+
 # 3. Profiling Data Table
 # ─────────────────────────────────────────────────────────────
 ## parses the 'zprof' output to find the most expensive function calls.
 ## We use 'awk' to generate a visual bar chart inline.
 
 # Table Headers
-printf "   ${COLOR[DIM]}%-25s %-10s %-8s %s${COLOR[RESET]}\n" "FUNCTION" "TIME" "CALLS" "LOAD"
+printf "   ${COLOR[BOLD]}${COLOR[DIM]}%-25s %-10s %-8s %s${COLOR[RESET]}\n" "FUNCTION" "TIME" "CALLS" "LOAD"
 
 # Process Zprof Data
 zprof | awk \
@@ -99,43 +127,47 @@ zprof | awk \
     -v color_reset="${COLOR[RESET]}" \
     -v color_func="${COLOR[MAGENTA]}" \
     '{
-        # 1. Filter: Only process lines starting with a number (e.g., "1)")
-        #    This ignores zprof headers, separators, and the breakdown graph.
+        # 1. Filter: Only process lines starting with a number
         if ($1 !~ /^[0-9]+\)$/) next
 
-        # 2. Limit: Stop after processing the top 10 rows
+        # 2. Extract Name
+        fn_name = $NF
+
+        # 3. DEDUPLICATION
+        if (seen[fn_name]++) next
+
+        # 4. Limit: Top 10 only
         if (count++ >= 10) exit
 
-        # 3. Extract Data
-        # $NF is the last field (Function Name)
-        # $3  is the time in ms
-        # $5  is the percentage of total time
-        fn_name = $NF
+        # --- FIX: TRUNCATE LONG NAMES ---
+        # If name is longer than 24 chars, cut it and add ".."
+        if (length(fn_name) > 24) {
+            fn_name = substr(fn_name, 1, 22) ".."
+        }
+
+        # 5. Extract Metrics
+        calls   = $2
         time_ms = $3 + 0
         percent = $5 + 0
 
-        # 4. Color Logic
-        # Highlight slower functions to draw attention
+        # 6. Color Logic
         time_color = color_dim
         if (time_ms > 5)  time_color = color_norm
         if (time_ms > 20) time_color = color_warn
 
-        # 5. Visual Bar Chart Logic
-        # Create a bar based on percentage (approx 1 block per 5%)
+        # 7. Bar Chart
         bar_len = int(percent / 5)
         bar_visual = ""
         for(i=0; i<bar_len; i++) bar_visual = bar_visual "■"
-
-        # Ensure extremely small non-zero items still show something
         if (bar_visual == "" && percent > 0) bar_visual = "·"
 
-        # 6. Print Formatted Row
+        # 8. Print
         printf "   %s%-25s%s %s%-10s%s %s%-8s%s %s%s%s\n",
-            color_func, fn_name, color_reset,   # Function Name
-            time_color, $3,      color_reset,   # Time
-            color_dim,  $2,      color_reset,   # Calls
-            time_color, bar_visual, color_reset # Bar Chart
+            color_func, fn_name, color_reset,
+            time_color, time_ms, color_reset,
+            color_dim,  calls,   color_reset,
+            time_color, bar_visual, color_reset
     }'
 
 # Final spacing
-echo
+printf "\n${COLOR[DIM]} For detailed analysis:${COLOR[RESET]}${COLOR[BLUE]} _zsh_debug_startup${COLOR[RESET]}\n\n"
