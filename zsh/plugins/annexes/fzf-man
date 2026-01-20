@@ -1,0 +1,54 @@
+#!/bin/zsh
+
+function fman() {
+    # 1. Direct Usage
+    if [ -n "$1" ]; then
+        /usr/bin/man "$@"
+        return
+    fi
+
+    # 2. Dependency Check (Bat for colors)
+    local preview_pager="cat"
+    if command -v bat >/dev/null; then
+        preview_pager="bat -l man -p --color=always"
+    fi
+
+    # 3. The Logic
+    man -k . | \
+    awk '
+    {
+        # --- NORMALIZATION ---
+        name = $1
+        sub(/,$/, "", name) # Remove trailing commas
+
+        # Handle "git(1)" vs "git (1)"
+        if (name ~ /\([0-9a-zA-Z]+\)/) {
+            sub(/\(/, " ", name)
+            sub(/\)/, "", name)
+            $1 = name
+        }
+        else if ($2 ~ /^\([0-9a-zA-Z]+\)/) {
+            sub(/\(/, "", $2)
+            sub(/\)/, "", $2)
+        }
+
+        # Output format: "name section description..."
+        print $0
+    }' | \
+    fzf \
+        --reverse \
+        --prompt="Manual > " \
+        --preview-window="right:75%:wrap" \
+        \
+        --bind "ctrl-e:change-preview-window(hidden|)" \
+        \
+        --with-nth=1 \
+        \
+        --preview="
+             echo {1} | sed 's/,//g' | xargs -I % sh -c 'MANPAGER=cat man {2} % | col -bx' | $preview_pager
+        " \
+        --header=$'[Enter]  Open\n[Ctrl-E] Toggle Preview\n[Ctrl-Q] Quit\n\n' | \
+    awk '{print $2, $1}' | \
+    sed 's/,//g' | \
+    xargs -r man
+}

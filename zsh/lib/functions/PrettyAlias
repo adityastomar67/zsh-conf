@@ -1,0 +1,58 @@
+#!/usr/bin/env zsh
+
+# ------------------------------------------------------------------------------
+# PRETTY ALIAS (Binary/Script Mode)
+# ------------------------------------------------------------------------------
+# Usage:
+#   1. To list aliases:  alias | pretty-alias
+#   2. To set aliases:   This script CANNOT set aliases for your parent shell.
+#                        Use standard 'alias name=value' for that.
+
+# 1. Input Handling
+# ─────────────────────────────────────────────────────────────
+# If arguments are passed (e.g., "name=value"), we warn the user that
+# this cannot work in a binary script.
+if [[ $# -gt 0 ]]; then
+   echo "${COLOR[RED]}[ERROR]${COLOR[DIM]} Cannot set aliases via an external script (subprocess isolation).${COLOR[RESET]}"
+    echo "       Use the builtin ${CLOR[YELLOW]}${COLOR[BOLD]}alias${COLOR[RESET]} command to set new aliases."
+    exit 1
+fi
+
+# 2. Rendering Logic
+# ─────────────────────────────────────────────────────────────
+# We read from Standard Input (Pipe) because an external script cannot
+# see the parent shell's aliases directly.
+
+# Check if input is coming from a pipe
+if [[ -t 0 ]]; then
+    echo "${COLOR[YELLOW]}[INFO]${COLOR[RESET]} No input detected."
+    echo "       Usage: ${COLOR[GREEN]}alias | pretty-alias${COLOR[RESET]}"
+    exit 0
+fi
+
+local -A colors
+colors[name]='\033[1;34m'   # Bold Blue
+colors[eq]='\033[2m'        # Dim (Grey)
+colors[value]='\033[32m'    # Green
+colors[reset]='\033[0m'
+
+# Process the piped input (cat)
+cat | sort | awk -v C_NAME="${colors[name]}" \
+                 -v C_EQ="${colors[eq]}" \
+                 -v C_VAL="${colors[value]}" \
+                 -v C_RST="${colors[reset]}" \
+'
+{
+    # Find index of first equals sign
+    idx = index($0, "=")
+
+    # Handle lines that might not be aliases (safety)
+    if (idx == 0) next;
+
+    # Split string manually to handle aliases that contain "=" in the value
+    name = substr($0, 1, idx - 1)
+    val  = substr($0, idx + 1)
+
+    # Print with padding (Width 20 for name)
+    printf "  %s%-20s%s %s::%s %s%s%s\n", C_NAME, name, C_RST, C_EQ, C_RST, C_VAL, val, C_RST
+}'

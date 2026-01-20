@@ -1,0 +1,21 @@
+function f_open() {
+    # 1. Local Override (Fixes Tab Selection)
+    #    We append the binding to the end so it overrides your global config.
+    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+
+    # 2. Run FZF
+    local files
+    files=$(fzf --multi --prompt="  Open > " --exit-0)
+
+    # 3. Check and Open
+    if [[ -n "$files" ]]; then
+        # Convert to array to handle spaces correctly
+        local -a file_array
+        file_array=("${(@f)files}")
+
+        # Open all files at once
+        $EDITOR "${file_array[@]}"
+    else
+        print -P "%F{red}Cancelled.%f"
+    fi
+}

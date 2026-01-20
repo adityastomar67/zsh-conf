@@ -1,0 +1,166 @@
+#!/usr/bin/env zsh
+#    ░█▀▀░█▄█░█▀█░▀█▀░█░█░░░░░▀█▀░█▀▄░█▀█░█▀▀░█░█
+#    ░█▀▀░█░█░█▀▀░░█░░░█░░▄▄▄░░█░░█▀▄░█▀█░▀▀█░█▀█
+#    ░▀▀▀░▀░▀░▀░░░░▀░░░▀░░░░░░░▀░░▀░▀░▀░▀░▀▀▀░▀░▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a robust, cross-platform utility to manage and empty the system trash.
+#
+# Problems Solved
+#   - Standardizes trash locations between macOS and Linux (XDG compliance).
+#   - Prevents accidental deletions by providing a visual summary (size/count)
+#     before confirmation.
+#   - Handles permission issues and metadata cleanup (Linux .trashinfo)
+#     transparently.
+#
+# Features / Responsibilities
+#   - Cross-Platform Detection: Adjusts paths for Darwin (macOS) and Linux.
+#   - Pre-flight Checks: Skips execution if the trash is already empty.
+#   - Confirmation Dashboard: Displays a TUI box with total reclaimed space.
+#   - Native Feedback: Plays the system "Tink" sound on macOS.
+#
+# Usage Notes
+#   - Syntax: empty_trash
+#   - Requires: coreutils (du, rm, find)
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── user interface function ──────────────────────────────────────────────────
+
+
+
+
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
+
+# We use 'emulate -L zsh' to ensure the function behaves consistently
+# regardless of the user's global shell settings.
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# ------------------------------------------------------------------------------
+# 2. Detect Trash Paths
+
+# macOS uses a flat directory (~/.Trash), while Linux follows the XDG spec,
+# separating the actual 'files' from 'info' metadata.
+local -a target_dirs
+local trash_root
+local is_mac=0
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    is_mac=1
+    trash_root="$HOME/.Trash"
+    target_dirs=("$trash_root")
+else
+    # Linux (XDG Spec) logic: defaults to local/share/Trash if XDG_DATA_HOME is unset
+    trash_root="${XDG_DATA_HOME:-$HOME/.local/share}/Trash"
+    target_dirs=("$trash_root/files" "$trash_root/info")
+fi
+
+# ------------------------------------------------------------------------------
+# 3. UI Styling
+
+# We use 256-color codes for high-fidelity UI elements.
+local c_red="%F{196}"
+local c_green="%F{46}"
+local c_yellow="%F{226}"
+local c_blue="%F{39}"
+local c_grey="%F{240}"
+local c_white="%F{255}"
+local c_reset="%f"
+local c_bold="%B"
+local c_unbold="%b"
+
+# ------------------------------------------------------------------------------
+# 4. Pre-Flight Checks
+
+# Check A: Does the directory even exist?
+if [[ ! -d "$trash_root" ]]; then
+    print -P "\n${c_green}✔${c_reset} Trash is already empty (Directory missing)."
+    return 0
+fi
+
+# Check B: Is there anything inside?
+# For Linux, we specifically look into the 'files' subdirectory.
+local check_path="$trash_root"
+[[ "$is_mac" -eq 0 ]] && check_path="$trash_root/files"
+
+if [[ ! -d "$check_path" ]] || [[ -z "$(ls -A "$check_path" 2>/dev/null)" ]]; then
+    print -P "\n${c_green}✔${c_reset} Trash is already empty."
+    return 0
+fi
+
+# ------------------------------------------------------------------------------
+# 5. Analysis Logic
+
+# Before asking for confirmation, we calculate the payload size and item count.
+# This involves a recursive 'du' and a 'find' piped to 'wc'.
+print -n ":: Analyzing trash contents..."
+
+local total_size
+local file_count
+
+# Redirect stderr to /dev/null to ignore "Permission Denied" errors on specific files
+if [[ "$is_mac" -eq 1 ]]; then
+    total_size=$(du -sh "$trash_root" 2>/dev/null | awk '{print $1}')
+    file_count=$(find "$trash_root" 2>/dev/null | wc -l | xargs)
+else
+    # On Linux, we measure the root Trash folder to include metadata overhead
+    total_size=$(du -sh "$trash_root" 2>/dev/null | awk '{print $1}')
+    file_count=$(find "$trash_root/files" 2>/dev/null | wc -l | xargs)
+fi
+
+# Clear the "Analyzing..." status line using terminal escape codes
+# \r: return to start of line, \e[K: clear to end of line
+printf "\r\e[K"
+
+# ------------------------------------------------------------------------------
+# 6. The Confirmation Dashboard
+
+print -P "${c_red}╭──────────────────────────────────────╮${c_reset}"
+print -P "${c_red}│      🗑  CONFIRM TRASH EMPTY         │${c_reset}"
+print -P "${c_red}├──────────────────────────────────────┤${c_reset}"
+print -P "${c_red}│${c_reset}  Items: ${c_white}$file_count files${c_reset}"
+print -P "${c_red}│${c_reset}  Size:  ${c_white}$total_size${c_reset}"
+print -P "${c_red}╰──────────────────────────────────────╯${c_reset}"
+
+print -P "${c_yellow}⚠  Warning:${c_reset} This action is ${c_bold}permanent${c_unbold}."
+print -P -n "   Empty trash now? [y/N] "
+
+# ------------------------------------------------------------------------------
+# 7. Execution Block
+
+local confirm
+read -k 1 confirm
+echo # Insert newline after keystroke
+
+if [[ "$confirm" =~ ^[yY]$ ]]; then
+    print -P "\n${c_blue}::${c_reset} Scrubbing files..."
+
+    # Complex Logic: OS-Specific Removal
+    # On Linux, we must be careful to delete the *contents* of subdirectories
+    # while preserving the directory structure itself to avoid breaking
+    # desktop environment trash integration.
+    if [[ "$is_mac" -eq 1 ]]; then
+        # macOS: Standard recursive deletion
+        rm -rf "$trash_root"/* 2>/dev/null
+
+        # Feedback: Audio cue
+        if (( $+commands[afplay] )); then
+            # Play the standard "Tink" sound asynchronously (&|)
+            afplay /System/Library/Sounds/Tink.aiff 2>/dev/null &|
+        fi
+    else
+        # Linux: Clean the XDG standard subfolders
+        rm -rf "$trash_root/files"/* 2>/dev/null
+        rm -rf "$trash_root/info"/* 2>/dev/null
+        rm -rf "$trash_root/expunged"/* 2>/dev/null
+    fi
+
+    print -P "   ${c_green}✔${c_reset} Trash emptied! Reclaimed ${c_bold}$total_size${c_unbold}."
+else
+    print -P "\n   ${c_grey}Operation aborted.${c_reset}"
+fi

@@ -1,0 +1,222 @@
+#!/usr/bin/env zsh
+#    ░█▀▀░█░█░▀█▀░█▀▄░█▀█░█▀▀░▀█▀
+#    ░█▀▀░▄▀▄░░█░░█▀▄░█▀█░█░░░░█░
+#    ░▀▀▀░▀░▀░░▀░░▀░▀░▀░▀░▀▀▀░░▀░
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a universal archive extraction utility that eliminates the need
+#   to remember specific flags for different compression formats.
+#
+# Problems Solved
+#   - Standardizes the interface for tar, zip, rar, 7z, and more.
+#   - Prevents accidental deletion of source files (uses -k/keep where possible).
+#   - Improves UI by hiding noisy terminal output and replacing it with
+#     a clean progress spinner.
+#   - Handles cross-platform binary detection and dependency validation.
+#
+# Features / Responsibilities
+#   - Multi-format support: .tar.*, .zip, .rar, .7z, .deb, .gz, etc.
+#   - Smart Case Handling: Converts filenames to lowercase for extension matching.
+#   - Visual Feedback: TUI-style dashboard with file metadata and duration timer.
+#   - Error Logging: Captures stderr to a temporary log, displayed only on failure.
+#
+# Usage Notes
+#   - Syntax: extract <filename>
+#   - Requires: Appropriate binaries for specific formats (unzip, unrar, etc.).
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── extraction engine ────────────────────────────────────────────────────────
+
+
+
+
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
+
+# We use 'emulate -L zsh' to maintain local scope for options like pipefail.
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# UI Color Palette (High-fidelity 256-color codes)
+local c_blue="%F{39}"
+local c_green="%F{46}"
+local c_red="%F{196}"
+local c_yellow="%F{226}"
+local c_grey="%F{240}"
+local c_white="%F{255}"
+local c_reset="%f"
+local c_bold="%B"
+local c_unbold="%b"
+
+# ------------------------------------------------------------------------------
+# 2. Input Validation
+
+local file="$1"
+
+# Check if an argument was provided
+if [[ -z "$file" ]]; then
+    print -P "${c_red}[ERROR]${c_reset} Usage: extract <archive_file>"
+    return 1
+fi
+
+# Check if the file physically exists on the disk
+if [[ ! -f "$file" ]]; then
+    print -P "${c_red}[ERROR]${c_reset} File '${c_bold}$file${c_unbold}' not found."
+    return 1
+fi
+
+# ------------------------------------------------------------------------------
+# 3. Strategy Selection
+
+# We define the command and specific arguments based on the file extension.
+local cmd=""
+local args=""
+local lower_file="${file:l}" # Zsh-native lowercase conversion
+
+case "$lower_file" in
+    # TAR Variants: Modern tar auto-detects compression (gzip, bzip2, xz, zstd)
+    *.tar.gz|*.tgz|*.tar.bz2|*.tbz2|*.tar.xz|*.txz|*.tar.zst|*.tar)
+        cmd="tar"
+        args="xf"
+        ;;
+    *.gz)
+        cmd="gunzip"
+        args="-k" # Keep original source file
+        ;;
+    *.bz2)
+        cmd="bunzip2"
+        args="-k"
+        ;;
+    *.xz)
+        cmd="unxz"
+        args="-k"
+        ;;
+    *.zip)
+        cmd="unzip"
+        args="-q" # Quiet mode (suppress file list)
+        ;;
+    *.rar)
+        cmd="unrar"
+        args="x -inul" # x: with full paths, -inul: Disable all messages
+        ;;
+    *.7z)
+        cmd="7z"
+        args="x -bd" # -bd: Disable progress bar (we use our spinner)
+        ;;
+    *.z)
+        cmd="uncompress"
+        args=""
+        ;;
+    *.deb)
+        # Debian packages use 'ar' format
+        if (( $+commands[ar] )); then
+            cmd="ar"
+            args="x"
+        else
+            print -P "${c_red}[ERROR]${c_reset} 'ar' command needed for .deb extraction."
+            return 1
+        fi
+        ;;
+    *)
+        print -P "${c_red}[ERROR]${c_reset} Unsupported format: ${file:e}"
+        return 1
+        ;;
+esac
+
+# ------------------------------------------------------------------------------
+# 4. Dependency Validation
+
+# Check the Zsh 'commands' hash to verify the binary is in the $PATH
+if (( ! $+commands[$cmd] )); then
+    print -P "${c_red}[ERROR]${c_reset} Command '${c_bold}$cmd${c_unbold}' is required but not installed."
+    print -P "        Please install it (e.g., brew install $cmd / sudo apt install $cmd)"
+    return 1
+fi
+
+# ------------------------------------------------------------------------------
+# 5. Execution Dashboard
+
+# Calculate file size for the UI header
+local size=$(du -h "$file" | cut -f1)
+
+print -P "${c_blue}╭──────────────────────────────────────╮${c_reset}"
+print -P "${c_blue}│        📦  ARCHIVE EXTRACTOR         │${c_reset}"
+print -P "${c_blue}├──────────────────────────────────────┤${c_reset}"
+print -P "${c_blue}│${c_reset}  File:   ${c_white}${file:t}${c_reset}"
+print -P "${c_blue}│${c_reset}  Size:   ${c_white}$size${c_reset}"
+print -P "${c_blue}│${c_reset}  Method: ${c_yellow}$cmd${c_reset}"
+print -P "${c_blue}╰──────────────────────────────────────╯${c_reset}"
+
+print -P -n "   ${c_blue}::${c_reset} Extracting... "
+
+# ------------------------------------------------------------------------------
+# 6. Background Execution & Async Spinner
+
+# We record start time to calculate total extraction duration.
+local start_time=$EPOCHREALTIME
+
+# Create a temporary log file to capture potential error messages.
+local log_file=$(mktemp)
+
+# !!! CRITICAL: Subprocess Management
+# We execute the extraction in the background to keep the terminal responsive
+# and allow the spinner loop to run in the foreground.
+if [[ "$cmd" == "tar" ]]; then
+    tar "$args" "$file" >"$log_file" 2>&1 &
+elif [[ "$cmd" == "unrar" ]]; then
+    unrar x -inul "$file" >"$log_file" 2>&1 &
+elif [[ "$cmd" == "unzip" ]]; then
+    unzip -q "$file" >"$log_file" 2>&1 &
+elif [[ "$cmd" == "7z" ]]; then
+    7z x -bd "$file" >"$log_file" 2>&1 &
+else
+    $cmd $args "$file" >"$log_file" 2>&1 &
+fi
+
+local pid=$! # Capture the Process ID of the background extraction
+local spin='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+local i=0
+
+# Hide the cursor during the visual spinner phase
+tput civis 2>/dev/null
+
+# ---- SAFE: Loop while the extraction PID is still active
+while kill -0 $pid 2>/dev/null; do
+    i=$(( (i+1) % 10 ))
+    printf "\b${c_blue}${spin:$i:1}${c_reset}"
+    sleep 0.1
+done
+
+# Restore the cursor immediately after background task finishes
+tput cnorm 2>/dev/null
+
+# Synchronize and fetch the exit status of the background command
+wait $pid
+local exit_code=$?
+
+# Math: Calculate total duration
+local end_time=$EPOCHREALTIME
+local duration=$(( end_time - start_time ))
+local duration_fmt=$(printf "%.2f" $duration)
+
+# ------------------------------------------------------------------------------
+# 7. Final Reporting
+
+printf "\b" # Clean up the last spinner character
+
+if (( exit_code == 0 )); then
+    print -P "${c_green}✔${c_reset} Done in ${duration_fmt}s"
+    rm -f "$log_file"
+else
+    # In case of failure, we display the stored error log to the user.
+    print -P "${c_red}✘${c_reset} Failed."
+    echo
+    print -P "${c_yellow}--- Error Log ---${c_reset}"
+    cat "$log_file"
+    rm -f "$log_file"
+    return $exit_code
+fi

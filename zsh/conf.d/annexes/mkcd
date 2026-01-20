@@ -1,0 +1,161 @@
+#!/usr/bin/env zsh
+
+#    ░█▄█░█░█░█▀▀░█▀▄
+#    ░█░█░█▀▄░█░░░█░█
+#    ░▀░░░▀░▀░▀▀▀░▀▀░
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Combines 'mkdir' and 'cd' into a single, high-utility navigation command.
+#
+# Problems Solved
+#   - Eliminates the two-step process of creating a folder and entering it.
+#   - Prevents "Directory not found" errors by ensuring the path is created first.
+#   - Provides immediate visual feedback of the new directory's location relative
+#     to the filesystem root.
+#   - Handles permission checks gracefully before attempting creation.
+#
+# Features / Responsibilities
+#   - Recursive Creation: Uses `mkdir -p` to build deep path structures.
+#   - Smart Validation: Detects existing directories and write-access issues.
+#   - Hierarchy Visualization: Renders a "Breadcrumb Tree" of the current path.
+#   - Content Inspection: Automatically lists contents or confirms an empty state.
+#
+# Usage Notes
+#   - Syntax: mkcd <path/to/directory>
+#   - Supports absolute paths, relative paths, and tilde (~) expansion.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── navigation & scaffolding engine ──────────────────────────────────────────
+
+
+
+
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
+
+# emulate -L zsh: Restricts shell option changes to this local function scope.
+# pipefail: Ensures the function catches errors in complex pipelines.
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# UI Color Palette (High-fidelity Zsh formatting)
+local c_blue="%F{39}"
+local c_green="%F{46}"
+local c_red="%F{196}"
+local c_yellow="%F{226}"
+local c_grey="%F{240}"
+local c_white="%F{255}"
+local c_reset="%f"
+local c_bold="%B"
+local c_unbold="%b"
+local c_dim="%F{237}"
+
+local target_dir="$1"
+
+# ------------------------------------------------------------------------------
+# 2. Input Validation
+
+if [[ -z "$target_dir" ]]; then
+    print -P "${c_red}[ERROR]${c_reset} Usage: mkcd <path/to/directory>"
+    return 1
+fi
+
+# ------------------------------------------------------------------------------
+# 3. Logic & Execution
+
+local is_new_dir=0
+
+# Scenario A: Directory already exists
+if [[ -d "$target_dir" ]]; then
+    print -P "${c_yellow}⚠${c_reset}  Directory '${c_bold}$target_dir${c_unbold}' already exists."
+
+# Scenario B: New Directory Scaffolding
+else
+    # !!! CRITICAL: Permission Pre-check
+    # We verify write access to the parent before attempting 'mkdir' to avoid
+    # generic "Permission Denied" shell errors.
+    local parent_path=$(dirname "$target_dir")
+    if [[ ! -w "$parent_path" ]] && [[ -e "$parent_path" ]]; then
+            print -P "${c_red}[ERROR]${c_reset} Permission denied: Cannot write to '$parent_path'."
+            return 1
+    fi
+
+    # Create the path recursively (-p)
+    if mkdir -p "$target_dir"; then
+            print -P "${c_green}✔${c_reset}  Created '${c_bold}$target_dir${c_unbold}'"
+            is_new_dir=1
+    else
+            print -P "\n${c_red}[ERROR]${c_reset} Failed to create directory."
+            return 1
+    fi
+fi
+
+# ------------------------------------------------------------------------------
+# 4. Navigation
+
+# Attempt to move the shell into the target directory
+if ! builtin cd "$target_dir"; then
+    print -P "\n${c_red}[FATAL]${c_reset} Could not change directory."
+    return 1
+fi
+
+# ------------------------------------------------------------------------------
+# 5. Visual Visualization (TUI Dashboard)
+
+# --- Section A: Location Tree ---
+# We normalize the path for display, substituting the home directory for '~'.
+local display_path="${PWD/#$HOME/~}"
+
+print -P "\n${c_blue}📍 LOCATION TREE:${c_reset}"
+
+# Complex Logic: Zsh Path Splitting
+# (${(@s:/:)var}) splits the string by '/' into a temporary array.
+local indent=""
+local path_segments=("${(@s:/:)display_path}")
+
+# Handle Root and Home-based paths
+if [[ "$display_path" == "/" ]]; then
+    print -P "${c_blue}  /${c_reset}"
+else
+    if [[ "$display_path" == ~* ]]; then
+            print -P "${c_blue}  ~${c_reset}"
+            [[ -z "${path_segments[1]}" ]] && shift path_segments
+    elif [[ "$display_path" == /* ]]; then
+            print -P "${c_blue}  /${c_reset}"
+    fi
+
+    # Iterate through segments to draw the ASCII tree
+    for seg in "${path_segments[@]}"; do
+        [[ -z "$seg" ]] && continue
+        if [[ "$seg" == "~" ]] && continue
+
+        print -P "  $indent${c_dim}└──${c_reset} ${c_white}$seg${c_reset}"
+        indent="$indent    "
+    done
+    print -P "  $indent    ${c_green}⬆ (You are here)${c_reset}"
+fi
+
+# --- Section B: Content Tree ---
+# We check for visibility of any files (hidden or otherwise).
+if [[ -n "$(ls -A . 2>/dev/null)" ]]; then
+    print -P "\n${c_blue}📂 CONTENTS:${c_reset}"
+
+    # If 'tree' command exists, use it for rich visualization
+    if (( $+commands[tree] )); then
+        # -C: Color | -L 2: Max depth | --dirsfirst: Better sorting
+        tree -C -L 2 --dirsfirst | head -n 20
+
+        local item_count=$(ls -A | wc -l)
+        (( item_count > 20 )) && print -P "${c_grey}... ($item_count items total)${c_reset}"
+    else
+        # Fallback for systems without 'tree' using sed to mimic tree-style pipes
+        ls -F | sed -e 's/^/  ├── /'
+    fi
+else
+    print -P "\n${c_grey}(Directory is empty)${c_reset}"
+fi
+

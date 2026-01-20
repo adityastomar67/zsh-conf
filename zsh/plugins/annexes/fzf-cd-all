@@ -1,0 +1,34 @@
+function fcd_all() {
+    local dir
+    local start_dir="${1:-.}"
+
+    # 1. Use 'fd' for speed if available, otherwise 'find'
+    local list_cmd
+    if (( $+commands[fd] )); then
+        # --type d: Directories only
+        # --strip-cwd-prefix: Clean output
+        list_cmd="fd --type d --hidden --follow --exclude .git . \"$start_dir\""
+    else
+        list_cmd="find \"$start_dir\" -type d -name .git -prune -o -type d -print"
+    fi
+
+    # 2. FZF with Directory Preview
+    #    Use Local Override for consistent behavior
+    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+
+    dir=$(eval "$list_cmd" | fzf \
+        --no-multi \
+        --prompt="📂 CD > " \
+        --preview-window="right:60%:wrap:nohidden" \
+        \
+        # PREVIEW: Show tree structure
+        --preview 'eza --tree --level=2 --color=always {} 2>/dev/null || tree -C {} 2>/dev/null || ls -1 --color=always {}'
+    )
+
+    # 3. CD and List
+    if [[ -n "$dir" ]]; then
+        cd "$dir" || return
+        # Optional: Print current dir structure upon entering
+        # ls -F
+    fi
+}

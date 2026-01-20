@@ -1,0 +1,54 @@
+replay() {
+  emulate -L zsh
+  setopt localoptions no_notify no_bg_nice
+
+  # 1. Help & Usage
+  if (( $# == 0 )); then
+    print -P "%F{yellow}Usage:%f replay [-s speed] <command>"
+    return 1
+  fi
+
+  # 2. Dependency Check
+  if ! zmodload -e zsh/zpty; then
+    zmodload -i zsh/zpty || { print "zsh/zpty module failed to load"; return 1; }
+  fi
+
+  # 3. Argument Parsing
+  local speed=0.01
+  if [[ "$1" == "-s" ]]; then
+    speed="$2"
+    shift 2
+  fi
+
+  local pty_name="replay_pts_$$"
+  local data
+  local char
+
+  # 4. Cleanup Trap (Critical)
+  trap "zpty -d $pty_name 2>/dev/null; return" INT TERM EXIT
+
+  # 5. Visual Header
+  print -P "%F{green}➜ Replaying:%f %B$*%b"
+  print -P "%F{grey}────────────────────────────────────────%f"
+
+  # 6. Spawn PTY (Blocking Mode)
+  #    FIX: Removed '-b'. Now it waits for output properly.
+  zpty "$pty_name" "$@"
+
+  # 7. Read Loop
+  #    zpty -r will now wait until data arrives or the command finishes.
+  while zpty -r "$pty_name" data; do
+
+    # Split the chunk into characters and type them out
+    for char in ${(s::)data}; do
+        print -nr -- "$char"
+        sleep "$speed"
+    done
+
+  done
+
+  # 8. Final Cleanup
+  trap - INT TERM EXIT
+  zpty -d "$pty_name" 2>/dev/null
+  print "" # Restore cursor position
+}

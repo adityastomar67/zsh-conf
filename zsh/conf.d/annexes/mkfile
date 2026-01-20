@@ -1,0 +1,162 @@
+#!/usr/bin/env zsh
+
+#    ░█▄█░█░█░█▀▀░▀█▀░█░░░█▀▀
+#    ░█░█░█▀▄░█▀▀░░█░░█░░░█▀▀
+#    ░▀░░░▀░▀░▀░░░▀▀▀░▀▀▀░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Advanced file creation utility that extends the standard 'touch' command.
+#
+# Problems Solved
+#   - Automatically creates missing parent directories (no more 'mkdir -p' first).
+#   - Injects boilerplate templates based on file extensions (Python, C, HTML, etc.).
+#   - Automatically sets executable permissions for script files (.sh, .py, .bash).
+#   - Handles multiple files in a single command execution.
+#
+# Features / Responsibilities
+#   - Scaffolding: Recursive directory creation via 'mkdir -p'.
+#   - Template Engine: Context-aware boilerplate injection.
+#   - Permission Guard: Auto-application of 'chmod +x' for interpreted languages.
+#   - Safety: Protects against directory/file type mismatches.
+#
+# Usage Notes
+#   - Syntax: mkfile <path/to/file.ext> [another/file.ext]
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── file creation engine ─────────────────────────────────────────────────────
+
+
+
+
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
+
+# emulate -L zsh: Restricts shell options to the function's local scope.
+# pipefail: Ensures the exit status of a pipeline is the status of the last command to fail.
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# UI Color Palette (High-fidelity Zsh codes)
+local c_blue="%F{39}"
+local c_green="%F{46}"
+local c_yellow="%F{226}"
+local c_grey="%F{240}"
+local c_reset="%f"
+local c_bold="%B"
+local c_unbold="%b"
+
+# Argument check: provide usage instructions if no input is detected.
+if [[ $# -eq 0 ]]; then
+    print -P "${c_yellow}Usage:${c_reset} mkfile <path/to/file> [file2 ...]"
+    return 1
+fi
+
+# ------------------------------------------------------------------------------
+# 2. Processing Loop
+
+# Iterate through every argument provided to the function.
+for file in "$@"; do
+
+    # --- Safety Check: Directory mismatch ---
+    # If the input ends in a slash, it's technically a directory path.
+    if [[ "$file" == */ ]]; then
+            print -P "${c_yellow}⚠${c_reset} Skipped '$file' (It's a directory, use mkdir)"
+            continue
+    fi
+
+    local dir_path
+    dir_path=$(dirname "$file")
+    local ext="${file:e}" # Zsh-native extension extraction
+
+    # A. Recursive Directory Scaffolding
+    # If the target directory doesn't exist, create it silently.
+    if [[ ! -d "$dir_path" ]]; then
+        mkdir -p "$dir_path"
+        print -P "   ${c_grey}📂 Created directory structure: $dir_path${c_reset}"
+    fi
+
+    # B. Existence Check
+    # If the file exists, we mimic 'touch' by updating the timestamp but
+    # avoiding template overwriting to prevent data loss.
+    if [[ -f "$file" ]]; then
+        touch "$file"
+        print -P "   ${c_yellow}⚠${c_reset} File '${c_bold}$file${c_unbold}' already exists. Timestamp updated."
+        continue
+    fi
+
+    # ------------------------------------------------------------------------------
+    # 3. Template Decision Matrix
+
+    # --- Complex Logic: Boilerplate Injection ---
+    # We determine the "starter code" based on the file extension.
+    local template=""
+    local is_script_file=0
+
+    case "$ext" in
+        sh|zsh)
+            template="#!/usr/bin/env $ext\n\n# Created on $(date)\n\nset -e\n\necho \"Hello World\""
+            is_script_file=1
+            ;;
+        bash)
+            template="#!/bin/bash\n\n# Created on $(date)\n\nset -e\n\necho \"Hello World\""
+            is_script_file=1
+            ;;
+        py)
+            template="#!/usr/bin/env python3\n\ndef main():\n    print(\"Hello World\")\n\nif __name__ == \"__main__\":\n    main()"
+            is_script_file=1
+            ;;
+        js|ts)
+            template="console.log('Hello World');"
+            ;;
+        html)
+            template="<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>$(basename "$file" .html)</title>\n</head>\n<body>\n    <h1>Hello World</h1>\n</body>\n</html>"
+            ;;
+        css)
+            template="/* Styles for $(basename "$file" .css) */\n\nbody {\n    margin: 0;\n    padding: 0;\n}"
+            ;;
+        json)
+            template="{\n    \"name\": \"project\"\n}"
+            ;;
+        md)
+            template="# $(basename "$file" .md | tr '[:lower:]' '[:upper:]')\n\nCreated: $(date '+%Y-%m-%d')"
+            ;;
+        c)
+            template="#include <stdio.h>\n\nint main() {\n    printf(\"Hello World\\\\n\");\n    return 0;\n}"
+            ;;
+        cpp)
+            template="#include <iostream>\n\nint main() {\n    std::cout << \"Hello World\" << std::endl;\n    return 0;\n}"
+            ;;
+        rs)
+            template="fn main() {\n    println!(\"Hello, world!\");\n}"
+            ;;
+        go)
+            template="package main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello World\")\n}"
+            ;;
+    esac
+
+    # ------------------------------------------------------------------------------
+    # 4. Finalization (Write & Permissions)
+
+    # !!! CRITICAL: Output Handling
+    # We use 'printf %b' to ensure that newlines (\n) within the template
+    # strings are correctly interpreted as actual line breaks in the file.
+    if [[ -n "$template" ]]; then
+        printf "%b\n" "$template" > "$file"
+        print -P "   ${c_green}✔${c_reset} Created '${c_bold}$file${c_unbold}' ${c_grey}(with $ext template)${c_reset}"
+    else
+        touch "$file"
+        print -P "   ${c_green}✔${c_reset} Created '${c_bold}$file${c_unbold}' ${c_grey}(empty)${c_reset}"
+    fi
+
+    # Auto-Executable Logic
+    # If the file was identified as a script, we apply the execution bit.
+    if (( is_script_file )); then
+        chmod +x "$file"
+        print -P "   ${c_blue}⚡${c_reset} Made executable (chmod +x)"
+    fi
+done
+

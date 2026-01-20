@@ -1,0 +1,40 @@
+function cd_work() {
+    # 1. Setup
+    local projects_dir="${WORK_DIR:-$HOME/Work}" # Fallback if env var not set
+
+    if [[ ! -d "$projects_dir" ]]; then
+        print -P "%F{red}[ERROR]%f Work directory not found: $projects_dir"
+        return 1
+    fi
+
+    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+
+    # 2. Get Project List (Depth 1)
+    #    We cd into the directory first so fzf produces clean output (just 'project-name')
+    #    then we cd back or use the result relative to projects_dir.
+    local project
+    project=$(cd "$projects_dir" && find . -maxdepth 1 -mindepth 1 -type d -not -path '*/.*' | sed 's|^\./||' | sort | \
+        fzf \
+        --no-multi \
+        --prompt="🚀 Projects > " \
+        --preview-window="right:65%:wrap:nohidden" \
+        \
+        # SMART PREVIEW:
+        # 1. Tries to show README.md (glow/bat/cat)
+        # 2. If no readme, shows directory tree
+        --preview "local p=\"$projects_dir/{}\";
+                   if [ -f \"\$p/README.md\" ]; then
+                       bat --style=numbers --color=always \"\$p/README.md\" 2>/dev/null || cat \"\$p/README.md\";
+                   elif [ -f \"\$p/readme.md\" ]; then
+                       bat --style=numbers --color=always \"\$p/readme.md\" 2>/dev/null || cat \"\$p/readme.md\";
+                   else
+                       eza --tree --level=2 --color=always \"\$p\" 2>/dev/null || ls -1 --color=always \"\$p\";
+                   fi"
+    )
+
+    # 3. Enter Project
+    if [[ -n "$project" ]]; then
+        cd "$projects_dir/$project" || return
+        # print -P "%F{green}::%f Work hard!"
+    fi
+}

@@ -1,0 +1,31 @@
+function fzf_kill() {
+    # 1. Local Override (Fixes Tab Selection)
+    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+
+    # 2. Run FZF
+    #    --header-lines=1: Treats the first line (UID PID...) as a sticky header
+    #    ctrl-r: Re-runs the 'ps' command to update the list
+    local pid
+    pid=$(ps -ef | fzf --multi \
+        --header-lines=1 \
+        --prompt="💀 Kill Process > " \
+        --preview 'echo {}' --preview-window='down:3:wrap' \
+        --bind 'ctrl-r:reload(ps -ef)' \
+        --color='preview-border:#f7768e' \
+        | awk '{print $2}')
+
+    # 3. Kill execution
+    if [[ -n "$pid" ]]; then
+        # Default to signal 9 (KILL) if no argument is passed
+        local signal="-${1:-9}"
+
+        echo "$pid" | xargs kill "$signal"
+
+        # Check if it worked
+        if [[ $? -eq 0 ]]; then
+            print -P "%F{red}Wait, that actually worked? Process killed.%f"
+        else
+             print -P "%F{yellow}Failed to kill some processes (Permission denied?).%f"
+        fi
+    fi
+}

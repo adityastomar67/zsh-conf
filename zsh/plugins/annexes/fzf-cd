@@ -1,0 +1,41 @@
+function fcd() {
+    local dir
+
+    # 1. SEARCH LOGIC
+    #    Preference: fd (Fast, Rust-based) > find (Standard, slower)
+    if is_installed fd; then
+        dir=$(fd --type d --hidden --follow --exclude ".git" --exclude "node_modules" . "${1:-.}" | fzf \
+            --prompt="Change Dir > " \
+            --header="Select a directory to enter" \
+            --preview="eza --tree --level=2 --color=always --icons {} | head -200" \
+            --height=60% --layout=reverse --border --info=hidden \
+            --color='header:blue,prompt:yellow,pointer:red,marker:green,bg+:236' \
+        )
+    else
+        # Fallback for systems without 'fd'
+        dir=$(find "${1:-.}" -path '*/\.*' -prune -o -type d -print 2>/dev/null | fzf \
+            --prompt="Change Dir > " \
+            --preview="ls -A --color=always {} | head -200" \
+            --height=60% --layout=reverse --border --info=hidden \
+        )
+    fi
+
+    # 2. EXIT HANDLER
+    #    If user pressed Esc or Ctrl+C, $dir is empty. Return safely.
+    [ -z "$dir" ] && return
+
+    # 3. ACTION
+    cd "$dir" || return
+
+    # 4. POST-ACTION LISTING
+    #    Print the entered path and list contents
+    print -P "%F{blue}➜ Entered:%f %B$dir%b"
+
+    if is_installed eza; then
+        eza -al --color=always --icons --git --group-directories-first
+    elif is_installed exa; then
+        exa -al --color=always --icons --git --group-directories-first
+    else
+        ls -al
+    fi
+}

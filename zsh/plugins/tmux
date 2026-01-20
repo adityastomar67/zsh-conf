@@ -1,0 +1,193 @@
+#!/usr/bin/env zsh
+
+#    ▀█▀░█▀▄▀█░█░█░█░█
+#    ░█░░█░▀░█░█░█░▄▀▄
+#    ░▀░░▀░░░▀░▀▀▀░▀░▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Manages the integration between Zsh and Tmux (Terminal Multiplexer).
+#   It handles auto-launching, session management aliases, and provides
+#   an interactive dashboard for attaching to or creating sessions.
+#
+# Problems Solved
+#   - Prevents nested Tmux sessions (Tmux inside Tmux).
+#   - Automatically attaches to existing detached sessions to save context.
+#   - Provides a GUI-like (TUI) menu via FZF to manage multiple sessions easily.
+#   - Detects IDE terminals (VS Code, IntelliJ) to avoid launching Tmux inside them.
+#
+# Features / Responsibilities
+#   - **Auto-Launch Logic:** Smart detection of whether to start/attach Tmux.
+#   - **FZF Dashboard:** A visual menu showing attached/detached states and window counts.
+#   - **Safety Guards:** Prevents execution in non-interactive shells.
+#
+# Usage Notes
+#   - Set `ENABLE_AUTO_TMUX="yes"` in your user config to enable this module.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── initialization & safety checks ───────────────────────────────────────────
+
+
+
+# 1. Feature Flag Check
+# We use the ':l' modifier to convert the string to lowercase for robust comparison.
+[[ "${ENABLE_AUTO_TMUX:l}" != "yes" ]] && return
+
+
+# 2. Dependency Check
+# We use the Zsh hash $+commands to check for binary existence efficiently.
+if (( ! $+commands[tmux] )); then
+    print -P "\n%F{yellow}[WARN] USE_TMUX='Yes' but 'tmux' is not installed.%f"
+    return
+fi
+
+
+# ── aliases ──────────────────────────────────────────────────────────────────
+
+# Standard shortcuts for common Tmux operations to speed up workflow.
+alias tn='tmux new -s'                 # New named session
+alias ta='tmux attach -t'              # Attach to session
+alias tk='tmux kill-session -t'        # Kill session
+alias tl='tmux ls'                     # List sessions
+alias tK='tmux kill-server'            # Kill everything (Server shutdown)
+
+
+# ── interactive launcher ─────────────────────────────────────────────────────
+
+# ------------------------------------------------------------------------------
+# Section: Execution Guard
+# Description:
+#   We explicitly block the auto-launcher in specific environments to prevent
+#   recursion or annoyance.
+#
+# Logic:
+#   - $TMUX: Already inside a session?
+#   - ! -t 0: Is the input not a TTY (e.g., running via script/pipe)?
+#   - $VSCODE...: Are we inside an IDE's integrated terminal?
+# ------------------------------------------------------------------------------
+[[ -n "$TMUX" || ! -t 0 || -n "$VSCODE_INJECTION" || -n "$TERMINAL_EMULATOR" ]] && return
+
+
+# ------------------------------------------------------------------------------
+# Section: Scenario A (Fresh Start)
+# Description:
+#   If no Tmux sessions exist on the server, prompt the user to create a default
+#   'main' session or drop into a standard shell.
+# ------------------------------------------------------------------------------
+if ! tmux has-session 2>/dev/null; then
+    print -P "\n%F{yellow}== No active Tmux sessions ==%f"
+    print -n "Create new session 'main'? [Y/n] "
+
+    local choice
+    read -k 1 choice
+    echo "" # Insert newline after keypress
+
+    if [[ "$choice" == "n" || "$choice" == "N" ]]; then
+        return
+    fi
+
+    # exec replaces the current shell process, saving memory.
+    exec tmux new-session -s main
+    return
+fi
+
+
+# ------------------------------------------------------------------------------
+# Section: Scenario B (Smart Attach)
+# Description:
+#   If there is exactly one session and it is currently DETACHED (nobody using it),
+#   we assume the user wants to resume work and attach immediately.
+# ------------------------------------------------------------------------------
+
+# Filter list-sessions output to count detached (attached=0) sessions
+local detached_count=$(tmux list-sessions -F "#{session_attached}" 2>/dev/null | grep "^0$" | wc -l)
+local total_count=$(tmux list-sessions 2>/dev/null | wc -l)
+
+if [[ "$detached_count" -eq 1 && "$total_count" -eq 1 ]]; then
+    exec tmux attach-session
+    return
+fi
+
+
+# ------------------------------------------------------------------------------
+# Section: Scenario C (The FZF Dashboard)
+# Description:
+#   If multiple sessions exist, we present a rich text UI using FZF.
+#   The user can select a session to attach to OR type a new name to create one.
+# ------------------------------------------------------------------------------
+
+
+
+# Configure FZF layout options
+local fzf_opts=(
+    --height=40%
+    --layout=reverse
+    --border
+    --prompt="⚡ Tmux > "
+    --header="Enter: Attach existing • Type & Enter: Create new"
+    --print-query  # Allows capturing what the user typed if no match found
+    --exit-0
+    --ansi         # Enable color support in the menu
+)
+
+# 1. Fetch Raw Data
+# Format: attached_flag (0/1) name window_count
+local sessions=$(tmux list-sessions -F "#{session_attached} #{session_name} #{session_windows}")
+
+# 2. Prettify Output (AWK Magic)
+# --- Complex Logic: Dynamic Alignment ---
+# We calculate the maximum length of session names first, then reprint the list
+# with padding so the "Window Count" column aligns perfectly.
+# Colors: Green dot for attached, White dot for detached.
+local pretty_list=$(echo "$sessions" | awk '{
+    # Save data to array so we can print it later
+    attached[NR] = $1
+    names[NR]    = $2
+    wins[NR]     = $3
+
+    # Calculate max length of session names for padding
+    len = length($2)
+    if (len > max) max = len
+} END {
+    # Print all lines with padding
+    for (i=1; i<=NR; i++) {
+        if (attached[i] == "1") {
+            # Green Dot + Name (Padded to max width) + Window Count
+            printf "\033[32m● %-" max "s\033[0m   \033[90m(%s windows)\033[0m\n", names[i], wins[i]
+        } else {
+            # White Dot + Name (Padded to max width) + Window Count
+            printf "\033[37m○ %-" max "s\033[0m   \033[90m(%s windows)\033[0m\n", names[i], wins[i]
+        }
+    }
+}')
+
+# 3. Launch Selection Menu
+local result=$(echo "$pretty_list" | fzf "${fzf_opts[@]}")
+
+# 4. Parse Results
+# FZF with --print-query returns two lines:
+# Line 1: The query string typed by the user.
+# Line 2: The actual selection from the list (if any).
+local query=$(echo "$result" | head -n1)
+local match=$(echo "$result" | tail -n1)
+
+# --- Complex Logic: Robust Extraction ---
+# We must strip the ANSI color codes we added in step 2 before extracting the name.
+# Perl regex removes \e[...] sequences. Awk gets the 2nd column (the Name).
+local target_session=$(echo "$match" | perl -pe 's/\e\[?.*?[\@-~]//g' | awk '{print $2}')
+
+if [[ -n "$target_session" ]]; then
+    # Case: User selected an existing session
+    if tmux has-session -t "$target_session" 2>/dev/null; then
+        exec tmux attach-session -t "$target_session"
+    else
+        print -P "%F{red}[ERROR] Session '$target_session' not found.%f"
+    fi
+elif [[ -n "$query" ]]; then
+    # Case: User typed a new name and hit Enter (no match)
+    print -P "\n%F{green}::%f Creating new session: %B$query%b"
+    exec tmux new-session -s "$query"
+fi

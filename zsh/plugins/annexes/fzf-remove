@@ -1,0 +1,69 @@
+function fzf_rm() {
+    # 1. Passthrough: If you typed arguments, just run rm and exit
+    if [[ "$#" -gt 0 ]]; then
+        command rm -rf "$@"
+        return
+    fi
+
+    # 2. Local Override
+    #    - Fix Tab Selection
+    #    - Force Preview Window to be VISIBLE (overrides global hidden setting)
+    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+
+    # 3. Generate Clean File List (Bypass 'eza' alias)
+    #    We prioritize 'fd' if installed, otherwise use raw 'ls'
+    local list_cmd
+    if (( $+commands[fd] )); then
+        list_cmd="fd --max-depth 1 --hidden --exclude .git --strip-cwd-prefix"
+    else
+        list_cmd="command ls -A1" # 'command' ignores your alias
+    fi
+
+    # 4. Run FZF
+    local selected
+    selected=$(eval "$list_cmd" | fzf \
+        --multi \
+        --prompt="💀 Delete > " \
+        --header="Tab: Select Multiple | Enter: Confirm" \
+        --preview-window="right:60%:wrap" \
+        --preview '
+            if [ -d {} ]; then
+                eza --tree --level=2 --color=always {} 2>/dev/null | head -200
+            else
+                mime=$(file --mime-type -b {} 2>/dev/null)
+                if [[ $mime == text/* || $mime == "application/json" ]]; then
+                    bat --style=numbers --color=always {} 2>/dev/null || cat {}
+                else
+                    echo "Binary File ($mime)"
+                fi
+            fi'
+    )
+
+    # 5. Safety Check & Execution
+    if [[ -n "$selected" ]]; then
+        local -a files
+        files=("${(@f)selected}")
+
+        print -P "\n%F{yellow}You are about to PERMANENTLY delete:%f"
+        print -P "%F{red}${files[*]}%f"
+
+        # Confirmation Prompt
+        print -P -n "\n%B%F{red}Are you sure? [y/N]%f%b "
+
+        if read -q choice; then
+            echo
+            command rm -rf "${files[@]}"
+
+            if [[ $? -eq 0 ]]; then
+                 print -P "\n%F{green}✔ Deleted successfully.%f"
+            else
+                 print -P "\n%F{red}✘ Error deleting files.%f"
+            fi
+        else
+            echo
+            print -P "\n%F{green}::%f Cancelled."
+        fi
+    else
+        print -P "\n%F{240}:: No files selected.%f"
+    fi
+}

@@ -1,0 +1,212 @@
+#!/usr/bin/env zsh
+
+#    ░█▀▄░█░█░█▀█░░░█▀▀░█▀█░█▀▄░█▀▀
+#    ░█▀▄░█░█░█░█░░░█░░░█░█░█░█░█▀▀
+#    ░▀░▀░▀▀▀░▀░▀░▀░▀▀▀░▀▀▀░▀▀░░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   A universal code runner that detects file types and executes them using the
+#   appropriate compiler or interpreter.
+#
+# Problems Solved
+#   - Eliminates the need to remember specific compiler flags (e.g., g++ -std=c++20).
+#   - Automates the "Compile -> Execute -> Cleanup" workflow for binary languages.
+#   - Provides high-precision execution timing for performance benchmarking.
+#   - Handles process interruption (Ctrl+C) gracefully, ensuring no orphaned
+#     temp files are left in /tmp.
+#
+# Features / Responsibilities
+#   - Multi-Language Support: C, C++, Rust, Go, Java, Python, JS, TS, etc.
+#   - Smart Compilation: Uses optimization flags (-O2) and modern standards.
+#   - Sandboxed Execution: Compiles to unique temp paths to prevent collisions.
+#   - Performance Tracking: Calculates runtime using $EPOCHREALTIME.
+#
+# Usage Notes
+#   - Syntax: run_code <filename> [args...]
+#   - Example: run_code main.cpp --input data.txt
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── execution engine ─────────────────────────────────────────────────────────
+
+
+
+
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
+
+# emulate -L zsh: Restricts configuration changes to this local function scope.
+# zmodload: Loads high-precision timing and mathematical function modules.
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+zmodload zsh/datetime
+zmodload zsh/mathfunc
+
+# ------------------------------------------------------------------------------
+# 2. Input Validation
+
+local file="$1"
+
+if [[ -z "$file" ]]; then
+    print -P "%F{red}[ERROR]%f No file provided."
+    return 1
+fi
+
+if [[ ! -f "$file" ]]; then
+    print -P "%F{red}[ERROR]%f File '%B$file%b' not found."
+    return 1
+fi
+
+# Shift arguments: remove $1 (file) so that "$@" contains only user-passed flags.
+shift
+
+# ------------------------------------------------------------------------------
+# 3. Path & UI Initialization
+
+local file_ext="${file:e}"          # File extension (e.g., rs)
+local file_base="${file:t:r}"       # Filename without extension (e.g., main)
+
+# !!! CRITICAL: Atomic Temp Path
+# We use the Process ID ($$) and EPOCHSECONDS to ensure that running multiple
+# instances of the same script simultaneously doesn't lead to binary collisions.
+local bin_path="/tmp/zsh_run_${file_base}_$$_${EPOCHSECONDS}"
+
+local c_blue="%F{blue}"
+local c_green="%F{green}"
+local c_red="%F{red}"
+local c_yellow="%F{yellow}"
+local c_grey="%F{240}"
+local c_rst="%f"
+
+# ------------------------------------------------------------------------------
+# 4. Cleanup Strategy
+
+# ---- SAFE: Ensure temp binary is removed even if the user hits Ctrl+C
+trap 'rm -f "$bin_path" 2>/dev/null; print -P "\n${c_red}::${c_rst} Execution cancelled."; return 130' INT TERM
+
+print -P "${c_blue}::${c_rst} Processing %B$file%b..."
+
+local start_time=$EPOCHREALTIME
+local exit_status=0
+local is_compiled=0
+
+# ------------------------------------------------------------------------------
+# 5. Language Decision Matrix
+
+case "$file_ext" in
+    # --- COMPILED LANGUAGES ---
+    cpp|cc|cxx)
+        print -P "   ${c_yellow}🔨${c_rst} Compiling (C++ 20)..."
+        if g++ -std=c++20 -O2 "$file" -o "$bin_path"; then
+            is_compiled=1
+            print -P "   ${c_green}🚀${c_rst} Running..."
+            "$bin_path" "$@"
+            exit_status=$?
+        else
+            exit_status=1
+        fi
+        ;;
+    c)
+        print -P "   ${c_yellow}🔨${c_rst} Compiling (GCC)..."
+        if gcc -O2 "$file" -o "$bin_path"; then
+            is_compiled=1
+            print -P "   ${c_green}🚀${c_rst} Running..."
+            "$bin_path" "$@"
+            exit_status=$?
+        else
+            exit_status=1
+        fi
+        ;;
+    rs)
+        print -P "   ${c_yellow}🔨${c_rst} Compiling (Rust)..."
+        if rustc "$file" -o "$bin_path"; then
+            is_compiled=1
+            print -P "   ${c_green}🚀${c_rst} Running..."
+            "$bin_path" "$@"
+            exit_status=$?
+        else
+            exit_status=1
+        fi
+        ;;
+    java)
+        # Modern Java (11+) allows direct execution of source files
+        print -P "   ${c_green}🚀${c_rst} Running (Java)..."
+        java "$file" "$@"
+        exit_status=$?
+        ;;
+    go)
+        print -P "   ${c_green}🚀${c_rst} Running (Go)..."
+        go run "$file" "$@"
+        exit_status=$?
+        ;;
+
+    # --- INTERPRETED LANGUAGES ---
+    py|python)
+        print -P "   ${c_green}🚀${c_rst} Running (Python)..."
+        python3 "$file" "$@"
+        exit_status=$?
+        ;;
+    js)
+        print -P "   ${c_green}🚀${c_rst} Running (Node)..."
+        node "$file" "$@"
+        exit_status=$?
+        ;;
+    ts)
+        print -P "   ${c_green}🚀${c_rst} Running (TypeScript)..."
+        # Prioritize Bun for speed, fallback to ts-node
+        if (( $+commands[bun] )); then
+            bun run "$file" "$@"
+        elif (( $+commands[ts-node] )); then
+            ts-node "$file" "$@"
+        else
+            print -P "${c_red}[ERROR]${c_rst} Neither 'bun' nor 'ts-node' found."
+            exit_status=1
+        fi
+        exit_status=$?
+        ;;
+    sh|bash|zsh)
+        print -P "   ${c_green}🚀${c_rst} Running (Shell)..."
+        ${SHELL:-bash} "$file" "$@"
+        exit_status=$?
+        ;;
+    md)
+        # Render Markdown in terminal using Glow
+        if (( $+commands[glow] )); then
+            glow "$file"
+        else
+            print -P "${c_red}[ERROR]${c_rst} 'glow' markdown renderer not found."
+            exit_status=1
+        fi
+        ;;
+    *)
+        print -P "${c_red}[ERROR]${c_rst} Unsupported file extension: .${file_ext}"
+        return 1
+        ;;
+esac
+
+# ------------------------------------------------------------------------------
+# 6. Post-Run Cleanup & Benchmarking
+
+# Remove binary immediately after execution to keep /tmp clean
+if (( is_compiled )) && [[ -f "$bin_path" ]]; then
+    rm -f "$bin_path"
+fi
+
+local end_time=$EPOCHREALTIME
+local total_duration=$(( end_time - start_time ))
+local duration_fmt=$(printf "%.3f" $total_duration)
+
+echo
+if (( exit_status == 0 )); then
+    print -P "${c_green}✔${c_rst} Finished in ${c_green}${duration_fmt}s${c_rst}"
+else
+    print -P "${c_red}✘${c_rst} Failed (Exit: $exit_status) in ${c_red}${duration_fmt}s${c_rst}"
+fi
+
+# Release the trap and return the original exit code
+trap - INT TERM
+return $exit_status
+

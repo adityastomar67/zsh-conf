@@ -1,0 +1,132 @@
+#!/usr/bin/env zsh
+#    ░▀▀█░█▀▀░█▀█░█▀█░█▀▀
+#    ░▄▀░░█░░░█░█░█░█░█▀▀
+#    ░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀░░
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a safe and efficient workflow for editing and reloading Zsh
+#   configuration files.
+#
+# Problems Solved
+#   - Prevents "Lockout": Automatically checks syntax before reloading to prevent
+#     broken configs from crashing the shell session.
+#   - Backup Security: Creates a timestamped backup in /tmp before every edit.
+#   - Context Awareness: Detects modular Zsh-conf setups versus standard ~/.zshrc.
+#   - Tool Integration: Supports both terminal-based editors (Vim/Nano) and
+#     GUI-based workflows (VS Code).
+#
+# Features / Responsibilities
+#   - Location Discovery: Resolves paths via ZSH_CONFIG_ROOT or ZDOTDIR.
+#   - Syntax Validation: Uses `zsh -n` to perform a dry-run parse.
+#   - Atomic Reload: Sources the file only if all safety checks pass.
+#   - VS Code Bridge: Implements a `--code` flag to open the entire project.
+#
+# Usage Notes
+#   - `zconf`        : Open primary config in $EDITOR.
+#   - `zconf --code` : Open config directory in VS Code.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── configuration management engine ──────────────────────────────────────────
+
+
+
+
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
+
+# emulate -L zsh: Ensures standard Zsh behavior within this local function.
+emulate -L zsh
+
+# ------------------------------------------------------------------------------
+# 2. Config Path Discovery
+
+# Logic: Prioritize custom modular setups over standard home-dir dotfiles.
+local config_file
+local config_dir
+
+if [[ -n "$ZSH_CONFIG_ROOT" && -d "$ZSH_CONFIG_ROOT" ]]; then
+    # Modular Setup Path
+    config_file="$ZSH_CONFIG_ROOT/zsh/conf.d/00_init.zsh"
+    config_dir="$ZSH_CONFIG_ROOT"
+else
+    # Standard Zsh Path (using ZDOTDIR fallback to HOME)
+    config_file="${ZDOTDIR:-$HOME}/.zshrc"
+    config_dir="${ZDOTDIR:-$HOME}"
+fi
+
+# ------------------------------------------------------------------------------
+# 3. GUI Mode (VS Code Bridge)
+
+if [[ "$1" == "--code" ]]; then
+    if (( ! $+commands[code] )); then
+        print -P "%F{red}[ERROR]%f 'code' command not found. Is VS Code installed?"
+        return 1
+    fi
+
+    print -P "%F{blue}::%f Opening config directory in VS Code..."
+    print -P "   %F{240}Target: $config_dir%f"
+
+    # Open the directory project in VS Code
+    code "$config_dir"
+    return 0
+fi
+
+# ------------------------------------------------------------------------------
+# 4. Terminal Workflow Initialization
+
+# Determine which editor to use (Priority: EDITOR > VISUAL > vim)
+local editor="${EDITOR:-${VISUAL:-vim}}"
+
+# Safety Check: Ensure the file actually exists before attempting edit
+if [[ ! -f "$config_file" ]]; then
+    print -P "%F{red}[ERROR]%f Config file not found at: %U$config_file%u"
+    return 1
+fi
+
+# ------------------------------------------------------------------------------
+# 5. Backup & Edit
+
+
+
+# Create a timestamped backup in the temporary directory.
+# We use %s (seconds since epoch) for unique filenames.
+local backup_file="/tmp/zshrc_backup_$(date +%s).zsh"
+cp "$config_file" "$backup_file"
+
+print -P "%F{blue}::%f Opening %B${config_file:t}%b with %B${editor:t}%b..."
+
+# Launch the editor and wait for the process to exit
+if "$editor" "$config_file"; then
+    echo
+    print -P "%F{yellow}::%f Validating syntax..."
+
+    # ------------------------------------------------------------------------------
+    # 6. Syntax Validation (The Guardrail)
+
+    # !!! CRITICAL: Syntax Check
+    # 'zsh -n' reads the file but does not execute it. It only checks for
+    # parsing errors like unclosed quotes or missing brackets.
+    if zsh -n "$config_file"; then
+        print -P "%F{green}::%f Syntax OK. Reloading..."
+
+        # ---- SAFE: Source the new configuration
+        if source "$config_file"; then
+            print -P "\n%F{green}🚀 Configuration updated successfully.%f"
+        else
+            print -P "\n%F{red}[ERROR]%f execution failed during reload."
+            print -P "        Your previous file is at: $backup_file"
+        fi
+    else
+        # Prevent the user from being stuck with a shell that won't start new sessions.
+        print -P "\n%F{red}[FATAL]%f Syntax Error Detected!"
+        print -P "        The shell was %BNOT%b reloaded to prevent a crash."
+        print -P "        Please run %B'zconf'%b again to fix the error."
+    fi
+else
+    print -P "\n%F{red}::%f Edit aborted."
+fi
+

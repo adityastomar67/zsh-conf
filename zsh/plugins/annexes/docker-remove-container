@@ -1,0 +1,44 @@
+function fzf_docker_rm_container() {
+    # 1. Validation
+    if ! command -v docker >/dev/null; then
+        print -P "%F{red}[ERROR]%f Docker is not installed or not in PATH."
+        return 1
+    fi
+
+    # 2. Local Override (Fixes Tab Selection & Preview)
+    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+
+    # 3. Get List (Formatted nicely)
+    #    We use --format table so columns align perfectly
+    local containers
+    containers=$(docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Image}}" | \
+        fzf --multi \
+            --header-lines=1 \
+            --prompt="🐳 Rm Container > " \
+            --height=60% \
+            \
+            # PREVIEW: Shows container logs (colored)
+            --preview-window="right:65%:wrap:nohidden" \
+            --preview 'docker logs --tail 50 {1} 2>&1 | bat --color=always --style=numbers --language=log 2>/dev/null || tail -n 50'
+    )
+
+    # 4. Execution
+    if [[ -n "$containers" ]]; then
+        # Extract just the Container IDs (Column 1)
+        local -a ids
+        ids=($(echo "$containers" | awk '{print $1}'))
+
+        print -P "\n%F{yellow}You are about to delete ${#ids[@]} container(s):%f"
+        print -P "%F{red}${ids[*]}%f"
+
+        print -P -n "\n%B%F{red}Are you sure? [y/N]%f%b "
+        if read -q choice; then
+            echo
+            docker rm -f "${ids[@]}"
+            print -P "\n%F{green}✔ Containers deleted.%f"
+        else
+            echo
+            print -P "\n%F{green}::%f Cancelled."
+        fi
+    fi
+}

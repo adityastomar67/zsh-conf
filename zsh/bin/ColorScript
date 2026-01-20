@@ -1,0 +1,166 @@
+#!/usr/bin/env zsh
+#  ╔═╗╔═╗╦  ╔═╗╦═╗  ╔═╗╔═╗╦═╗╦╔═╗╔╦╗
+#  ║  ║ ║║  ║ ║╠╦╝  ╚═╗║  ╠╦╝║╠═╝ ║
+#  ╚═╝╚═╝╩═╝╚═╝╩╚═  ╚═╝╚═╝╩╚═╩╩   ╩
+#
+#  :: Simple CLI for shell-color-scripts (Zsh Native Version)
+#  :: A collection of terminal color scripts for eye-candy.
+#  :: Based on: https://github.com/charitarthchugh/shell-color-scripts
+#  :: Updated By: GitHub@adityastomar67
+#
+#  USAGE:
+#      1. List scripts:    colorscript -l
+#      2. Run Random:      colorscript -r
+#      3. Run Specific:    colorscript -e <name_or_index>
+
+# ==============================================================================
+# [1] CONFIGURATION
+# ==============================================================================
+
+# 'typeset -r' makes these variables Read-Only (constants).
+typeset -r DIR_COLORSCRIPTS="$ZSH_CONFIG_ROOT/bin/ASCII"
+
+# ------------------------------------------------------------------------------
+# :: Script Loader
+#    Populates the 'scripts' array using Zsh Glob Qualifiers.
+# ------------------------------------------------------------------------------
+
+# [Zsh Specific] Glob Qualifiers Explanation:
+# (.)  : Match only regular files (no directories).
+# (N)  : Nullglob - If no match, result is an empty list (no error).
+# (on) : Order by Name (lowercase 'o' sorts by name, 'n' usually implied but explicit here).
+# (:t) : Tail - Extract only the filename, remove the path (Modifiers).
+typeset -a scripts
+scripts=( "$DIR_COLORSCRIPTS"/*(.NOn:t) )
+
+# Get total count for logic checks
+readonly count=${#scripts}
+
+
+# ==============================================================================
+# [2] UTILITIES
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# :: Help Menu
+#    Displays usage instructions using a key-value map for layout.
+# ------------------------------------------------------------------------------
+_help() {
+    echo "${COLOR[BOLD]}${COLOR[BLUE]}Description:${COLOR[RESET]} A collection of terminal color scripts.\n"
+    echo "${COLOR[BOLD]}${COLOR[YELLOW]}Usage:${COLOR[RESET]} colorscript [OPTION] [SCRIPT NAME/INDEX]\n"
+
+    # Using Zsh associative array (Hash map) for cleaner formatting
+    local -A options
+    options=(
+        "-h" "Print this help."
+        "-l" "List all installed color scripts."
+        "-r" "Run a random color script."
+        "-e" "Run a specified color script by NAME or INDEX."
+    )
+
+    # Iterate over keys (k) and values (v)
+    for k v in ${(kv)options}; do
+        printf "  %-3s\t%s\n" "$k" "$v"
+    done
+}
+
+# ------------------------------------------------------------------------------
+# :: List Scripts
+#    Iterates through the loaded array and prints index + name.
+# ------------------------------------------------------------------------------
+_list() {
+    # Check if the array is empty
+    if (( count == 0 )); then
+        echo "${COLOR[RED]}Error:${COLOR[RESET]} No scripts found in $DIR_COLORSCRIPTS"
+        return 1
+    fi
+
+    echo "There are ${COLOR[BOLD]}$count${COLOR[RESET]} installed color scripts:"
+
+    # Zsh loops can use {start..end} syntax
+    # Arrays in Zsh are 1-indexed (unlike Bash which is 0-indexed)
+    for i in {1..$count}; do
+        printf "%d\t%s\n" "$i" "${scripts[i]}"
+    done
+}
+
+# ------------------------------------------------------------------------------
+# :: Random Execution
+#    Selects a random file using built-in integer math.
+# ------------------------------------------------------------------------------
+_random() {
+    if (( count == 0 )); then
+        echo "${COLOR[RED]}Error:${COLOR[RESET]} No scripts found."
+        return 1
+    fi
+
+    # Zsh Math:
+    # $RANDOM  : Returns an integer between 0 and 32767
+    # % count  : Modulo operator limits range to (0 to count-1)
+    # + 1      : Shifts range to (1 to count) for Zsh indexing
+    local rand_idx=$(( RANDOM % count + 1 ))
+
+    # 'exec' replaces the current shell process with the script
+    exec "$DIR_COLORSCRIPTS/${scripts[rand_idx]}"
+}
+
+# ------------------------------------------------------------------------------
+# :: Specific Execution
+#    Runs a script based on either numeric index or string name.
+# ------------------------------------------------------------------------------
+_run_colorscript() {
+    local input="$1"
+
+    # Regex check: Is the input a number?
+    if [[ "$input" =~ ^[0-9]+$ ]]; then
+        # Bounds check for the index
+        if (( input < 1 || input > count )); then
+            echo "${COLOR[RED]}Error:${COLOR[RESET]} Invalid index '$input'. Use 1-$count." >&2
+            exit 1
+        fi
+        # Execute by Index
+        exec "$DIR_COLORSCRIPTS/${scripts[input]}"
+    else
+        # Check if file exists (Execute by Name)
+        if [[ ! -f "$DIR_COLORSCRIPTS/$input" ]]; then
+            echo "${COLOR[RED]}Error:${COLOR[RESET]} The '$input' script does not exist." >&2
+            exit 1
+        fi
+        exec "$DIR_COLORSCRIPTS/$input"
+    fi
+}
+
+
+# ==============================================================================
+# [3] MAIN EXECUTION
+# ==============================================================================
+
+main() {
+    # Handle command line arguments
+    case "$1" in
+        ""|-h|--help)
+            _help
+            ;;
+        -l|--list)
+            _list
+            ;;
+        -r|--random)
+            _random
+            ;;
+        -e|--exec)
+            if [[ -z "$2" ]]; then
+                echo "${COLOR[RED]}Error:${COLOR[RESET]} Missing argument for -e." >&2
+                exit 1
+            fi
+            _run_colorscript "$2"
+            ;;
+        *)
+            # Fallback: Invalid option
+            echo "${COLOR[RED]}Error:${COLOR[RESET]} Invalid option '$1'." >&2
+            exit 1
+            ;;
+    esac
+}
+
+# Pass all arguments to main
+main "$@"

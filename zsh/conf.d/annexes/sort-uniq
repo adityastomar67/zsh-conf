@@ -1,0 +1,153 @@
+#!/usr/bin/env zsh
+#    ░█▀▀░█▀█░█▀▄░▀█▀░░░░█░█░█▀█░▀█▀░▄▀▄
+#    ░▀▀█░█░█░█▀▄░░█░░░░░█░█░█░█░░█░░█\█
+#    ░▀▀▀░▀▀▀░▀░▀░░▀░░▀░░▀▀▀░▀░▀░▀▀▀░░▀\
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a robust and high-performance utility to sort and deduplicate
+#   text files.
+#
+# Problems Solved
+#   - Standard 'sort' commands can be slow on large files due to locale-specific
+#     collation; this script optimizes for raw byte-sorting.
+#   - Prevents data loss by using an "Atomic Swap" pattern (writing to a temp
+#     file first before overwriting the source).
+#   - Provides a clear optimization report comparing line counts before and after.
+#   - Automatically creates a backup (.bak) of the original data.
+#
+# Features / Responsibilities
+#   - Performance: Uses 'LC_ALL=C' for maximum sorting speed.
+#   - Integrity: Ensures files are only modified if duplicates are actually found.
+#   - Visualization: Displays a TUI dashboard with percentage of data reclaimed.
+#
+# Usage Notes
+#   - Syntax: sort_uniq <filename>
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── deduplication engine ─────────────────────────────────────────────────────
+
+
+
+
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
+
+# emulate -L zsh: Restricts configuration changes to this local function scope.
+# pipefail: Ensures that if 'sort' fails in a pipe, the whole command returns
+#           the error status.
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# UI Color Palette (High-fidelity Zsh formatting)
+local c_blue="%F{39}"
+local c_green="%F{46}"
+local c_red="%F{196}"
+local c_yellow="%F{226}"
+local c_grey="%F{240}"
+local c_white="%F{255}"
+local c_reset="%f"
+local c_bold="%B"
+local c_unbold="%b"
+
+# ------------------------------------------------------------------------------
+# 2. Input Validation
+
+local source_file="$1"
+
+if [[ -z "$source_file" ]]; then
+    print -P "${c_red}[ERROR]${c_reset} Usage: sort_uniq <filename>"
+    return 1
+fi
+
+# Check if the file physically exists and is a regular file
+if [[ ! -f "$source_file" ]]; then
+    print -P "${c_red}[ERROR]${c_reset} File '${c_bold}$source_file${c_unbold}' not found."
+    return 1
+fi
+
+# -s: checks if file size is greater than zero
+if [[ ! -s "$source_file" ]]; then
+    print -P "${c_yellow}⚠${c_reset} File is empty. Nothing to do."
+    return 0
+fi
+
+# ------------------------------------------------------------------------------
+# 3. Pre-Processing Analysis
+
+print -P -n "${c_blue}::${c_reset} Analyzing..."
+
+# Extract the line count before modification.
+# We use 'tr -d' to ensure no leading/trailing spaces interfere with math logic.
+local lines_before
+lines_before=$(wc -l < "$source_file" | tr -d ' ')
+
+# Clear the "Analyzing..." status using terminal escape codes (\r\e[K)
+printf "\r\e[K"
+
+# ------------------------------------------------------------------------------
+# 4. Sorting Logic
+
+# !!! CRITICAL: Atomic Operation
+# We write results to a temp file first. If the sort fails (e.g., out of disk space),
+# the original file remains untouched.
+local tmp_output
+tmp_output=$(mktemp)
+
+print -P -n "${c_blue}::${c_reset} Sorting & Deduplicating..."
+
+# ---- NOTE: LC_ALL=C Optimization
+# By default, 'sort' respects system locale (e.g., UTF-8 collation rules).
+# Forcing LC_ALL=C tells the binary to sort by raw byte values, which is
+# significantly faster and produces consistent results for unique IDs/logs.
+if ! LC_ALL=C sort -u "$source_file" > "$tmp_output"; then
+    print -P "\n${c_red}[ERROR]${c_reset} Sort failed. Original file untouched."
+    rm -f "$tmp_output"
+    return 1
+fi
+
+local lines_after
+lines_after=$(wc -l < "$tmp_output" | tr -d ' ')
+printf "\r\e[K"
+
+# ------------------------------------------------------------------------------
+# 5. Logic Check
+
+# Calculate the number of redundant lines removed
+local removed_count=$(( lines_before - lines_after ))
+
+# If no duplicates were found, clean up and exit early to save IO
+if (( removed_count == 0 )); then
+    print -P "${c_green}✔${c_reset} File is already sorted and unique. No changes made."
+    rm -f "$tmp_output"
+    return 0
+fi
+
+# ------------------------------------------------------------------------------
+# 6. Applying Changes
+
+# ---- SAFE: Backup creation
+# Before overwriting, we create a fallback file.
+cp "$source_file" "$source_file.bak"
+mv "$tmp_output" "$source_file"
+
+# ------------------------------------------------------------------------------
+# 7. Dashboard Report
+
+# Calculate percentage of data reduction
+local reclaim_pct=$(( (removed_count * 100) / lines_before ))
+
+print -P "${c_blue}╭──────────────────────────────────────╮${c_reset}"
+print -P "${c_blue}│      📉  OPTIMIZATION REPORT         │${c_reset}"
+print -P "${c_blue}├──────────────────────────────────────┤${c_reset}"
+print -P "${c_blue}│${c_reset}  Before:  ${c_white}$lines_before lines${c_reset}"
+print -P "${c_blue}│${c_reset}  After:   ${c_white}$lines_after lines${c_reset}"
+print -P "${c_blue}│${c_reset}  Removed: ${c_red}-$removed_count lines ($reclaim_pct%)${c_reset}"
+print -P "${c_blue}╰──────────────────────────────────────╯${c_reset}"
+
+print -P "   ${c_green}✔${c_reset} Optimized file saved to: ${c_bold}$source_file${c_unbold}"
+print -P "   ${c_grey}Backup saved to: $source_file.bak${c_reset}"
+

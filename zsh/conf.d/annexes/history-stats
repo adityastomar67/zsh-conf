@@ -1,0 +1,163 @@
+#!/usr/bin/env zsh
+
+#    ░█░█░▀█▀░█▀▀░▀█▀░░░█▀▀░▀█▀░█▀█░▀█▀░█▀▀
+#    ░█▀█░░█░░▀▀█░░█░░░░▀▀█░░█░░█▀█░░█░░▀▀█
+#    ░▀░▀░▀▀▀░▀▀▀░░▀░░▀░▀▀▀░░▀░░▀░▀░░▀░░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Analyzes the shell history file to provide a visual breakdown of the user's
+#   most frequently used commands.
+#
+# Problems Solved
+#   - Aggregates raw history data into meaningful usage patterns.
+#   - Normalizes commands (e.g., stripping 'sudo' or 'time' prefixes and paths).
+#   - Filters out high-frequency "noise" commands (ls, cd, etc.) to highlight
+#     actual tool usage.
+#   - Visualizes frequency through a color-coded TUI bar chart.
+#
+# Features / Responsibilities
+#   - Command Normalization: Extracts the core binary name from paths or wrappers.
+#   - Advanced AWK Pipeline: Handles data aggregation and bar width calculation.
+#   - Heatmap Bars: Colors bars based on the percentage of total command volume.
+#   - Dashboard UI: Displays total analyzed vs. unique command count.
+#
+# Usage Notes
+#   - Syntax: hist_stats
+#   - Relies on the 'fc' (fix command) builtin to read history.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── history analysis engine ──────────────────────────────────────────────────
+
+
+
+
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
+
+# emulate -L zsh: Restricts configuration changes to this local scope.
+# pipefail: Ensures that if any command in the pipe fails, the whole chain fails.
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# UI Color Palette (High-fidelity Zsh codes)
+local c_blue="%F{39}"
+local c_green="%F{46}"
+local c_grey="%F{240}"
+local c_white="%F{255}"
+local c_reset="%f"
+
+# ------------------------------------------------------------------------------
+# 2. Filtering Configuration
+
+# Regex pattern to ignore utility commands that don't represent "work"
+local ignore_pattern="^(ls|cd|clear|exit|z|zsh|pwd|history|exec|source|sudo)$"
+
+print -P "${c_blue}::${c_reset} Analyzing command history..."
+
+# ------------------------------------------------------------------------------
+# 3. Processing Pipeline
+
+# --- Complex Logic: Data Aggregation ---
+# 1. fc -l -n 1: Lists all history commands without line numbers.
+# 2. AWK Logic:
+#    - Skips prefixes like 'sudo' to find the actual command being run.
+#    - Strips directory paths (e.g., /usr/bin/git -> git).
+#    - Increments a hash map 'count[cmd]' for every valid entry.
+local output
+output=$(fc -l -n 1 | LC_ALL=C awk -v ignore="$ignore_pattern" '
+{
+    cmd = $1
+    # Extract true command if wrapped in common utility wrappers
+    if (cmd == "sudo" || cmd == "time") cmd = $2
+
+    # Handle absolute or relative paths: find basename
+    n = split(cmd, parts, "/")
+    if (n > 1) cmd = parts[n]
+
+    # Filter out noise, empty lines, or variable assignments
+    if (cmd == "" || cmd ~ /^(\.|\/)/ || cmd ~ /=/ || cmd ~ ignore) next
+
+    count[cmd]++
+    total++
+}
+END {
+    print "TOTAL_CMDS " total
+    for (c in count) print count[c] " " c
+}' | sort -nr)
+
+# ------------------------------------------------------------------------------
+# 4. Result Parsing
+
+# Extract calculated metrics from the AWK output stream
+local total_cmds=$(echo "$output" | grep "TOTAL_CMDS" | cut -d' ' -f2)
+local data=$(echo "$output" | grep -v "TOTAL_CMDS")
+local top_15=$(echo "$data" | head -n 15)
+local unique_count=$(echo "$data" | wc -l | tr -d ' ')
+
+# ------------------------------------------------------------------------------
+# 5. Dashboard Rendering
+
+
+
+print -P "${c_blue}╭──────────────────────────────────────────────────╮${c_reset}"
+print -P "${c_blue}│             📊  COMMAND HISTORY STATS            │${c_reset}"
+print -P "${c_blue}├──────────────────────────────────────────────────┤${c_reset}"
+
+# !!! CRITICAL: Formatting
+# We use printf with %s to pass Zsh color variables into the AWK-style formatting
+# to avoid rendering glitches or misinterpreted percent signs.
+printf "%s│%s  Analyzed: %s%-10s%s Unique: %s%-11s%s  %s│%s\n" \
+    "$c_blue" "$c_reset" \
+    "$c_white" "$total_cmds" "$c_reset" \
+    "$c_white" "$unique_count" "$c_reset" \
+    "$c_blue" "$c_reset"
+
+print -P "${c_blue}╰──────────────────────────────────────────────────╯${c_reset}"
+
+# ------------------------------------------------------------------------------
+# 6. Bar Chart Rendering
+
+# --- Complex Logic: Heatmap Generation ---
+# We map the percentage of usage to a color scale and bar width.
+# 1. pct > 20% -> Red (Major Reliance)
+# 2. pct > 10% -> Orange
+# 3. pct > 5%  -> Yellow
+# 4. else      -> Green
+echo "$top_15" | awk -v total="$total_cmds" '
+function get_color(pct) {
+    if (pct > 20) return "\033[38;5;196m"
+    if (pct > 10) return "\033[38;5;214m"
+    if (pct > 5)  return "\033[38;5;226m"
+    return "\033[38;5;46m"
+}
+{
+    count = $1
+    cmd = $2
+    percent = (total > 0) ? (count / total) * 100 : 0
+
+    # Scale the bar width (capped at 20 characters)
+    bar_width = int(percent / 1.5)
+    if (bar_width == 0 && percent > 0) bar_width = 1
+    if (bar_width > 20) bar_width = 20
+
+    # Build Unicode bar string
+    bar = ""
+    for (i=0; i<bar_width; i++) bar = bar "▇"
+
+    color = get_color(percent)
+    reset = "\033[0m"
+    grey  = "\033[38;5;240m"
+    white = "\033[1;37m"
+
+    # Final Dashboard Print
+    printf "  %s%4d%s  %s%5.1f%%%s  %s%-12s%s  %s%s%s\n",
+        white, count, reset,
+        grey, percent, reset,
+        white, cmd, reset,
+        color, bar, reset
+}'
+echo

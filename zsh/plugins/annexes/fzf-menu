@@ -1,0 +1,47 @@
+function fzf_menu() {
+    # 1. SETUP: Where do your functions live?
+    #    Change this to your actual directory path.
+    local tools_dir="${ZDOTDIR}/zsh/plugins/annexes"
+
+    if [[ ! -d "$tools_dir" ]]; then
+        print -P "%F{red}[ERROR]%f Directory not found: $tools_dir"
+        return 1
+    fi
+
+    # 2. LIST & STRIP
+    #    We look for files starting with 'fzf-' inside the directory.
+    #    We strip 'fzf-' from the display so the menu looks clean (e.g. 'uninstall' instead of 'fzf-uninstall').
+    local tool
+    tool=$(find "$tools_dir" -maxdepth 1 -name "fzf-*" -type f -exec basename {} \; | \
+           sed 's/^fzf-//' | \
+           sort | \
+           fzf --prompt="🧰 FZF Tools > " \
+               --height=50% \
+               --layout=reverse \
+               --preview "bat --color=always --style=numbers --language=zsh \"$tools_dir/fzf-{}\" 2>/dev/null || cat \"$tools_dir/fzf-{}\"" \
+               --preview-window="right:65%:wrap"
+    )
+
+    # 3. EXECUTE
+    if [[ -n "$tool" ]]; then
+        local script_file="$tools_dir/fzf-${tool}"
+
+        # A. Source the file (Loads the function into current shell)
+        source "$script_file"
+
+        # B. Run the function
+        #    Assumption: If file is 'fzf-uninstall', the function inside is named 'fzf_uninstall'
+        #    We construct the function name and call it.
+        local func_name="fzf_${tool}"
+
+        # Check if function exists after sourcing
+        if functions "$func_name" > /dev/null; then
+            print -P "\n%F{green}::%f Running %B$func_name%b..."
+            "$func_name"
+        else
+            # Fallback: Maybe the function is named 'fzf-uninstall' (with hyphen) or something else?
+            print -P "%F{red}[ERROR]%f Loaded $script_file, but could not find function '$func_name'."
+            print -P "Ensure the function inside the file matches the filename pattern (e.g. fzf_uninstall)."
+        fi
+    fi
+}

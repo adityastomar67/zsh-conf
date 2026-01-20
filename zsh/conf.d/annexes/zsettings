@@ -1,0 +1,281 @@
+#!/usr/bin/env zsh
+#    ░▀▀█░█▀▀░█▀▀░▀█▀░▀█▀░▀█▀░█▀█░█▀▀░█▀▀
+#    ░▄▀░░▀▀█░█▀▀░░█░░░█░░░█░░█░█░█░█░▀▀█
+#    ░▀▀▀░▀▀▀░▀▀▀░░▀░░░▀░░▀▀▀░▀░▀░▀▀▀░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a visual, interactive dashboard for managing user configuration.
+#
+# Problems Solved
+#   - Eliminates the need to manually open and search `user.conf`.
+#   - Prevents syntax errors by programmatically editing the file.
+#   - Visualizes "Active" vs "Disabled" plugins in a color-coded table.
+#   - Handles boolean toggles (Yes/No) instantly without typing.
+#
+# Features / Responsibilities
+#   - Parser: Uses AWK to extract `ZPLUGINS` array and `export` variables.
+#   - UI: Uses FZF to display a formatted, aligned table of settings.
+#   - Editor: Uses Perl for in-place file editing (sed replacement is risky here).
+#
+# Usage Notes
+#   - Run `zsettings` to open the dashboard.
+#   - Requires `user.conf` to follow a strict format (ZPLUGINS array, export VAR=Val).
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── configuration dashboard ──────────────────────────────────────────────────
+
+
+
+zsettings() {
+    # ------------------------------------------------------------------------------
+    # 1. Environment Sandbox
+
+    emulate -L zsh
+    setopt localoptions no_xtrace pipefail
+
+    # ------------------------------------------------------------------------------
+    # 2. Path Resolution
+
+    local config_file="${ZDOTDIR:-$HOME/.config/zsh}/user.conf"
+
+    if [[ ! -f "$config_file" ]]; then
+        print -P "%F{red}[ERROR]%f Config file not found at: %U$config_file%u"
+        return 1
+    fi
+
+    # Create temporary files securely
+    local tmp_raw=$(mktemp)
+    local tmp_list=$(mktemp)
+
+    # ---- SAFE: Cleanup trap
+    # Ensures temp files are deleted even if user Ctrl+C's out of the function
+    trap 'rm -f "$tmp_raw" "$tmp_list"; return' INT TERM EXIT
+
+    # ------------------------------------------------------------------------------
+    # 3. Main Event Loop
+
+    while true; do
+        # Clear temp file
+        : > "$tmp_raw"
+
+        # --- Complex Logic: The Parser ---
+        # We use AWK to statefully parse the config file.
+        # It handles two modes:
+        # 1. Array Mode: Inside 'typeset -a ZPLUGINS=('
+        # 2. Export Mode: Lines starting with 'export'
+        awk '
+        BEGIN { opts = ""; in_plugins = 0; }
+
+        # --- DETECT PLUGINS ARRAY ---
+        /^typeset -a ZPLUGINS=\(/ { in_plugins = 1; next }
+        in_plugins && /^\)/       { in_plugins = 0; next }
+
+        in_plugins {
+            # Skip empty lines or lines without quotes
+            if ($0 ~ /^[ \t]*$/ || $0 !~ /"/) next;
+
+            # Logic: If line starts with comment #, it is disabled
+            status = ($0 ~ /^[ \t]*#/) ? "Disabled" : "Active";
+
+            # Cleanup: Extract just the "user/repo" string
+            raw = $0;
+            gsub(/^[ \t]*#?[ \t]*/, "", raw); # Remove leading space/hash
+            gsub(/"defer"[ \t]*/, "", raw);   # Remove defer keyword
+            gsub(/"/, "", raw);               # Remove quotes
+            sub(/[ \t]*#.*/, "", raw);        # Remove trailing comments
+
+            # Output: LineNum | Type | Name | Status | Hint
+            print NR "\t" "PLUGIN" "\t" "📦 " raw "\t" status "\t" "(Toggle)";
+            next;
+        }
+
+        # --- DETECT EXPORT VARIABLES ---
+        # Capture comment lines starting with "# Options:" to use as hints
+        /# Options:/ {
+            opts = $0;
+            sub(/^[ \t]*# Options:[ \t]*/, "", opts);
+            next;
+        }
+        /^export [A-Z_]+=/{
+            # Extract Key and Value
+            n = index($0, "=");
+            key = substr($0, 8, n-8);
+            val = substr($0, n+1);
+            gsub(/^"|"$/, "", val); # Strip quotes
+
+            print NR "\t" "VAR" "\t" key "\t" val "\t" opts;
+            opts = ""; # Reset hint
+        }
+        # Reset hints if we hit a non-export line
+        !/^export/ && !/# Options:/ { opts = "" }
+        ' "$config_file" > "$tmp_raw"
+
+        # ------------------------------------------------------------------------------
+        # 4. UI Alignment Calculation
+
+        # We perform a pass to find the maximum length of Keys and Values.
+        # This allows us to print a perfectly aligned table in the terminal.
+        local max_key_len=0
+        local max_val_len=12  # Minimum width to fit "Click to Add"
+
+        local line_num type key value extra
+        while IFS=$'\t' read -r line_num type key value extra; do
+            if (( ${#key} > max_key_len )); then max_key_len=${#key}; fi
+            if (( ${#value} > max_val_len )); then max_val_len=${#value}; fi
+        done < "$tmp_raw"
+
+        # Add visual padding
+        (( max_key_len += 2 ))
+        (( max_val_len += 2 ))
+
+        # ------------------------------------------------------------------------------
+        # 5. Render Display List
+
+        : > "$tmp_list"
+
+        # A. Add the "Create New" button at the very top
+        # We use ANSI codes directly here for the yellow color
+        printf "0\tACTION\t%-${max_key_len}s\t%s%-${max_val_len}s\033[0m%s\n" \
+            "+ Add New Plugin" \
+            $'\033[1;33m' "Click to Add" \
+            $'\033[2m(Insert new repo)\033[0m' >> "$tmp_list"
+
+        # B. Render the items from the parser
+        while IFS=$'\t' read -r line_num type key value extra; do
+            local val_color
+
+            # Semantic Coloring
+            if [[ "$value" == "Yes" || "$value" == "Active" ]]; then
+                val_color=$'\033[1;32m' # Green
+            elif [[ "$value" == "No" || "$value" == "Disabled" ]]; then
+                val_color=$'\033[1;31m' # Red
+            else
+                val_color=$'\033[38;5;75m' # Blue
+            fi
+
+            local extra_display=""
+            if [[ -n "$extra" ]]; then
+                extra_display=$'\033[2m'"$extra"$'\033[0m'
+            fi
+
+            # Format: ID \t Type \t PaddedKey \t ColoredPaddedValue \t Extra
+            printf "%d\t%s\t%-${max_key_len}s\t%s%-${max_val_len}s\033[0m%s\n" \
+                "$line_num" "$type" "$key" \
+                "$val_color" "$value" \
+                "$extra_display" >> "$tmp_list"
+
+        done < "$tmp_raw"
+
+        # ------------------------------------------------------------------------------
+        # 6. Interactive FZF Menu
+
+        local selected
+        # We sort to ensure ACTION is top, but otherwise preserve file order?
+        # Actually, let's trust the input order mostly, but ensure Action (ID 0) is first.
+        # Using 'sort' on the 3rd column (Key) groups items nicely.
+        sort -t$'\t' -k3 -o "$tmp_list" "$tmp_list"
+
+        selected=$(cat "$tmp_list" | fzf \
+            --ansi \
+            --delimiter='\t' \
+            --with-nth=3.. \
+            --height=60% \
+            --layout=reverse \
+            --border \
+            --info=inline \
+            --prompt="  Search > " \
+            --pointer="➜" \
+            --marker="✓" \
+            --bind 'q:abort' \
+            --header=" ⚙️  DASHBOARD (Enter to Edit/Toggle • q to Quit)"
+        )
+
+        # Break loop if user cancelled/quit
+        if [[ -z "$selected" ]]; then break; fi
+
+        # ------------------------------------------------------------------------------
+        # 7. Action Processing
+
+
+
+        # Extract data from the tab-delimited selection string
+        local target_line=$(echo "$selected" | awk -F'\t' '{print $1}')
+        local target_type=$(echo "$selected" | awk -F'\t' '{print $2}')
+        local raw_key=$(echo "$selected" | awk -F'\t' '{print $3}')
+
+        # Cleanup Key (remove padding and icons)
+        local target_key="${raw_key%% *}"
+        target_key="${target_key#📦 }"
+
+        # Cleanup Value (remove ANSI color codes and padding)
+        local target_val=$(echo "$selected" | awk -F'\t' '{print $4}' | perl -pe 's/\e\[?.*?[\@-~]//g' | sed 's/[[:space:]]*$//')
+
+        # --- BRANCH: Add New Plugin ---
+        if [[ "$target_type" == "ACTION" ]]; then
+            echo
+            print -P "%F{cyan}Enter plugin repo (e.g. %Uuser/repo%u):%f"
+            local new_repo
+            vared -p "➜ " -c new_repo
+            if [[ -z "$new_repo" ]]; then continue; fi
+
+            print -P "%F{cyan}Defer loading? (y/n):%f"
+            local defer_choice
+            read -k 1 defer_choice
+
+            local new_line
+            [[ "${defer_choice:l}" == "y" ]] && new_line="    \"defer\" \"$new_repo\"" || new_line="    \"$new_repo\""
+
+            # Find the closing parenthesis of the array to insert before it
+            local end_line=$(awk '/^typeset -a ZPLUGINS=\(/ {p=1} p && /^\)/ {print NR; exit}' "$config_file")
+
+            if [[ -n "$end_line" ]]; then
+                # Perl in-place edit to insert line
+                perl -i -pe "if($. == $end_line) { print \"$new_line\n\" }" "$config_file"
+                print -P "\n%F{green}✔ Plugin added!%f"
+            fi
+            continue
+        fi
+
+        # --- BRANCH: Toggle Plugin ---
+        if [[ "$target_type" == "PLUGIN" ]]; then
+            if [[ "$target_val" =~ "Active" ]]; then
+                # Comment out the line
+                perl -i -pe "if($. == $target_line) { s/^([ \t]*)([^#])/\$1# \$2/ }" "$config_file"
+            else
+                # Uncomment the line
+                perl -i -pe "if($. == $target_line) { s/^([ \t]*)# ?/\$1/ }" "$config_file"
+            fi
+            continue
+        fi
+
+        # --- BRANCH: Edit Variable ---
+        local new_val=""
+
+        # Smart Toggle for Boolean values
+        if [[ "$target_val" == "Yes" ]]; then
+            new_val="No"
+        elif [[ "$target_val" == "No" ]]; then
+            new_val="Yes"
+        else
+            # Manual text entry for other values
+            echo
+            print -P "%F{cyan}Edit value for: %B$target_key%b%f"
+            vared -p "➜ " -c target_val
+            new_val="$target_val"
+        fi
+
+        if [[ -n "$new_val" ]]; then
+            # !!! CRITICAL: Regex Safety
+            # We use '#' as the regex delimiter in Perl to avoid clashing with file paths
+            # (which contain slashes) inside the value.
+            perl -i -pe "if($. == $target_line) { s#^export ${target_key}=.*#export ${target_key}=\"${new_val}\"# }" "$config_file"
+        fi
+
+    done
+
+    # Trap will handle file cleanup automatically on return
+}

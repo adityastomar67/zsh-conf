@@ -1,0 +1,18 @@
+function ftmux() {
+    # 1. Guard: Only works inside Tmux
+    if [[ -z "$TMUX" ]]; then
+        print -P "%F{red}[ERROR]%f This function only works inside a Tmux session."
+        return 1
+    fi
+
+    # 2. Determine command: Use argument if provided, otherwise default to Shell
+    local cmd="${1:-$SHELL}"
+
+    # 3. Open the Popup
+    #    -E : Close the popup automatically when the command exits
+    #    -w : Width (80%)
+    #    -h : Height (80%)
+    #    -d : Start in the current pane's directory
+    #    -B : (Optional) Remove border if you prefer cleaner look
+    tmux display-popup -E -w 80% -h 80% -d "#{pane_current_path}" "$cmd"
+}

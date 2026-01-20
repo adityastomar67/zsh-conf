@@ -1,0 +1,241 @@
+#!/usr/bin/env zsh
+#    ░█▀▀░█▀█░█░█░█▀█░▀█▀░█▀▄░█▀█░█░█░█▀█
+#    ░█░░░█░█░█░█░█░█░░█░░█░█░█░█░█▄█░█░█
+#    ░▀▀▀░▀▀▀░▀▀▀░▀░▀░░▀░░▀▀░░▀▀▀░▀░▀░▀░▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a high-precision, interactive terminal countdown timer.
+#
+# Problems Solved
+#   - Eliminates terminal flickering during rapid UI updates by utilizing
+#     terminal "Home" cursor positioning instead of full screen clears.
+#   - Provides sub-second precision for timing using the zsh/datetime module.
+#   - Handles terminal state management to provide a clean TUI experience.
+#
+# Features / Responsibilities
+#   - Interactive controls (Space: Pause/Resume, Q: Quit).
+#   - Dynamic progress bar using native Zsh string padding (no external forks).
+#   - Desktop notifications for macOS and audible system bells.
+#
+# Usage Notes
+#   - Syntax: countdown 1h 30m 10s
+#   - Requires: zsh/datetime and zsh/mathfunc modules.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ------------------------------------------------------------------------------
+# Environment Sandbox
+
+# We use 'emulate -L zsh' to ensure the function runs with standard Zsh behavior.
+emulate -L zsh
+
+# Disable tracing to keep the TUI clean and prevent debug output interference.
+setopt localoptions no_xtrace no_verbose
+
+# Clear any active traps that might interfere with timing logic.
+trap - DEBUG
+trap - ZERR
+
+# Load Zsh modules for high-resolution time ($EPOCHREALTIME)
+# and mathematical functions (int, float).
+zmodload zsh/datetime
+zmodload zsh/mathfunc
+
+
+# ── argument parsing ───────────────────────────────────────────────────────
+
+# Strip the function name if it was passed as the first argument by a wrapper.
+if [[ "$1" == "countdown" ]]; then shift; fi
+
+local target_seconds=0
+
+# ------------------------------------------------------------------------------
+# Complex Logic: Time Parsing
+# This loop processes human-readable strings (e.g., 1h, 5m, 10s) and converts
+# them into a single integer representing the total number of seconds.
+# It uses Zsh's parameter expansion ${arg%h} to strip the suffix before math.
+if [[ $# -eq 0 ]]; then
+    target_seconds=60
+else
+    for arg in "$@"; do
+        case "$arg" in
+            [0-9]*h) target_seconds=$((target_seconds + ${arg%h} * 3600)) ;;
+            [0-9]*m) target_seconds=$((target_seconds + ${arg%m} * 60)) ;;
+            [0-9]*s) target_seconds=$((target_seconds + ${arg%s})) ;;
+            [0-9]##) target_seconds=$((target_seconds + arg)) ;;
+            *)
+                print -P "%F{red}[ERROR]%f Unknown format '%B$arg%b'. Valid: 1h, 30m, 90."
+                return 1
+                ;;
+        esac
+    done
+fi
+
+if (( target_seconds <= 0 )); then
+    print -P "%F{red}[ERROR]%f Time must be > 0."
+    return 1
+fi
+
+
+# ── terminal setup ─────────────────────────────────────────────────────────
+
+# !!! CRITICAL: UI state management
+# Hide cursor and stop the terminal from printing user keystrokes (echo).
+# We use tput civis for broader terminal compatibility.
+printf "\e[?25l"
+stty -echo
+tput civis 2>/dev/null
+
+# ---- SAFE: Restore terminal state on any exit condition
+trap 'stty echo; printf "\e[?25h"; tput cnorm 2>/dev/null; return' INT TERM EXIT
+
+# Initialize timing variables using $EPOCHREALTIME (float) for accuracy.
+local start_time=$EPOCHREALTIME
+local pause_time=0
+local accumulated_pause=0
+local is_paused=0
+
+# Color definitions using standard ANSI escape codes.
+local c_box="\e[0;34m"    # Blue borders
+local c_lbl="\e[1;30m"    # Dim/Grey labels
+local c_num="\e[1;37m"    # Bright White numbers
+local c_gre="\e[1;32m"    # Green (Safe)
+local c_yel="\e[1;33m"    # Yellow (Paused)
+local c_red="\e[1;31m"    # Red (Urgent)
+local c_rst="\e[0m"       # Reset formatting
+
+clear
+
+
+# ── main execution loop ────────────────────────────────────────────────────
+
+
+
+while true; do
+    # ------------------------------------------------------------------------------
+    # Complex Logic: Dynamic Elapsed Time
+    # To support pause/resume functionality without time-drift, we track the
+    # 'accumulated_pause'. When paused, we fix the 'pause_time'.
+    # When resumed, we add the duration of the pause to our cumulative offset.
+    local current_time=$EPOCHREALTIME
+    local elapsed=0
+
+    if (( is_paused )); then
+        elapsed=$((pause_time - start_time - accumulated_pause))
+    else
+        elapsed=$((current_time - start_time - accumulated_pause))
+    fi
+
+    local remaining=$((target_seconds - elapsed))
+
+    # Prevent the timer from displaying negative values if the loop overshoots.
+    if (( remaining < 0 )); then remaining=0; fi
+
+    # Breakdown seconds into human-readable components using mathfunc.
+    local h=$((int(remaining / 3600)))
+    local m=$((int((remaining % 3600) / 60)))
+    local s=$((int(remaining % 60)))
+    local ms=$((int((remaining - int(remaining)) * 100)))
+
+
+    # ------------------------------------------------------------------------------
+    # Complex Logic: Progress Bar
+    # We calculate 'pct' as a ratio. To draw the bar, we generate strings of
+    # specific characters using Zsh's unique (l:size::char:) padding expansion.
+    # This is high-performance because it avoids for-loops or external calls.
+    local width=30
+    local pct=$((elapsed * 1.0 / target_seconds))
+    if (( pct > 1 )); then pct=1; fi
+
+    local fill_size=$((int((1.0 - pct) * width)))
+
+    # ---- SAFE: Clamp values to bar bounds to prevent expansion errors
+    if (( fill_size < 0 ));     then fill_size=0; fi
+    if (( fill_size > width )); then fill_size=width; fi
+
+    local empty_size=$((width - fill_size))
+
+    # ${(l:fill_size::█:):-} generates a string of '█' of length 'fill_size'
+    local bar_fill="${(l:fill_size::█:):-}"
+    local bar_empty="${(l:empty_size::░:):-}"
+
+
+    # ------------------------------------------------------------------------------
+    # UI Rendering
+
+    # \e[H moves the cursor to the top-left (Home).
+    # By overwriting the same lines instead of clearing, we eliminate flicker.
+    printf "\e[H"
+
+    local status_color="$c_gre"
+    local status_text="RUNNING"
+
+    if (( is_paused )); then
+        status_color="$c_yel"
+        status_text="PAUSED "
+    elif (( remaining < 10 )); then
+        status_color="$c_red"
+        status_text="CRITICAL"
+    fi
+
+    # Draw the TUI Container.
+    print -P "${c_box}╭──────────────────────────────────────╮${c_rst}"
+    print -P "${c_box}│         ${status_color}⏳  $status_text                 ${c_box}│${c_rst}"
+
+    # Format the time numbers into fixed-width slots for stability.
+    printf "${c_box}│         ${c_num}%02d:%02d:%02d${c_lbl}.%02d               ${c_box}│${c_rst}\n" $h $m $s $ms
+
+    print -P "${c_box}│   ${status_color}${bar_fill}${c_lbl}${bar_empty}${c_rst}   ${c_box}│${c_rst}"
+    print -P "${c_box}├──────────────────────────────────────┤${c_rst}"
+    print -P "${c_box}│ ${c_lbl}[SPACE] Pause   [Q] Quit             ${c_box}│${c_rst}"
+    print -P "${c_box}╰──────────────────────────────────────╯${c_rst}"
+
+
+    # ── interaction / feedback ───────────────────────────────────────────
+
+    if (( remaining <= 0 )); then
+        printf "\a" # System bell
+        break
+    fi
+
+    # ------------------------------------------------------------------------------
+    # Complex Logic: Input Handling
+    # read -sk 1: Reads 1 char silently.
+    # -t 0.05: Blocks for only 50ms, allowing the clock to update 20 times per second.
+    local key=""
+    read -sk 1 -t 0.05 key 2>/dev/null
+
+    case "$key" in
+        [qQ])
+            print -P "\n${c_yel}:: Timer cancelled.${c_rst}"
+            return
+            ;;
+        " ")
+            if (( is_paused )); then
+                is_paused=0
+                accumulated_pause=$((accumulated_pause + (EPOCHREALTIME - pause_time)))
+            else
+                is_paused=1
+                pause_time=$EPOCHREALTIME
+            fi
+            ;;
+    esac
+done
+
+
+# ── finalization ───────────────────────────────────────────────────────────
+
+clear
+print -P "${c_gre}"
+echo "  ╭──────────────────────╮"
+echo "  │      TIME IS UP!     │"
+echo "  ╰──────────────────────╯"
+print -P "${c_rst}"
+
+# macOS specific notification logic via AppleScript.
+if (( $+commands[osascript] )); then
+    osascript -e 'display notification "Timer Finished" with title "Countdown"' 2>/dev/null
+fi

@@ -1,0 +1,155 @@
+#!/usr/bin/env zsh
+#    ░█▄█░█▀█░▀█▀░█▀▄░▀█▀░█░█
+#    ░█░█░█▀█░░█░░█▀▄░░█░░▄▀▄
+#    ░▀░▀░▀░▀░░▀░░▀░▀░▀▀▀░▀░▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   A high-performance terminal implementation of the "Digital Rain" effect.
+#
+# Problems Solved
+#   - Visualizes the classic Matrix effect using optimized terminal escape codes.
+#   - Solves the problem of multibyte character rendering in standard AWK by
+#     defaulting to GAWK (GNU Awk) for Japanese character support.
+#   - Manages terminal state to prevent artifacts (hides cursor, restores colors).
+#
+# Features / Responsibilities
+#   - Unicode Support: Utilizes Half-width Katakana for an authentic look.
+#   - Dynamic Resizing: Adapts to current terminal dimensions via 'tput'.
+#   - High-Speed Refresh: Controlled by a non-blocking Zsh 'read' loop.
+#   - Smooth Animation: Implements "Tail Erase" logic to prevent screen smearing.
+#
+# Usage Notes
+#   - Press 'q' or 'Ctrl+C' to terminate and restore terminal settings.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── initialization ───────────────────────────────────────────────────────────
+
+
+
+
+# ------------------------------------------------------------------------------
+# Environment Sandbox
+
+# emulate -L zsh: Ensures function-local scope for options.
+# no_notify/no_monitor: Prevents background job status from breaking the UI.
+emulate -L zsh
+setopt localoptions no_notify no_monitor
+
+# ------------------------------------------------------------------------------
+# 1. Dependency Check
+
+local awk_cmd="awk"
+local use_unicode="0"
+
+# !!! CRITICAL: Character Encoding
+# GAWK is required to handle the multibyte Katakana string correctly.
+# Standard POSIX awk may treat a multibyte char as multiple columns.
+if (( $+commands[gawk] )); then
+    awk_cmd="gawk"
+    use_unicode="1"
+else
+    print -P "${COLOR[YELLOW]}[WARNING]${COLOR[RESET]} 'gawk' not found. Falling back to ASCII mode."
+    print -P "          Install gawk (${COLOR[UNDERLINE]}brew install gawk${COLOR[RESET]}) for Japanese characters."
+    read -k 1 -t 2  # Pause briefly so user sees the warning
+fi
+
+# ------------------------------------------------------------------------------
+# 2. Terminal State Management
+
+# ---- SAFE: Ensure terminal is restored on exit
+# cnorm: restores cursor | sgr0: resets colors | clear: wipes screen.
+trap 'tput cnorm; tput sgr0; clear; return' INT TERM EXIT
+
+tput civis  # Hide the cursor for better immersion
+clear       # Initial screen wipe
+
+# ------------------------------------------------------------------------------
+# 3. Character Set Selection
+
+# Half-width Katakana (standard for the Matrix effect)
+local chars_japanese="ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ0123456789:・.=*+-<>"
+local chars_ascii="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()"
+
+local selected_chars="$chars_ascii"
+[[ "$use_unicode" == "1" ]] && selected_chars="$chars_japanese"
+
+# ------------------------------------------------------------------------------
+# 4. Execution Loop (The Clock)
+
+# We use a Zsh while loop as the "metronome". Every 'echo' sends a pulse to AWK.
+while :; do
+    # read -t 0.05: Controls the framerate (approx 20 FPS).
+    # We read from /dev/tty to ensure 'q' works even if we are piping.
+    read -s -k 1 -t 0.05 key < /dev/tty 2>/dev/null
+    if [[ "$key" == "q" ]]; then break; fi
+    echo
+done | LC_ALL=en_US.UTF-8 $awk_cmd \
+    -v lines="$(tput lines)" \
+    -v cols="$(tput cols)" \
+    -v chars="$selected_chars" \
+    '
+BEGIN {
+    srand();
+    len_chars = length(chars);
+
+    # --- Complex Logic: Column Initialization ---
+    # y[c]: current vertical position of the head.
+    # l[c]: the length of the green tail for this column.
+    # We start with negative Y values to stagger the entry of streams.
+    for (c = 1; c <= cols; c++) {
+        y[c] = -1 * int(rand() * 50);
+        l[c] = int(rand() * 15) + 5;
+    }
+}
+
+{
+    # For every "tick" received from the Zsh loop:
+    for (c = 1; c <= cols; c++) {
+
+        # --- Complex Logic: Boundary & Reset ---
+        # If the tail has completely left the screen, or by random chance (0.02),
+        # we reset the stream to the top.
+        if (y[c] > lines + l[c] || (y[c] < 0 && rand() < 0.02)) {
+            y[c] = 0;
+            l[c] = int(rand() * 15) + 5;
+        }
+
+        if (y[c] >= 0) {
+            # 1. Tail Erasing
+            # We calculate the position of the very last character in the tail
+            # and replace it with a space to "move" the stream down.
+            if (y[c] - l[c] > 0 && y[c] - l[c] <= lines) {
+                printf "\033[%d;%dH ", y[c] - l[c], c;
+            }
+
+            # 2. Body Rendering (Dim Green)
+            # This prints a random character at the current "head" position
+            # in green (\033[32m).
+            if (y[c] > 0 && y[c] <= lines) {
+                r_char = substr(chars, int(rand() * len_chars) + 1, 1);
+                printf "\033[%d;%dH\033[32m%s", y[c], c, r_char;
+            }
+
+            # 3. Head Rendering (Bright White)
+            # The Matrix effect features a leading bright white character.
+            # We print this one row ahead of the green body (\033[1;37m).
+            if (y[c] + 1 > 0 && y[c] + 1 <= lines) {
+                r_char_head = substr(chars, int(rand() * len_chars) + 1, 1);
+                printf "\033[%d;%dH\033[1;37m%s", y[c] + 1, c, r_char_head;
+            }
+
+            y[c]++;
+        } else {
+            # Stream is still "falling" from above the visible area
+            y[c]++;
+        }
+    }
+    # fflush() is mandatory to prevent AWK from buffering output,
+    # which would cause the animation to stutter.
+    fflush();
+}'
+

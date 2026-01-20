@@ -1,0 +1,65 @@
+function fzf_uninstall() {
+    emulate -L zsh
+
+    # 1. Detect Package Manager
+    local list_cmd uninstall_cmd preview_cmd header_text
+
+    if [[ "$OSTYPE" == "darwin"* ]] && (( $+commands[brew] )); then
+        list_cmd="brew leaves"
+        uninstall_cmd="brew uninstall"
+        preview_cmd="brew info {}"
+        header_text="🍺 Select Homebrew packages to uninstall"
+    elif (( $+commands[pacman] )); then
+        list_cmd="pacman -Qqe"
+        uninstall_cmd="sudo pacman -Rns"
+        preview_cmd="pacman -Qi {}"
+        header_text="📦 Select Pacman packages to uninstall"
+    else
+        print -P "%F{red}[ERROR]%f No supported package manager found."
+        return 1
+    fi
+
+    # 2. Local Override (Fixes Tab Selection)
+    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+
+    # 3. Run FZF Selection
+    print -P "%F{blue}::%f Loading package list..."
+
+    local selected
+    selected=$(eval "$list_cmd" | fzf \
+        --multi \
+        --prompt="🗑  Uninstall > " \
+        --header="$header_text (TAB to select multiple)" \
+        --preview="$preview_cmd" \
+        --preview-window="right:60%:wrap" \
+        --height="80%" \
+        --color="header:yellow,prompt:red" \
+        --bind="ctrl-a:select-all"
+    )
+
+    # 4. Safety Check & Execution
+    if [[ -n "$selected" ]]; then
+        local -a pkgs
+        pkgs=("${(@f)selected}")
+
+        print -P "\n%F{yellow}You are about to uninstall:%f"
+
+        # --- FIXED LINE HERE ---
+        # We join the array elements with spaces for display
+        print -P "%F{240}${pkgs[*]}%f"
+        # -----------------------
+        echo
+
+        print -P -n "\n%B%F{red}Are you sure? [y/N]%f%b "
+        if read -q choice; then
+            echo
+            print -P "\n%F{red}::%f Nuking selected packages..."
+            eval "$uninstall_cmd ${pkgs[@]}"
+            print -P "\n%F{green}✔ Operation complete.%f"
+        else
+            print -P "\n%F{green}::%f Aborted safely."
+        fi
+    else
+        print -P "\n%F{240}:: No packages selected.%f"
+    fi
+}

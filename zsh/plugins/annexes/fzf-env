@@ -1,0 +1,25 @@
+function fenv() {
+    local out
+
+    # 1. Run env and pipe to FZF
+    out=$(env | fzf --prompt="  Env > " \
+        --header="Enter: Print | Ctrl-y: Copy" \
+        \
+        # PREVIEW: Shows the full value wrapped nicely
+        --preview 'val=$(echo {} | cut -d= -f2-);
+                   if command -v bat > /dev/null; then
+                       echo "$val" | bat -l bash --style=plain --color=always --wrap=character;
+                   else
+                       echo "$val" | fold -w $(tput cols);
+                   fi' \
+        --preview-window="right:60%:wrap" \
+        \
+        # BINDING: Ctrl-Y to copy the value (using your detected clipboard tool)
+        --bind "ctrl-y:execute-silent(echo {} | cut -d= -f2- | ${CLIP_CMD:-pbcopy})"
+    )
+
+    # 2. Output the value (safely handles '=' in values)
+    if [[ -n "$out" ]]; then
+        echo "$out" | cut -d= -f2-
+    fi
+}

@@ -1,0 +1,254 @@
+#!/usr/bin/env zsh
+
+#    ░█▀▀░▀█▀░▀█▀░░░█░█░█▀▀░█░░░█▀█░█▀▀░█▀▄
+#    ░█░█░░█░░░█░░░░█▀█░█▀▀░█░░░█▀▀░█▀▀░█▀▄
+#    ░▀▀▀░▀▀▀░░▀░░░░▀░▀░▀▀▀░▀▀▀░▀░░░▀▀▀░▀░▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a suite of interactive Git utilities powered by FZF.
+#
+# Problems Solved
+#   - Simplifies complex Git workflows (staging, switching branches, viewing logs).
+#   - Eliminates the need to remember file paths or commit hashes.
+#   - Provides rich, contextual previews (diffs, log graphs) before execution.
+#
+# Features / Responsibilities
+#   - `git_status`: Interactive file editor for modified files.
+#   - `git_checkout`: Visual branch switcher with commit previews.
+#   - `git_add`: Interactive staging area with diff previews.
+#   - `git_log`: Advanced commit browser with clipboard integration.
+#   - `fgit_branch`: Smart remote/local tracking branch logic.
+#
+# Usage Notes
+#   - Requires 'fzf' and 'git'.
+#   - Optionally uses 'delta' for side-by-side diffs and 'bat' for file previews.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── initialization & helpers ──────────────────────────────────────────────────
+
+
+
+# Function: is_in_git_repo
+# Description: Checks if the current directory is within a Git work tree.
+is_in_git_repo() {
+    git rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
+
+# Smart Pager Selection
+# We use 'delta' for beautiful, side-by-side diffs if installed.
+# Otherwise, we fallback to 'cat' for raw text.
+local _git_pager="cat"
+if is_installed delta; then
+    _git_pager="delta --side-by-side --width \${FZF_PREVIEW_COLUMNS:-$COLUMNS}"
+fi
+
+# Function: _fzf_git
+# Description: Standardizes the UI layout for all Git-FZF functions.
+_fzf_git() {
+    fzf --ansi --height=60% --layout=reverse --border --multi \
+        --color='header:blue,prompt:yellow,pointer:red,marker:green,bg+:236' \
+        --bind 'ctrl-/:toggle-preview' \
+        --bind 'ctrl-u:preview-page-up' \
+        --bind 'ctrl-d:preview-page-down' \
+        "$@"
+}
+
+
+# ── git status interface ──────────────────────────────────────────────────────
+
+# ------------------------------------------------------------------------------
+# Function: git_status
+# Logic:
+#   1. Lists modified/untracked files via 'git status -s'.
+#   2. Previews 'git diff' for modified files or 'bat/cat' for new files.
+#   3. Opens selected files in the system $EDITOR.
+# ------------------------------------------------------------------------------
+function git_status() {
+    is_in_git_repo || return
+
+    local selected
+    # Extract filename safely using awk and sed to handle leading status characters
+    selected=$(git -c color.status=always status --short |
+        _fzf_git \
+        --prompt="Git Status > " \
+        --header="[Enter] Edit File" \
+        --preview="
+            stat=\$(echo {} | awk '{print \$1}');
+            file=\$(echo {} | awk '{\$1=\"\"; print \$0}' | sed 's/^[ \t]*//');
+            if [[ \"\$stat\" == \"??\" ]]; then
+                bat --color=always --style=numbers \$file 2>/dev/null || cat \$file
+            else
+                git diff --color=always -- \$file | $_git_pager
+            fi" \
+        --nth 2.. | awk '{print $NF}')
+
+    if [[ -n "$selected" ]]; then
+        # ${(f)selected} is a Zsh-ism that splits a string into an array by lines.
+        $EDITOR ${(f)selected}
+    fi
+}
+
+
+# ── branch management ─────────────────────────────────────────────────────────
+
+# ------------------------------------------------------------------------------
+# Function: git_checkout
+# Logic:
+#   1. Lists all local and remote branches sorted by committer date.
+#   2. [Alt-D]: Deletes the highlighted branch and reloads the list.
+#   3. [Enter]: Switches to the selected branch.
+# ------------------------------------------------------------------------------
+function git_checkout() {
+    is_in_git_repo || return
+
+    # Standard passthrough if arguments are provided (e.g., git_checkout -b feature)
+    if [[ "$#" -ne 0 ]]; then
+        git checkout "$@"
+        return
+    fi
+
+    local branches branch
+    branches=$(git branch --all --color=always --sort=-committerdate --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(contents:subject) (%(color:green)%(committerdate:relative)%(color:reset))')
+
+    branch=$(echo "$branches" |
+        _fzf_git +m \
+        --prompt="Checkout > " \
+        --header="[Enter] Switch  [Alt-D] Delete Branch" \
+        --preview="git log --oneline --graph --date=short --color=always --pretty='%C(auto)%h%d %s %C(black)%C(bold)%cr' {2} | head -200" \
+        --bind "alt-d:execute(git branch -D {2} 2>/dev/null && echo 'Deleted {2}')+reload(git branch --all --color=always --sort=-committerdate --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(contents:subject) (%(color:green)%(committerdate:relative)%(color:reset))')" \
+    )
+
+    # Sanitize branch name: Remove 'remotes/origin/' style prefixes for clean checkout
+    local target=$(echo "$branch" | awk '{print $2}' | sed "s#remotes/[^/]*/##")
+
+    [[ -n "$target" ]] && git checkout "$target"
+}
+
+
+# ── interactive staging ───────────────────────────────────────────────────────
+
+# ------------------------------------------------------------------------------
+# Function: git_add
+# Logic:
+#   1. Displays modified files.
+#   2. Allows multi-selection using [TAB].
+#   3. Stages all selected files using 'git add'.
+# ------------------------------------------------------------------------------
+function git_add() {
+    is_in_git_repo || return
+
+    [[ $# -ne 0 ]] && git add "$@" && return
+
+    local files
+    files=$(git -c color.status=always status --short | \
+        _fzf_git \
+        --prompt="Git Add > " \
+        --header="[TAB] Toggle Selection  [Enter] Stage Files" \
+        --preview="
+            file=\$(echo {} | awk '{\$1=\"\"; print \$0}' | sed 's/^[ \t]*//');
+            git diff --color=always -- \$file | $_git_pager
+        " | \
+        awk '{$1=""; print $0}' | sed 's/^[ \t]*//'
+    )
+
+    if [[ -n "$files" ]]; then
+        # Iterate through selection and stage each item
+        echo "$files" | while read -r item; do
+            git add "$item"
+        done
+        print -P "%F{green}✓ Staged selected files.%f"
+    else
+        echo "Nothing added."
+    fi
+}
+
+
+# ── history browser ───────────────────────────────────────────────────────────
+
+
+
+# ------------------------------------------------------------------------------
+# Function: git_log
+# Logic:
+#   1. Browses commit history with an ASCII graph.
+#   2. [Enter]: Opens the full commit diff in a pager.
+#   3. [Ctrl-Y]: Copies the commit hash to the system clipboard.
+#   4. [Ctrl-O]: Checks out the selected commit (Detached HEAD).
+# ------------------------------------------------------------------------------
+function git_log() {
+    is_in_git_repo || return
+
+    local git_fmt='%C(auto)%h%d %s %C(black)%C(bold)%cr% C(auto)%an'
+    local _view="echo {} | grep -o '[a-f0-9]\{7,\}' | head -1 | xargs -I % git show --color=always % | $_git_pager"
+
+    git log --color=always --format="$git_fmt" | \
+        _fzf_git \
+        --no-sort --reverse --tiebreak=index \
+        --prompt="Git Log > " \
+        --header="[Enter] View Details  [Ctrl-Y] Copy Hash  [Ctrl-O] Checkout" \
+        --preview="$_view" \
+        \
+        --bind "enter:execute:$_view | less -R" \
+        --bind "ctrl-y:execute-silent(echo {} | grep -o '[a-f0-9]\{7,\}' | head -1 | pbcopy)+abort" \
+        --bind "ctrl-o:execute(echo {} | grep -o '[a-f0-9]\{7,\}' | head -1 | xargs git checkout)"
+}
+
+
+# ── advanced branch checkout ──────────────────────────────────────────────────
+
+# ------------------------------------------------------------------------------
+# Function: fgit_branch
+# Description:
+#   A "smarter" branch switcher that distinguishes between local and remote
+#   branches. It automatically sets up tracking branches for remotes.
+# ------------------------------------------------------------------------------
+function fgit_branch() {
+    if ! is_in_git_repo; then
+        print -P "%F{red}[ERROR]%f Not a git repository."
+        return 1
+    fi
+
+    # Override default FZF bindings locally for better branch selection UX
+    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+
+    local branches
+    branches=$(git for-each-ref --sort=-committerdate refs/heads/ refs/remotes/ \
+        --format='%(refname:short)' | grep -v '/HEAD$')
+
+    local branch
+    branch=$(echo "$branches" | fzf \
+        --no-multi \
+        --prompt=" Checkout > " \
+        --height=50% \
+        --layout=reverse \
+        --info=hidden \
+        --preview-window="right:65%:wrap" \
+        --preview 'git log -n 20 --color=always --date=short --pretty="format:%C(auto)%cd %h%C(reset) - %C(cyan)%an%C(reset)%C(auto)%d%C(reset) %s" {}' \
+    )
+
+    if [[ -n "$branch" ]]; then
+        # Handle Remote-to-Local conversion logic
+        if [[ "$branch" == */* ]] && ! git show-ref --verify --quiet "refs/heads/$branch"; then
+            local remote_name="${branch%%/*}"
+            local branch_name="${branch#$remote_name/}"
+
+            if git show-ref --verify --quiet "refs/heads/$branch_name"; then
+                 print -P "\n%F{green}::%f Switching to existing local branch %B$branch_name%b..."
+                 git checkout "$branch_name"
+            else
+                 print -P "\n%F{blue}::%f Creating local tracking branch for %B$branch%b..."
+                 git checkout --track "$branch"
+            fi
+        else
+            print -P "\n%F{green}::%f Checking out %B$branch%b..."
+            git checkout "$branch"
+        fi
+    else
+        print -P "\n%F{red}Cancelled.%f"
+    fi
+}
+

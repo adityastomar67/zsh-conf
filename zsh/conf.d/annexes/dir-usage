@@ -1,0 +1,166 @@
+#!/usr/bin/env zsh
+# Not showinhg any names after the icon
+
+#    ░█▀▄░▀█▀░█▀▄░░░█░█░█▀▀░█▀█░█▀▀░█▀▀
+#    ░█░█░░█░░█▀▄░░░█░█░▀▀█░█▀█░█░█░█▀▀
+#    ░▀▀░░▀▀▀░▀░▀░▀░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a visual directory and file usage reporting tool.
+#
+# Problems Solved
+#   - Makes the standard 'du' output readable by adding visual bar charts.
+#   - Sorts files and directories by size to identify storage hogs quickly.
+#   - Implements cross-platform flag detection (Linux vs macOS/BSD).
+#   - Uses Nerd Font icons to distinguish file types (archives, images, code).
+#
+# Features / Responsibilities
+#   - Dynamic Bar Charts: Generates relative usage bars using AWK.
+#   - Heatmap Coloring: Sizes are colored by magnitude (Green for KB, Red for GB).
+#   - Robust Parsing: Correctly handles filenames with spaces and special characters.
+#   - Binary-to-Human Conversion: Logic to calculate percentages from human-readable strings.
+#
+# Usage Notes
+#   - Syntax: dir_usage [directory_path]
+#   - Requires: AWK and a Nerd Font compatible terminal for icons.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── internal helper ──────────────────────────────────────────────────────────
+
+# ------------------------------------------------------------------------------
+# Function: _dir_usage_visualizer
+# Description:
+#   An internal AWK processor that transforms the output of 'du' into a
+#   visual dashboard.
+#
+# Logic:
+#   1. Parses human-readable sizes (K, M, G) into raw bytes for math.
+#   2. Calculates percentages based on the largest item in the current set.
+#   3. Assigns icons based on file extensions using regex.
+#   4. Renders a fixed-width bar chart using Unicode blocks (■).
+# ------------------------------------------------------------------------------
+_dir_usage_visualizer() {
+    awk '
+    BEGIN {
+        # Define color escape codes for terminal output
+        c_reset = "\033[0m"
+        c_dim   = "\033[2m"
+        c_red   = "\033[31m"
+        c_yell  = "\033[33m"
+        c_green = "\033[32m"
+        c_blue  = "\033[34m"
+
+        # Width of the visual bar in characters
+        bar_width = 12
+    }
+
+    # Helper: Convert strings like "500M" or "1.2G" into raw integers for comparison
+    function parse_size(s,   val, unit) {
+        val  = substr(s, 1, length(s)-1) + 0
+        unit = substr(s, length(s))
+        if (unit == "G") return val * 1024 * 1024 * 1024
+        if (unit == "M") return val * 1024 * 1024
+        if (unit == "K") return val * 1024
+        return val
+    }
+
+    {
+        # 1. Capture Size String
+        sizes[NR] = $1
+
+        # 2. Capture Name
+        # We delete the size field and leading whitespace to preserve the full
+        # filename even if it contains spaces.
+        raw_line = $0
+        sub(/^[0-9.]+[KMGTP]?\s+/, "", raw_line)
+        names[NR] = raw_line
+
+        # 3. Math for Scaling
+        # We track the max_val to ensure the largest file takes up 100% of the bar.
+        raw_vals[NR] = parse_size($1)
+        if (raw_vals[NR] > max_val) max_val = raw_vals[NR]
+    }
+
+    END {
+        for (i=1; i<=NR; i++) {
+            # --- Complex Logic: Bar Calculation ---
+            # Calculates the ratio of the current item relative to the largest item.
+            if (max_val > 0) percent = raw_vals[i] / max_val; else percent = 0
+            len = int(percent * bar_width)
+
+            # Build the visual bar (■) and the empty track (·)
+            bar   = ""; for (j=0; j<len; j++) bar = bar "■"
+            empty = ""; for (j=len; j<bar_width; j++) empty = empty "·"
+
+            # --- Complex Logic: Color Heatmap ---
+            # We determine urgency based on the size unit.
+            unit  = substr(sizes[i], length(sizes[i]))
+            color = c_green
+            if (unit == "M") color = c_yell
+            if (unit == "G") color = c_red
+
+            # --- Complex Logic: Icon Mapping ---
+            # Identifies file types using regex patterns.
+            icon = ""
+            n    = names[i]
+            if (n ~ /\/$/ || n ~ /^\.\// || n == ".") icon = ""
+            if (n ~ /\.(zip|tar|gz|rar|7z)$/)         icon = ""
+            if (n ~ /\.(jpg|png|gif|svg)$/)           icon = ""
+            if (n ~ /\.(mp4|mkv|mov)$/)               icon = ""
+            if (n ~ /\.(py|js|rs|go|c|cpp|rb|zsh)$/)  icon = ""
+
+            # Render the dashboard row
+            printf "  %s%-7s%s %s%s%s%s %s%s%s %s\n",
+                color, sizes[i], c_reset,
+                color, bar, c_dim, empty, c_reset,
+                c_blue, icon, c_reset,
+                names[i]
+        }
+    }'
+}
+
+
+# ── user interface ───────────────────────────────────────────────────────────
+
+
+
+# ------------------------------------------------------------------------------
+# Function: dir_usage
+# Description:
+#   Entry point for the Disk Usage Report. Handles flag detection for
+#   OS compatibility and manages the output pipeline.
+# ------------------------------------------------------------------------------
+# 1. Detection Logic
+# We check if the 'du' binary supports -b (GNU specific) for byte-exactness.
+# Otherwise, we fallback to standard human-readable flags.
+if [[ -z "$_DU_OPTS" ]]; then
+    if du -b /dev/null >/dev/null 2>&1; then
+        _DU_OPTS="-sbh" # GNU/Linux standard
+    else
+        _DU_OPTS="-sh"  # macOS/BSD/Solaris standard
+    fi
+fi
+
+# 2. Header
+print -P "\n  %B%F{blue}DISK USAGE REPORT%f%b"
+print -P "  %F{240}──────────────────────────────────────────────────────────%f"
+
+# 3. Pipeline Execution
+#    - du: Calculates sizes
+#    - sort -rh: Numeric reverse sort by human-readable values
+#    - head -20: Prevents terminal flooding by limiting to the top 20 hogs
+#    - _dir_usage_visualizer: Renders the TUI dashboard
+if [[ -n "$@" ]]; then
+    du $_DU_OPTS -- "$@" | sort -rh | head -20 | _dir_usage_visualizer
+else
+    # If no path is provided, we scan hidden and visible files in current directory.
+    # We explicitly exclude '..' to prevent traversing up the tree.
+    du $_DU_OPTS .[^.]* ./* 2>/dev/null | sort -rh | head -20 | _dir_usage_visualizer
+fi
+
+print -P "  %F{240}──────────────────────────────────────────────────────────%f\n"
+

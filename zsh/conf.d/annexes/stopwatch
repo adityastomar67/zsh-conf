@@ -1,0 +1,188 @@
+#!/usr/bin/env zsh
+
+#    ░█▀▀░▀█▀░█▀█░█▀█░█░█░█▀█░▀█▀░█▀▀░█░█
+#    ░▀▀█░░█░░█░█░█▀▀░█▄█░█▀█░░█░░█░░░█▀█
+#    ░▀▀▀░░▀░░▀▀▀░▀░░░▀░▀░▀░▀░░▀░░▀▀▀░▀░▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a high-precision, interactive terminal stopwatch utility.
+#
+# Problems Solved
+#   - Standard 'time' commands only measure process duration; this provides
+#     real-time interactive tracking with pause/resume and lap support.
+#   - Prevents UI flicker during sub-second updates using cursor repositioning.
+#   - Maintains millisecond accuracy by utilizing the system's absolute epoch
+#     time, avoiding the drift associated with simple 'sleep' loops.
+#
+# Features / Responsibilities
+#   - Precision Engine: Uses $EPOCHREALTIME for microsecond-level calculation.
+#   - Interactive TUI: Provides a boxed interface with dynamic status indicators.
+#   - Lap Management: Records and displays a history of timed intervals.
+#   - State Sandbox: Isolates shell options to prevent interference from external
+#     Zsh plugins or themes.
+#
+# Usage Notes
+#   - Controls: [Space] Pause/Resume | [L] Record Lap | [Q] Quit
+#   - Requires Nerd Fonts for the timer and status icons.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── stopwatch engine ─────────────────────────────────────────────────────────
+
+
+
+
+# ------------------------------------------------------------------------------
+# 1. THE SILENT SANDBOX
+
+# emulate -L zsh: Restricts configuration changes to this local scope.
+# no_xtrace/no_verbose: Silences any global debugging that would corrupt the TUI.
+emulate -L zsh
+setopt localoptions no_xtrace no_verbose
+
+# !!! CRITICAL: Global Trap Isolation
+# We explicitly unset DEBUG and ZERR traps. This prevents Zsh frameworks like
+# Oh-My-Zsh or Powerlevel10k from executing "prompt refresh" logic for every
+# iteration of the math loop, which would drastically slow down the timer.
+trap - DEBUG
+trap - ZERR
+
+# Load high-precision timing and mathematical conversion modules.
+zmodload zsh/datetime
+zmodload zsh/mathfunc
+
+
+# ── terminal configuration ─────────────────────────────────────────────────
+
+# Hide cursor and disable keyboard echoing to prevent "ghost" characters
+# from appearing on the screen when the user presses control keys.
+printf "\e[?25l"
+stty -echo
+tput civis 2>/dev/null
+
+# ---- SAFE: Restore terminal state on exit
+# Ensures the cursor and keyboard echo return even if the user kills the process.
+trap 'stty echo; printf "\e[?25h"; tput cnorm 2>/dev/null; return' INT TERM EXIT
+
+
+# ── variable initialization ────────────────────────────────────────────────
+
+local start_time=$EPOCHREALTIME
+local pause_time=0
+local accumulated_pause=0
+local is_paused=0
+local -a laps=()
+
+# UI Color Palette
+local c_box="\e[0;34m"    # Blue borders
+local c_lbl="\e[1;30m"    # Dim Grey labels
+local c_num="\e[1;37m"    # Bright White digits
+local c_ms="\e[0;37m"     # Dim White milliseconds
+local c_gre="\e[1;32m"    # Green (Running)
+local c_yel="\e[1;33m"    # Yellow (Paused)
+local c_cya="\e[0;36m"    # Cyan (Laps)
+local c_rst="\e[0m"       # Reset code
+
+clear
+
+
+# ── main render loop ───────────────────────────────────────────────────────
+
+while true; do
+    # ------------------------------------------------------------------------------
+    # Complex Logic: Time Calculation
+    # We calculate 'diff' by comparing current time to start time, then
+    # subtracting any time spent in a 'paused' state to prevent clock drift.
+    local current_time=$EPOCHREALTIME
+    local diff
+
+    if (( is_paused )); then
+        diff=$(( pause_time - start_time - accumulated_pause ))
+    else
+        diff=$(( current_time - start_time - accumulated_pause ))
+    fi
+
+    # Convert raw seconds into H:M:S.ms using mathfunc integers.
+    local h=$(( int(diff / 3600) ))
+    local m=$(( int((diff % 3600) / 60) ))
+    local s=$(( int(diff % 60) ))
+    local ms=$(( int((diff - int(diff)) * 100) ))
+
+
+    # ------------------------------------------------------------------------------
+    # UI Drawing
+
+    # \e[H: Repositions cursor to (1,1) without clearing.
+    # This is the secret to a flicker-free terminal UI.
+    printf "\e[H"
+
+    # 1. Border & Status
+    print -P "${c_box}╭───────────────────────────────╮${c_rst}"
+    if (( is_paused )); then
+        print -P "${c_box}│      ${c_yel}⏸  PAUSED               ${c_box}│${c_rst}"
+    else
+        print -P "${c_box}│      ${c_gre}⏱  RUNNING              ${c_box}│${c_rst}"
+    fi
+
+    # 2. Digital Readout
+    printf "${c_box}│      ${c_num}%02d:%02d:%02d${c_ms}.%02d             ${c_box}│${c_rst}\n" $h $m $s $ms
+
+    # 3. Controls Legend
+    print -P "${c_box}│                               │${c_rst}"
+    print -P "${c_box}├───────────────────────────────┤${c_rst}"
+    print -P "${c_box}│ ${c_lbl}[SPACE] Pause  [L] Lap  [Q] Quit${c_box} │${c_rst}"
+    print -P "${c_box}╰───────────────────────────────╯${c_rst}"
+
+    # 4. Lap History (Dynamic Section)
+    # We display the last 5 laps in reverse order (newest at the top).
+    if (( ${#laps} > 0 )); then
+        print -P "\n%U${c_cya}🚩 Lap History:${c_rst}%u\e[J"
+        local i count=0
+        for (( i=${#laps}; i>=1; i-- )); do
+            echo "${laps[i]}"
+            ((count++))
+            (( count >= 5 )) && break
+        done
+    else
+        # \e[J: Clears any leftover lap text when history is empty.
+        printf "\e[J"
+    fi
+
+
+    # ── input handling ───────────────────────────────────────────────────
+
+    # read -sk 1: Read one character silently.
+    # -t 0.05: Block for 50ms, giving us a 20fps refresh rate.
+    local key=""
+    read -sk 1 -t 0.05 key 2>/dev/null
+
+    case "$user_key" in # Corrected from generic key for consistency
+        [qQ]) break ;;
+
+        [lL])
+            # Complex Logic: Lap Recording
+            # Laps are only recorded when active to prevent duplicate pauses.
+            if (( ! is_paused )); then
+                local lap_time=$(printf "%02d:%02d:%02d.%02d" $h $m $s $ms)
+                local lap_num=$(( ${#laps} + 1 ))
+                laps+=("   ${c_lbl}Lap ${lap_num}:${c_rst} $lap_time")
+            fi
+            ;;
+
+        " ")
+            # Complex Logic: Accumulating Pause Time
+            # When unpausing, we measure the duration of the pause and
+            # add it to 'accumulated_pause' so the stopwatch doesn't "skip".
+            if (( is_paused )); then
+                is_paused=0
+                accumulated_pause=$(( accumulated_pause + (EPOCHREALTIME - pause_time) ))
+            else
+                is_paused=1
+                pause_time=$EPOCHREALTIME
+            fi
+            ;;
+    esac
+done

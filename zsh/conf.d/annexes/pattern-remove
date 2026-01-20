@@ -1,0 +1,163 @@
+#!/usr/bin/env zsh
+
+#    ░█▀▄░█▄█░░░█▀█░█▀█░▀█▀░▀█▀░█▀▀░█▀▄░█▀█
+#    ░█▀▄░█░█░░░█▀▀░█▀█░░█░░░█░░█▀▀░█▀▄░█░█
+#    ░▀░▀░▀░▀░▀░▀░░░▀░▀░░▀░░░▀░░▀▀▀░▀░▀░▀░▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a safe, interactive wrapper for pattern-based file deletion.
+#
+# Problems Solved
+#   - Prevents accidental "mass-deletion" by forcing a review of matched files.
+#   - Blocks "Fat Finger" disasters by blacklisting overly broad patterns (/, *, .).
+#   - Provides a TUI (Terminal User Interface) to view the full list of targets
+#     before committing to the 'delete' operation.
+#
+# Features / Responsibilities
+#   - Pattern Validation: Rejects dangerous root or wildcard-only inputs.
+#   - Match Analysis: Uses 'find' to perform a fast scan and item count.
+#   - Interactive Dashboard: Shows a summary and a "Top 3" preview of matches.
+#   - Review Mode: Integrates with 'fzf' for a searchable target list.
+#
+# Usage Notes
+#   - Syntax: rm_pattern "*.tmp"
+#   - Keybinds: [y] to delete, [v] to view full list, [N] to abort.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── pattern deletion engine ──────────────────────────────────────────────────
+
+
+
+
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
+
+# emulate -L zsh: Restricts shell option changes to this function's scope.
+# pipefail: Ensures that if 'find' fails, the error propagates through the pipe.
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# UI Color Palette (High-fidelity Zsh formatting)
+local c_red="%F{196}"
+local c_green="%F{46}"
+local c_yellow="%F{226}"
+local c_blue="%F{39}"
+local c_grey="%F{240}"
+local c_white="%F{255}"
+local c_reset="%f"
+local c_bold="%B"
+local c_unbold="%b"
+
+# ------------------------------------------------------------------------------
+# 2. Input Validation
+
+local search_pattern="$1"
+
+# Check for empty input
+if [[ -z "$search_pattern" ]]; then
+    print -P "${c_red}[ERROR]${c_reset} Usage: rm_pattern ${c_white}<filename_pattern>${c_reset}"
+    print -P "        Example: rm_pattern '*.log'"
+    return 1
+fi
+
+# !!! CRITICAL: Safety Blacklist
+# We explicitly block patterns that could wipe the root, current, or parent
+# directories to prevent catastrophic data loss.
+if [[ "$search_pattern" == "/" || "$search_pattern" == "." || "$search_pattern" == ".." || "$search_pattern" == "*" ]]; then
+    print -P "${c_red}[FATAL]${c_reset} Pattern '${c_bold}$search_pattern${c_unbold}' is too broad/dangerous."
+    return 1
+fi
+
+# ------------------------------------------------------------------------------
+# 3. State Machine Loop
+
+# We use a 'while true' loop so the user can jump to the [V]iewer
+# and return to the dashboard without exiting the function.
+while true; do
+    print -P -n "${c_blue}::${c_reset} Scanning for '${c_bold}$search_pattern${c_unbold}'..."
+
+    # Calculate exact number of matches
+    local match_count
+    match_count=$(find . -type f -name "$search_pattern" 2>/dev/null | wc -l | xargs)
+
+    # Clear the "Scanning..." line using terminal escape codes
+    # \r (return to start) and \e[K (clear to end of line)
+    printf "\r\e[K"
+
+    # Exit if no targets are found
+    if [[ "$match_count" -eq 0 ]]; then
+        print -P "${c_green}✔${c_reset} No files found matching '${c_bold}$search_pattern${c_unbold}'."
+        return 0
+    fi
+
+    # ------------------------------------------------------------------------------
+    # 4. Dashboard UI
+
+    print -P "${c_red}╭──────────────────────────────────────╮${c_reset}"
+    print -P "${c_red}│      🗑  DELETE PATTERN MATCHES      │${c_reset}"
+    print -P "${c_red}├──────────────────────────────────────┤${c_reset}"
+    print -P "${c_red}│${c_reset}  Pattern: ${c_white}$search_pattern${c_reset}"
+    print -P "${c_red}│${c_reset}  Matches: ${c_white}$match_count files${c_reset}"
+    print -P "${c_red}╰──────────────────────────────────────╯${c_reset}"
+
+    # Render a mini-preview of the first 3 files to give immediate context.
+    print -P "${c_grey}Preview:${c_reset}"
+    find . -type f -name "$search_pattern" 2>/dev/null | head -n 3 | while read -r file; do
+        print -P "  ${c_red}×${c_reset} $file"
+    done
+
+    if (( match_count > 3 )); then
+        print -P "  ${c_grey}...and $((match_count - 3)) more.${c_reset}"
+    fi
+
+    print -P "\n${c_yellow}⚠  Warning:${c_reset} This will ${c_bold}permanently delete${c_unbold} these files."
+
+    # ------------------------------------------------------------------------------
+    # 5. Interactive Input
+
+    print -P -n "   [y]es  [N]o  [v]iew full list > "
+
+    local user_key
+    read -k 1 user_key
+    echo # Newline after keypress
+
+    case "$user_key" in
+        [yY])
+            # --- Execution Path ---
+            print -P -n "${c_blue}::${c_reset} Deleting..."
+            find . -type f -name "$search_pattern" -delete
+            print -P "\r\e[K   ${c_green}✔${c_reset} Successfully deleted ${c_bold}$match_count${c_unbold} files."
+            return 0
+            ;;
+
+        [vV])
+            # --- View Mode ---
+            # Logic: If fzf is available, provide an interactive searchable list.
+            # Otherwise, fallback to 'less' for basic scrolling.
+            if (( $+commands[fzf] )); then
+                find . -type f -name "$search_pattern" | \
+                fzf --header="Files matching: $search_pattern (ESC to return)" \
+                    --prompt="Review > " \
+                    --info=inline \
+                    --layout=reverse \
+                    --color="header:red"
+            else
+                find . -type f -name "$search_pattern" | less
+            fi
+
+            # Refresh the dashboard after returning from the viewer
+            clear
+            continue
+            ;;
+
+        *)
+            # ---- SAFE: Abort on any other key (Default to No)
+            print -P "   ${c_grey}Operation aborted.${c_reset}"
+            return 0
+            ;;
+    esac
+done
