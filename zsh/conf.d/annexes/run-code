@@ -51,12 +51,12 @@ zmodload zsh/mathfunc
 local file="$1"
 
 if [[ -z "$file" ]]; then
-    print -P "%F{red}[ERROR]%f No file provided."
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} No file provided."
     return 1
 fi
 
 if [[ ! -f "$file" ]]; then
-    print -P "%F{red}[ERROR]%f File '%B$file%b' not found."
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} File '${COLOR[BOLD]}$file${COLOR[RESET]}' not found."
     return 1
 fi
 
@@ -74,20 +74,13 @@ local file_base="${file:t:r}"       # Filename without extension (e.g., main)
 # instances of the same script simultaneously doesn't lead to binary collisions.
 local bin_path="/tmp/zsh_run_${file_base}_$$_${EPOCHSECONDS}"
 
-local c_blue="%F{blue}"
-local c_green="%F{green}"
-local c_red="%F{red}"
-local c_yellow="%F{yellow}"
-local c_grey="%F{240}"
-local c_rst="%f"
-
 # ------------------------------------------------------------------------------
 # 4. Cleanup Strategy
 
 # ---- SAFE: Ensure temp binary is removed even if the user hits Ctrl+C
-trap 'rm -f "$bin_path" 2>/dev/null; print -P "\n${c_red}::${c_rst} Execution cancelled."; return 130' INT TERM
+trap 'rm -f "$bin_path" 2>/dev/null; print "\n${COLOR[RED]}::${COLOR[RESET]} Execution cancelled."; return 130' INT TERM
 
-print -P "${c_blue}::${c_rst} Processing %B$file%b..."
+print "${COLOR[BLUE]}::${COLOR[RESET]} Processing ${COLOR[BOLD]}$file${COLOR[RESET]}..."
 
 local start_time=$EPOCHREALTIME
 local exit_status=0
@@ -99,10 +92,10 @@ local is_compiled=0
 case "$file_ext" in
     # --- COMPILED LANGUAGES ---
     cpp|cc|cxx)
-        print -P "   ${c_yellow}🔨${c_rst} Compiling (C++ 20)..."
+        print "   ${COLOR[YELLOW]}🔨${COLOR[RESET]} Compiling (C++ 20)..."
         if g++ -std=c++20 -O2 "$file" -o "$bin_path"; then
             is_compiled=1
-            print -P "   ${c_green}🚀${c_rst} Running..."
+            print "   ${COLOR[GREEN]}🚀${COLOR[RESET]} Running..."
             "$bin_path" "$@"
             exit_status=$?
         else
@@ -110,10 +103,10 @@ case "$file_ext" in
         fi
         ;;
     c)
-        print -P "   ${c_yellow}🔨${c_rst} Compiling (GCC)..."
+        print "   ${COLOR[YELLOW]}🔨${COLOR[RESET]} Compiling (GCC)..."
         if gcc -O2 "$file" -o "$bin_path"; then
             is_compiled=1
-            print -P "   ${c_green}🚀${c_rst} Running..."
+            print "   ${COLOR[GREEN]}🚀${COLOR[RESET]} Running..."
             "$bin_path" "$@"
             exit_status=$?
         else
@@ -121,10 +114,10 @@ case "$file_ext" in
         fi
         ;;
     rs)
-        print -P "   ${c_yellow}🔨${c_rst} Compiling (Rust)..."
+        print "   ${COLOR[YELLOW]}🔨${COLOR[RESET]} Compiling (Rust)..."
         if rustc "$file" -o "$bin_path"; then
             is_compiled=1
-            print -P "   ${c_green}🚀${c_rst} Running..."
+            print "   ${COLOR[GREEN]}🚀${COLOR[RESET]} Running..."
             "$bin_path" "$@"
             exit_status=$?
         else
@@ -133,42 +126,42 @@ case "$file_ext" in
         ;;
     java)
         # Modern Java (11+) allows direct execution of source files
-        print -P "   ${c_green}🚀${c_rst} Running (Java)..."
+        print "   ${COLOR[GREEN]}🚀${COLOR[RESET]} Running (Java)..."
         java "$file" "$@"
         exit_status=$?
         ;;
     go)
-        print -P "   ${c_green}🚀${c_rst} Running (Go)..."
+        print "   ${COLOR[GREEN]}🚀${COLOR[RESET]} Running (Go)..."
         go run "$file" "$@"
         exit_status=$?
         ;;
 
     # --- INTERPRETED LANGUAGES ---
     py|python)
-        print -P "   ${c_green}🚀${c_rst} Running (Python)..."
+        print "   ${COLOR[GREEN]}🚀${COLOR[RESET]} Running (Python)..."
         python3 "$file" "$@"
         exit_status=$?
         ;;
     js)
-        print -P "   ${c_green}🚀${c_rst} Running (Node)..."
+        print "   ${COLOR[GREEN]}🚀${COLOR[RESET]} Running (Node)..."
         node "$file" "$@"
         exit_status=$?
         ;;
     ts)
-        print -P "   ${c_green}🚀${c_rst} Running (TypeScript)..."
+        print "   ${COLOR[GREEN]}🚀${COLOR[RESET]} Running (TypeScript)..."
         # Prioritize Bun for speed, fallback to ts-node
         if (( $+commands[bun] )); then
             bun run "$file" "$@"
         elif (( $+commands[ts-node] )); then
             ts-node "$file" "$@"
         else
-            print -P "${c_red}[ERROR]${c_rst} Neither 'bun' nor 'ts-node' found."
+            print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Neither 'bun' nor 'ts-node' found."
             exit_status=1
         fi
         exit_status=$?
         ;;
     sh|bash|zsh)
-        print -P "   ${c_green}🚀${c_rst} Running (Shell)..."
+        print "   ${COLOR[GREEN]}🚀${COLOR[RESET]} Running (Shell)..."
         ${SHELL:-bash} "$file" "$@"
         exit_status=$?
         ;;
@@ -177,12 +170,12 @@ case "$file_ext" in
         if (( $+commands[glow] )); then
             glow "$file"
         else
-            print -P "${c_red}[ERROR]${c_rst} 'glow' markdown renderer not found."
+            print "${COLOR[RED]}[ERROR]${COLOR[RESET]} 'glow' markdown renderer not found."
             exit_status=1
         fi
         ;;
     *)
-        print -P "${c_red}[ERROR]${c_rst} Unsupported file extension: .${file_ext}"
+        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Unsupported file extension: .${file_ext}"
         return 1
         ;;
 esac
@@ -201,9 +194,9 @@ local duration_fmt=$(printf "%.3f" $total_duration)
 
 echo
 if (( exit_status == 0 )); then
-    print -P "${c_green}✔${c_rst} Finished in ${c_green}${duration_fmt}s${c_rst}"
+    print "${COLOR[GREEN]}✔${COLOR[RESET]} Finished in ${COLOR[GREEN]}${duration_fmt}s${COLOR[RESET]}"
 else
-    print -P "${c_red}✘${c_rst} Failed (Exit: $exit_status) in ${c_red}${duration_fmt}s${c_rst}"
+    print "${COLOR[RED]}✘${COLOR[RESET]} Failed (Exit: $exit_status) in ${COLOR[RED]}${duration_fmt}s${COLOR[RESET]}"
 fi
 
 # Release the trap and return the original exit code

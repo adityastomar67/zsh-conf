@@ -43,7 +43,47 @@ autoload -Uz vcs_info
 #   Returns a random "ignition" symbol from a curated list.
 #   Adds visual variety to every new line.
 function get_random_prompt_symbol() {
-    local -a symbols=(" " "" "-->" "➤" "󰮯 " "")
+    local -a symbols=(
+        # --- Standard ASCII (Safe) ---
+        ">"
+        ">>"
+        "-->"
+        "==>"
+        "::"
+        "~>"
+        "|>"
+
+        # --- Geometric & Triangles (Clean) ---
+        "▶"   # Black right-pointing triangle
+        "▷"   # White right-pointing triangle
+        "▸"   # Small black right-pointing triangle
+        "►"   # Heavy black right-pointing pointer
+        "◆"   # Diamond
+        "●"   # Circle
+        "■"   # Square
+
+        # --- Standard Unicode Arrows (Bold) ---
+        "➤"   # Heavy black arrowhead
+        "➜"   # Heavy round-tipped arrow
+        "➔"   # Heavy wide-headed arrow
+        "➝"   # Triangle-headed arrow
+        "➞"   # Heavy triangle-headed arrow
+        "⇒"   # Double right arrow
+        "»"   # Right angle quotes
+
+        # --- Nerd Fonts / Powerline (Requires patched font) ---
+        ""   # Powerline hard right
+        ""   # Powerline soft right
+        "❯"   # Heavy angle quote (Classic Pure/Spaceship theme)
+        "❱"   # Heavy double angle quote
+        ""   # FontAwesome chevron
+        ""  # Double chevron
+        ""   # Octicons arrow right
+        ""   # Small triangle right
+        ""   # FontAwesome long arrow
+        ""   # Circle outline
+        ""   # Simple angle right
+    )
 
     # Select random index based on array length
     echo "${symbols[1 + $RANDOM % ${#symbols[@]}]}"

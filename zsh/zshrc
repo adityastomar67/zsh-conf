@@ -42,7 +42,7 @@ fi
 # Feature: Auto-Tmux Integration
 # ─────────────────────────────────────────────────────────────
 ## conditionally launches Tmux. We use the ':l' modifier to lowercase the
-## variable for case-insensitive comparison ("Yes" == "yes").
+## {:l} variable for case-insensitive comparison ("Yes" == "yes").
 
 if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" ]] && is_installed tmux && [[ -z "$TMUX" && -t 0 ]]; then
     # Only load if we are NOT already inside a Tmux session or Tmux is enabled by user.

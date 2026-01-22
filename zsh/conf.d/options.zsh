@@ -166,7 +166,7 @@ zstyle ':completion:*' menu select         # Allow arrow key selection
 # ── Visual Styling ──
 # Group Descriptions (Magenta Arrow -> Bold Text)
 zstyle ':completion:*:*:*:*:descriptions' format \
-    "${COLOR[MAGENTA]} ${COLOR[BOLD]}%d${COLOR[DIM]}${COLOR[RESET]}"
+    "${COLOR[MAGENTA]} ${COLOR[BOLD]}${COLOR[DIM]}%d${COLOR[RESET]}"
 
 # Corrections ("Did you mean...")
 zstyle ':completion:*:*:*:*:corrections' format \

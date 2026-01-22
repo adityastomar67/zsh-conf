@@ -67,7 +67,7 @@ else
             [0-9]*s) target_seconds=$((target_seconds + ${arg%s})) ;;
             [0-9]##) target_seconds=$((target_seconds + arg)) ;;
             *)
-                print -P "%F{red}[ERROR]%f Unknown format '%B$arg%b'. Valid: 1h, 30m, 90."
+                print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Unknown format '${COLOR[BOLD]}$arg${COLOR[RESET]}'. Valid: 1h, 30m, 90."
                 return 1
                 ;;
         esac
@@ -75,7 +75,7 @@ else
 fi
 
 if (( target_seconds <= 0 )); then
-    print -P "%F{red}[ERROR]%f Time must be > 0."
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Time must be > 0."
     return 1
 fi
 
@@ -97,22 +97,10 @@ local start_time=$EPOCHREALTIME
 local pause_time=0
 local accumulated_pause=0
 local is_paused=0
-
-# Color definitions using standard ANSI escape codes.
-local c_box="\e[0;34m"    # Blue borders
-local c_lbl="\e[1;30m"    # Dim/Grey labels
-local c_num="\e[1;37m"    # Bright White numbers
-local c_gre="\e[1;32m"    # Green (Safe)
-local c_yel="\e[1;33m"    # Yellow (Paused)
-local c_red="\e[1;31m"    # Red (Urgent)
-local c_rst="\e[0m"       # Reset formatting
-
 clear
 
 
 # ── main execution loop ────────────────────────────────────────────────────
-
-
 
 while true; do
     # ------------------------------------------------------------------------------
@@ -170,28 +158,28 @@ while true; do
     # By overwriting the same lines instead of clearing, we eliminate flicker.
     printf "\e[H"
 
-    local status_color="$c_gre"
+    local status_color=" COLOR[GREEN]"
     local status_text="RUNNING"
 
     if (( is_paused )); then
-        status_color="$c_yel"
+        status_color="$COLOR[YELLOW]"
         status_text="PAUSED "
     elif (( remaining < 10 )); then
-        status_color="$c_red"
+        status_color="$COLOR[RED]"
         status_text="CRITICAL"
     fi
 
     # Draw the TUI Container.
-    print -P "${c_box}╭──────────────────────────────────────╮${c_rst}"
-    print -P "${c_box}│         ${status_color}⏳  $status_text                 ${c_box}│${c_rst}"
+    print "${COLOR[BLUE]}╭──────────────────────────────────────╮${COLOR[RESET]}"
+    print "${COLOR[BLUE]}│         ${status_color}⏳  $status_text                 ${COLOR[BLUE]}│${COLOR[RESET]}"
 
     # Format the time numbers into fixed-width slots for stability.
-    printf "${c_box}│         ${c_num}%02d:%02d:%02d${c_lbl}.%02d               ${c_box}│${c_rst}\n" $h $m $s $ms
+    printf "${COLOR[BLUE]}│         ${COLOR[B_WHITE]}%02d:%02d:%02d${COLOR[GREY]}.%02d               ${COLOR[BLUE]}│${COLOR[RESET]}\n" $h $m $s $ms
 
-    print -P "${c_box}│   ${status_color}${bar_fill}${c_lbl}${bar_empty}${c_rst}   ${c_box}│${c_rst}"
-    print -P "${c_box}├──────────────────────────────────────┤${c_rst}"
-    print -P "${c_box}│ ${c_lbl}[SPACE] Pause   [Q] Quit             ${c_box}│${c_rst}"
-    print -P "${c_box}╰──────────────────────────────────────╯${c_rst}"
+    print "${COLOR[BLUE]}│   ${status_color}${bar_fill}${COLOR[GREY]}${bar_empty}${COLOR[RESET]}   ${COLOR[BLUE]}│${COLOR[RESET]}"
+    print "${COLOR[BLUE]}├──────────────────────────────────────┤${COLOR[RESET]}"
+    print "${COLOR[BLUE]}│ ${COLOR[GREY]}[SPACE] Pause   [Q] Quit             ${COLOR[BLUE]}│${COLOR[RESET]}"
+    print "${COLOR[BLUE]}╰──────────────────────────────────────╯${COLOR[RESET]}"
 
 
     # ── interaction / feedback ───────────────────────────────────────────
@@ -210,7 +198,7 @@ while true; do
 
     case "$key" in
         [qQ])
-            print -P "\n${c_yel}:: Timer cancelled.${c_rst}"
+            print "\n${COLOR[YELLOW]}:: Timer cancelled.${COLOR[RESET]}"
             return
             ;;
         " ")
@@ -229,11 +217,11 @@ done
 # ── finalization ───────────────────────────────────────────────────────────
 
 clear
-print -P "${c_gre}"
+print "$ COLOR[GREEN]}"
 echo "  ╭──────────────────────╮"
 echo "  │      TIME IS UP!     │"
 echo "  ╰──────────────────────╯"
-print -P "${c_rst}"
+print "${COLOR[RESET]}"
 
 # macOS specific notification logic via AppleScript.
 if (( $+commands[osascript] )); then

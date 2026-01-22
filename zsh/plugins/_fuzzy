@@ -1,0 +1,297 @@
+#!/usr/bin/env zsh
+
+#    ░█▀▀░▀█▀░█▀▀░░░█▀▀░█▀█░█▄█░█▀█░█░░░█▀▀░▀█▀░█▀█░█▀▄
+#    ░█▀▀░░█░░█▀▀░░░█░░░█░█░█░█░█▀▀░█░░░█▀▀░░█░░█░█░█▀▄
+#    ░▀░░░▀▀▀░▀░░░▀░▀▀▀░▀▀▀░▀░▀░▀░░░▀▀▀░▀▀▀░░▀░░▀▀▀░▀░▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Configures FZF (Fuzzy Finder) as the primary interaction layer for Zsh.
+#   It overrides standard completions and keybindings to provide rich,
+#   context-aware previews for files, directories, processes, and more.
+#
+# Problems Solved
+#   - Standard Tab-completion is static; FZF makes it searchable and visual.
+#   - Replaces slow 'find' calls with optimized tools like 'rg' or 'fd'.
+#   - Provides "instant-read" previews (syntax-highlighted code, directory trees).
+#   - Standardizes clipboard and editor integration across platforms.
+#
+# Features / Responsibilities
+#   - **Smart Compgen:** Optimized directory/file discovery logic.
+#   - **Contextual Previews:** Dynamic logic for `cd`, `vim`, `ssh`, `git`, etc.
+#   - **Unified UI:** Rounded borders, consistent color palette, and iconography.
+#   - **High-Speed Search:** Native integration with Ripgrep and FD.
+#
+# Usage Notes
+#   - Requires: `fzf` (Binary).
+#   - Optional: `bat`, `eza`, `fd`, `rg`, `delta` for enhanced visuals.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── initialization & dependencies ────────────────────────────────────────────
+
+
+
+# Guard: Ensure FZF is installed before proceeding
+if ! is_installed fzf; then
+    printf "\n\033[0;33m[WARN] USE_FUNCTION='Yes' but 'fzf' is not installed.\033[0m\n"
+    return
+fi
+
+# ------------------------------------------------------------------------------
+# Clipboard Detection
+# ------------------------------------------------------------------------------
+local CLIP_CMD=""
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    CLIP_CMD="pbcopy" # macOS
+elif [[ -n "$WAYLAND_DISPLAY" ]] && (( $+commands[wl-copy] )); then
+    CLIP_CMD="wl-copy" # Wayland
+elif (( $+commands[xclip] )); then
+    CLIP_CMD="xclip -selection clipboard" # X11 xclip
+elif (( $+commands[xsel] )); then
+    CLIP_CMD="xsel --clipboard --input" # X11 xsel
+else
+    CLIP_CMD="cat" # Fallback to stdout
+fi
+
+
+# ── custom completion engines ────────────────────────────────────────────────
+
+
+
+# ------------------------------------------------------------------------------
+# Function: _fzf_compgen_dir
+# Description: Overrides directory discovery for FZF completions.
+# ------------------------------------------------------------------------------
+_fzf_compgen_dir() {
+    local base_dir="$1"
+
+    if is_installed fd; then
+        # Use 'fd' for performance and automatic .gitignore respect
+        fd --type d --hidden --follow --color=always \
+           --exclude ".git" \
+           --exclude "node_modules" \
+           . "$base_dir"
+    else
+        # Fallback to universal 'find' with pruning logic for heavy folders
+        command find -L "$base_dir" \
+            \( -name .git -o -name node_modules \) -prune -o \
+            -type d -print 2>/dev/null
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# Function: _fzf_compgen_unalias
+# Description: Specialized FZF picker for unsetting shell aliases with previews.
+# ------------------------------------------------------------------------------
+_fzf_compgen_unalias() {
+    local tmp=$(mktemp "${TMPDIR:-/tmp}/zsh-aliases.XXXXXX")
+    trap "rm -f '$tmp'" EXIT
+
+    # Capture current aliases to a temp file for the FZF subshell to read
+    alias > "$tmp"
+
+    local preview_cmd="grep -F --color=always \"{}=\" '$tmp'"
+    if is_installed bat; then
+        preview_cmd="$preview_cmd | bat -l zsh --style=plain --color=always"
+    fi
+
+    print -l "${(@k)aliases}" | fzf "$@" --preview "$preview_cmd"
+}
+
+# ------------------------------------------------------------------------------
+# Function: _fzf_comprun
+# Description: The "Brain" of FZF context-awareness. It determines what preview
+#              to show based on the command you are currently typing.
+# ------------------------------------------------------------------------------
+_fzf_comprun() {
+    local command=$1
+    shift
+
+    case "$command" in
+        # 1. Navigation (cd/pushd) -> Show Directory Trees
+        cd|pushd|rmdir)
+            if is_installed eza; then
+                fzf "$@" --preview 'eza --tree --level=2 --color=always --icons=always --group-directories-first {} | head -200'
+            elif is_installed tree; then
+                fzf "$@" --preview 'tree -C {} | head -200'
+            else
+                fzf "$@" --preview 'ls -1 --color=always {} | head -200'
+            fi
+            ;;
+
+        # 2. Files (vim/cat/bat) -> Show Syntax Highlighted Code
+        vim|nvim|vi|nano|code|cat|bat|less|more)
+            if is_installed bat; then
+                fzf "$@" --preview 'bat --style=numbers --color=always --line-range :500 {}' \
+                        --preview-window 'right:60%:border-left'
+            else
+                fzf "$@" --preview 'cat {}'
+            fi
+            ;;
+
+        # 3. Environment & Processes -> Show Values/Status
+        export|unset|printenv)
+            fzf "$@" --preview "printenv {}" --preview-window="bottom:3:wrap"
+            ;;
+        kill|pkill)
+            fzf "$@" --preview 'ps -fp {1} 2>/dev/null || echo "Process not found"' \
+                    --preview-window="bottom:20%:wrap"
+            ;;
+
+        # 4. Networking & SSH -> Show Config Fragments
+        ssh|telnet)
+            fzf "$@" --preview 'cat ~/.ssh/config 2>/dev/null | grep -A 4 "Host {}" || echo "System Host: {}"' \
+                    --preview-window="bottom:20%:wrap"
+            ;;
+
+        # 5. Git -> Show Colorful Diffs
+        git)
+            if is_installed delta; then
+                fzf "$@" --preview 'git diff --color=always {} | delta' --preview-window 'right:60%'
+            else
+                fzf "$@" --preview 'git diff --color=always {}' --preview-window 'right:60%'
+            fi
+            ;;
+
+        unalias) _fzf_compgen_unalias "$@" ;;
+
+        systemctl)
+             fzf "$@" --preview 'systemctl status {1} --no-pager 2>/dev/null || echo "Status unavailable"' \
+                      --preview-window="right:60%:wrap"
+             ;;
+
+        # 7. Service Management (macOS)
+        #    'launchctl list' shows PID, Last Exit Status, and Label
+        launchctl)
+             fzf "$@" --preview 'launchctl list {1} 2>/dev/null || echo "No info available for {1}"' \
+                      --preview-window="bottom:20%:wrap"
+             ;;
+
+        # 10. Multi-Tool Fallback logic for everything else
+        *)
+            local preview_cmd="echo {}"
+            if is_installed bat; then
+                preview_cmd="if [ -f {} ]; then bat --style=numbers --color=always --line-range :500 {};"
+            else
+                preview_cmd="if [ -f {} ]; then cat {};"
+            fi
+
+            if is_installed eza; then
+                 preview_cmd+=" elif [ -d {} ]; then eza --tree --level=2 --color=always --icons=always {} | head -200;"
+            else
+                 preview_cmd+=" elif [ -d {} ]; then ls -1 --color=always {};"
+            fi
+            preview_cmd+=" else echo {}; fi"
+
+            fzf "$@" --preview "$preview_cmd"
+            ;;
+    esac
+}
+
+
+# ── global fzf options & keybindings ──────────────────────────────────────────
+
+
+
+export FZF_DEFAULT_OPTS="
+    # 1. TOKYO NIGHT COLOR PALETTE
+    --color=fg:#c0caf5,bg:-1,hl:#36608a
+    --color=fg+:#ffffff,bg+:#1f2335,hl+:#76b9e0
+    --color=info:#7aa2f7,prompt:#f7768e,pointer:#f7768e
+    --color=marker:#9ece6a,spinner:#9ece6a,header:#9ece6a
+    --color=border:#414868,label:#aeaeae,query:#ddb6f2
+    --color=preview-border:#f7768e
+    --gutter ' ' --color gutter:-1
+
+    # 2. UI SETTINGS
+    --border='rounded'
+    --border-label='  Fuzzy Finder'
+    --border-label-pos='4'
+    --preview-window='border-rounded,hidden'
+    --prompt='  '
+    --pointer='▌'
+    --marker=' '
+    --info='inline'
+    --height='45%'
+    --layout='reverse'
+    --margin='1'
+    --padding='1,1,0,1'
+    --preview '[[ \$(file --mime {}) =~ binary ]] && echo {} is a binary file || (bat --style=numbers --color=always {} || cat {}) 2> /dev/null | head -500'
+
+    # 3. KEYBINDINGS
+    --bind 'ctrl-j:preview-down'
+    --bind 'ctrl-k:preview-up'
+    --bind 'ctrl-a:select-all'
+    --bind 'ctrl-y:execute-silent(echo {+} | $CLIP_CMD)'
+    --bind 'ctrl-e:execute(echo {+} | xargs -o nvim)'
+    --bind 'ctrl-v:execute(code {+})'
+    --bind 'tab:down,shift-tab:up'
+    --bind 'ctrl-/:toggle-preview'
+"
+
+
+# ── search tool backend ──────────────────────────────────────────────────────
+
+# Centralized list of noisy directories to ignore globally
+local _fzf_ignore_list=(
+    .git .mypy_cache .tox .cache .venv venv node_modules __pycache__ site-packages
+)
+
+if is_installed rg; then
+    # RIPGREP: Native .gitignore support + ultra-fast filtering
+    export FZF_DEFAULT_COMMAND="rg --files --hidden --follow ${(@)_fzf_ignore_list/#/--glob \!}"
+    export FZF_ALT_C_COMMAND='find . -type d'
+elif is_installed fd; then
+    # FD: Purpose-built for file discovery
+    local fd_excludes="${(@)_fzf_ignore_list/#/--exclude }"
+    export FZF_DEFAULT_COMMAND="fd --type f --hidden --follow --strip-cwd-prefix $fd_excludes"
+    export FZF_ALT_C_COMMAND="fd --type d --hidden --follow --strip-cwd-prefix $fd_excludes"
+else
+    # FIND: Standard POSIX fallback
+    export FZF_DEFAULT_COMMAND='find . -type f'
+    export FZF_ALT_C_COMMAND='find . -type d'
+fi
+
+# Ensure Ctrl-T (File Finder) uses the same optimized command
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+
+
+# ── keybinding-specific preview strategies ───────────────────────────────────
+
+# Select File Previewer (Prioritize bat)
+local _fzf_preview_file_cmd
+if is_installed bat; then
+    _fzf_preview_file_cmd='bat --color=always --style=numbers --line-range=:500 {}'
+else
+    _fzf_preview_file_cmd='cat {}'
+fi
+
+# Select Directory Previewer (Prioritize eza)
+local _fzf_preview_dir_cmd
+if is_installed eza; then
+    _fzf_preview_dir_cmd='eza --tree --color=always {} | head -200'
+elif is_installed tree; then
+    _fzf_preview_dir_cmd='tree -C {} | head -200'
+else
+    _fzf_preview_dir_cmd='ls -1 {}'
+fi
+
+# Apply Previews to Widgets
+export FZF_CTRL_T_OPTS="--preview '$_fzf_preview_file_cmd 2>/dev/null' --bind 'ctrl-/:toggle-preview'"
+export FZF_ALT_C_OPTS="--preview '$_fzf_preview_dir_cmd 2>/dev/null'"
+
+# Cleanup helper variables
+unset _fzf_preview_file_cmd _fzf_preview_dir_cmd
+
+
+# ── os-specific shell loading ────────────────────────────────────────────────
+
+# Load standard FZF completion and key-bindings for macOS (Homebrew paths)
+[[ -f /opt/homebrew/opt/fzf/shell/completion.zsh ]] && source /opt/homebrew/opt/fzf/shell/completion.zsh
+[[ -f /opt/homebrew/opt/fzf/shell/key-bindings.zsh ]] && source /opt/homebrew/opt/fzf/shell/key-bindings.zsh
+
+# Would you like me to add a custom FZF widget for searching and installing Homebrew packages or browsing Docker containers?

@@ -71,7 +71,7 @@ function _zsh_debug_startup() {
 
     # 4. User Feedback
     clear
-    print -P "${COLOR[YELLOW]}🚧 Starting Zsh Debugger...${COLOR[RESET]}"
+    print "${COLOR[YELLOW]}🚧 Starting Zsh Debugger...${COLOR[RESET]}"
     echo "   • Debug Log:   ${COLOR[UNDERLINE]}$debug_log${COLOR[RESET]}"
 
     if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
@@ -148,7 +148,7 @@ function v() {
 
     # 3. Execution Path
     if [[ "$use_sudo" == "yes" ]]; then
-        print -P "${COLOR[YELLOW]}:: File requires root permissions.${COLOR[RESET]}"
+        print "${COLOR[YELLOW]}:: File requires root permissions.${COLOR[RESET]}"
         if [[ -n "$app_name" ]]; then
             echo ":: Opening with sudo ($app_name)..."
             # sudo -E is the 'secret sauce'—it preserves YOUR Zsh/Nvim theme
@@ -185,7 +185,7 @@ function lg() {
         local target_dir=$(cat "$lg_config_file")
         if [[ -d "$target_dir" && "$target_dir" != "$PWD" ]]; then
             cd "$target_dir"
-            print -P "${COLOR[GREEN]}:: Switched to:${COLOR[RESET]} $target_dir"
+            print "${COLOR[GREEN]}:: Switched to:${COLOR[RESET]} $target_dir"
         fi
         rm -f "$lg_config_file"
     fi
@@ -227,14 +227,14 @@ function kubectl() {
 
         # 3. Guard PRODUCTION keywords
         if [[ "$current_ctx" =~ "prod|production|live|main" ]]; then
-            print -P "\n%F{red}%B[K8S GUARD] 🛑 WARNING: Targeting PRODUCTION ($current_ctx)%b%f"
-            print -P "Command: %F{yellow}kubectl $cmd_args%f"
+            print "\n${COLOR[BOLD]}${COLOR[RED]}[K8S GUARD] 🛑 WARNING: Targeting PRODUCTION ($current_ctx)${COLOR[RESET]}"
+            print "Command: ${COLOR[YELLOW]}kubectl $cmd_args${COLOR[RESET]}"
             print -n "Are you sure? [y/N] "
 
             # read -q: read one character and compare it to 'y'
             if ! read -q; then
                 echo # Newline
-                print -P "%F{red}Aborted.%f"
+                print "${COLOR[RED]}Aborted.${COLOR[RESET]}"
                 return 1
             fi
             echo # Newline

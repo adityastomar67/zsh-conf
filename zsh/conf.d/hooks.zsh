@@ -113,7 +113,7 @@ magic_enter() {
 
     # ::: Background Jobs Detector :::
     if [[ $(jobs | wc -l) -gt 0 ]]; then
-        print -P "%F{cyan}::: Background Jobs :::%f"
+        print "${COLOR[CYAN]}::: Background Jobs :::${COLOR[RESET]}"
         jobs
         echo ""
     fi
@@ -121,7 +121,7 @@ magic_enter() {
     # ::: Python VirtualEnv Detector :::
     if [[ -f "requirements.txt" || -f "pyproject.toml" ]]; then
         if [[ -z "$VIRTUAL_ENV" ]]; then
-             print -P "%F{red}::: ⚠️  PYTHON PROJECT DETECTED (No VirtualEnv Active) ⚠️  :::%f"
+             print "${COLOR[RED]}::: ⚠️  PYTHON PROJECT DETECTED (No VirtualEnv Active) ⚠️  :::${COLOR[RESET]}"
              echo ""
         fi
     fi
@@ -129,10 +129,10 @@ magic_enter() {
     # ::: Smart Git Status :::
     if git rev-parse --is-inside-work-tree &>/dev/null; then
         if [[ -n $(git status --porcelain) ]]; then
-            print -P "%F{yellow}::: Git Status (Dirty) :::%f"
+            print "${COLOR[YELLOW]}::: Git Status (Dirty) :::${COLOR[RESET]}"
             git status -sb
         else
-            print -P "%F{green}::: Git Status (Clean) :::%f"
+            print "${COLOR[GREEN]}::: Git Status (Clean) :::${COLOR[RESET]}"
             git log -n 3 --oneline --color=always
         fi
         echo ""
@@ -154,10 +154,30 @@ zle -N magic_enter
 # Hook: Auto LS on CD
 # Description: Automatically lists files when changing directories.
 # ------------------------------------------------------------------------------
+# PRE-CALCULATE: Decide the command ONCE at startup.
+#    We store the command and args in an array for safe execution.
+typeset -a _chpwd_ls_cmd
+
+if (( $+commands[eza] )); then
+    _chpwd_ls_cmd=(eza -al --color=always --icons --group-directories-first)
+elif (( $+commands[lsd] )); then
+    _chpwd_ls_cmd=(lsd -a --group-directories-first)
+else
+    _chpwd_ls_cmd=(ls -la)
+fi
+
+# 2. EXECUTE: The function is now extremely dumb and fast.
 function chpwd_auto_ls() {
     emulate -L zsh
-    ls -F --color=auto
+
+    # Optimization: Use $PWD (variable) instead of $(pwd) (subshell)
+    # Return immediately if in HOME to reduce clutter
+    [[ "$PWD" == "$HOME" ]] && return
+
+    # Execute the pre-calculated command
+    "${_chpwd_ls_cmd[@]}"
 }
+
 add-zsh-hook chpwd chpwd_auto_ls
 
 
@@ -204,25 +224,40 @@ zle -N fancy_ctrl_z
 # Widget: Copy Buffer to Clipboard
 # Description: Cross-platform command line copying.
 # ------------------------------------------------------------------------------
+# PRE-CALCULATE: Find the clipboard tool ONCE at startup.
+#    We use an array to safely handle arguments like '-selection clipboard'.
+typeset -a _copy_cmd_list
+
+if [[ "$OSTYPE" == darwin* ]]; then
+    _copy_cmd_list=(pbcopy)
+elif (( $+commands[wl-copy] )); then
+    _copy_cmd_list=(wl-copy)
+elif (( $+commands[xclip] )); then
+    _copy_cmd_list=(xclip -selection clipboard)
+elif (( $+commands[xsel] )); then
+    _copy_cmd_list=(xsel --clipboard --input)
+elif (( $+commands[clip.exe] )); then
+    # Support for WSL (Windows Subsystem for Linux)
+    _copy_cmd_list=(clip.exe)
+fi
+
+# 2. EXECUTE: The widget simply uses the pre-found command.
 copy_buffer_to_clipboard() {
-    local copy_cmd
-    if [[ "$OSTYPE" == darwin* ]]; then
-        copy_cmd="pbcopy"
-    elif (( $+commands[wl-copy] )); then
-        copy_cmd="wl-copy"
-    elif (( $+commands[xclip] )); then
-        copy_cmd="xclip -selection clipboard"
-    elif (( $+commands[xsel] )); then
-        copy_cmd="xsel --clipboard --input"
+    emulate -L zsh
+
+    # Safety check: Do we have a command?
+    if (( ${#_copy_cmd_list} == 0 )); then
+        zle -M "Error: No clipboard utility found."
+        return 1
     fi
 
-    if [[ -n "$copy_cmd" ]]; then
-        echo -n "$BUFFER" | eval "$copy_cmd"
-        zle -M "Copied buffer to clipboard."
-    else
-        zle -M "Error: No clipboard utility found."
-    fi
+    # Optimization: Use 'print -rn --' instead of 'echo -n'.
+    # It prevents Zsh from interpreting flags like '-e' inside your buffer.
+    print -rn -- "$BUFFER" | "${_copy_cmd_list[@]}"
+
+    zle -M "✓ Copied buffer to clipboard."
 }
+
 zle -N copy_buffer_to_clipboard
 
 
@@ -230,7 +265,7 @@ zle -N copy_buffer_to_clipboard
 # Widget: Transient Prompt
 # Description: Shrinks the prompt to a minimal symbol after execution.
 # ------------------------------------------------------------------------------
-typeset -g _TRANS_PROMPT="%F{8}❯%f "
+typeset -g _TRANS_PROMPT="%{${COLOR[YELLOW]}%}::%{${COLOR[RESET]}%} "
 typeset -g _OLD_PROMPT=""
 
 _transient_restore() {
@@ -295,7 +330,7 @@ docker_connect_widget() {
               --height=40% \
               --layout=reverse \
               --preview='docker logs --tail 20 {1}' \
-              --preview-window='right:50%:wrap:nohidden' | \
+              --preview-window='right:50%:wrap' | \
           awk '{print $1}')
 
     if [[ -n "$cid" ]]; then

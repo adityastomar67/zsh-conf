@@ -29,6 +29,7 @@
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
+
 # Localization & Terminal
 # ─────────────────────────────────────────────────────────────
 ## Ensure the shell handles UTF-8 characters correctly and identifies
@@ -43,9 +44,9 @@ export LC_ALL="en_US.UTF-8"
 export GPG_TTY="${TTY:-$(tty)}"
 
 # ── true color support ─────────────────────────────────────────────────
-
 # If the terminal supports truecolor (16 million colors), force the
 # TERM variable to xterm-256color for compatibility with tools like Bat/Vim.
+
 if [[ "$COLORTERM" == "truecolor" || "$TERM" == *256* ]]; then
     export TERM="xterm-256color"
     export BAT_THEME="TwoDark"
@@ -77,7 +78,7 @@ fi
 # ------------------------------------------------------------------------------
 # Sudo Prompt
 # Custom prompt when asking for root password (displays username).
-export SUDO_PROMPT="Deploying root access for %u. Password pls: "
+export SUDO_PROMPT="${COLOR[RED]}[NOTE]${COLOR[RESET]} Deploying root access for ${COLOR[YELLOW]}${COLOR[BOLD]}%u${COLOR[RESET]}, Password pls: "
 
 # ------------------------------------------------------------------------------
 # Manpager (Manual Page Viewer)
@@ -125,7 +126,7 @@ fi
 
 # Link to the main dotfiles repo location
 # Note: $DOTFILES_ROOT is defined in the main env.zsh file
-export XDG_DOTS="${DOTFILES_ROOT:-$DOT_PATH}"
+export XDG_DOTS="${DOTFILES_ROOT:-$HOME/.config/.dotfiles}"
 
 # Neovim configuration location
 export XDG_NVIM="$HOME/.config/nvim"
@@ -134,8 +135,6 @@ export XDG_NVIM="$HOME/.config/nvim"
 # SSH & Remote Settings
 # ─────────────────────────────────────────────────────────────
 ## Configuration applied only when connected via SSH.
-
-
 
 if [[ -n "$SSH_CONNECTION" ]]; then
     # Revert to standard Vim on remote servers (safer than assuming Nvim config exists)

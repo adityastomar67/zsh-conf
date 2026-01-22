@@ -58,6 +58,7 @@ COLOR[GREEN]=$'\e[32m'
 COLOR[YELLOW]=$'\e[33m'
 COLOR[BLUE]=$'\e[34m'
 COLOR[MAGENTA]=$'\e[35m'
+COLOR[PURPLE]=$'\e[95m'
 COLOR[CYAN]=$'\e[36m'
 COLOR[WHITE]=$'\e[37m'     # Light Grey usually
 

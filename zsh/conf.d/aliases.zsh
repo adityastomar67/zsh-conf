@@ -382,6 +382,65 @@ alias -g 'NUL'="> /dev/null 2>&1"   # Silence Everything (Output + Errors)
 alias -g 'LL'="2>&1 | less"         # Pipe Output+Errors to Less
 
 
+# Suffix Aliases
+# ─────────────────────────────────────────────────────────────
+## Executing files based on extension (e.g., typing 'main.py' runs python).
+
+# 1. Define the System Opener
+#    macOS uses 'open', Linux uses 'xdg-open'.
+if [[ "$detected_os" == "Darwin" ]]; then
+    local _sys_open="open"
+else
+    local _sys_open="xdg-open"
+fi
+
+# 2. Text & Config Files -> Open in Editor
+#    Extensions usually meant for editing.
+alias -s {txt,md,markdown,yml,yaml,toml,conf,ini,json,xml,csv}="$EDITOR"
+alias -s {zsh,bash,sh,zshrc,bashrc}="$EDITOR"
+
+# 3. Source Code -> Open in Editor (Safe Default)
+#    We default to editing to prevent accidental execution of unfinished code.
+alias -s {c,cpp,h,hpp,rs,go,java,ts,css,html}="$EDITOR"
+
+# 4. Script Execution -> Run Immediately
+#    Typing 'script.py' will run it through python3.
+alias -s py="python3"
+alias -s js="node"
+alias -s rb="ruby"
+
+# 5. Media & Documents -> System Default Viewer
+#    Opens PDFs, images, and videos in your default GUI app.
+alias -s {pdf,epub,djvu}="$_sys_open"
+alias -s {jpg,jpeg,png,gif,svg,webp,bmp}="$_sys_open"
+alias -s {mp3,wav,flac,aac,ogg}="$_sys_open"
+alias -s {mp4,mkv,avi,mov,webm}="$_sys_open"
+
+# 6. Archives -> List Contents (Safety First)
+#    Typing 'data.zip' lists contents rather than auto-extracting (messy).
+if is_installed unzip; then
+    alias -s zip="unzip -l"
+fi
+if is_installed tar; then
+    alias -s {tgz,gz}="tar tf"
+fi
+
+# 7. Log Files -> Bat (Syntax Highlighting)
+#    If 'bat' is installed, use it for logs. Otherwise, use 'tail -f'.
+if is_installed bat; then
+    alias -s {log,md}="bat --paging=always"
+else
+    alias -s log="tail -f"
+fi
+
+# 8. Git Patches -> Apply
+#    Typing a .patch file applies it to the repo.
+alias -s patch="git apply"
+
+# Cleanup variable
+unset _sys_open
+
+
 # Miscellaneous
 # ─────────────────────────────────────────────────────────────
 
