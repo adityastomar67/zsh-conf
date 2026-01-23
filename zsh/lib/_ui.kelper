@@ -5,86 +5,81 @@
 
 # ------------------------------------------------------------------------------
 # File Purpose
-#   Display a nicely formatted "Cheat Sheet" of custom keybindings on startup.
+#   Display a comprehensive "Cheat Sheet" of custom keybindings on startup.
 #   It helps the user learn the shortcuts (Macros, Navigation) immediately.
 #
 # Features
 #   - Aligned columns for readability.
-#   - Grouped by category (Navigation, History, Macros).
+#   - Detailed breakdown of all active widgets.
 #   - Self-Destruction: Removes itself from .zshrc after the first run.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 () {
     # ── Helpers ────────────────────────────────────────────────────────────
-    # A mini-function to print aligned rows easily
-    # Usage: print_row "Key Combo" "Description"
     function print_row() {
-        printf "   ${COLOR[YELLOW]}%-22s${COLOR[RESET]}  ${COLOR[DIM]}::${COLOR[RESET]}  %s\n" "$1" "$2"
+        printf "   ${COLOR[YELLOW]}%-26s${COLOR[RESET]}  ${COLOR[DIM]}::${COLOR[RESET]}  %s\n" "$1" "$2"
+    }
+
+    function print_section() {
+        printf "\n   ${COLOR[MAGENTA]}${COLOR[BOLD]}%s${COLOR[RESET]}\n" "$1"
     }
 
     # ── UI Rendering ───────────────────────────────────────────────────────
     clear
 
     # 1. Header
-    printf "${COLOR[DIM]}╭──────────────────────────────────────────────────────────────╮${COLOR[RESET]}\n"
-    printf "${COLOR[DIM]}│${COLOR[RESET]}               ${COLOR[CYAN]}⌨️  QUICK START: KEY BINDINGS${COLOR[RESET]}               ${COLOR[DIM]}   │${COLOR[RESET]}\n"
-    printf "${COLOR[DIM]}╰──────────────────────────────────────────────────────────────╯${COLOR[RESET]}\n"
+    printf "${COLOR[DIM]}╭────────────────────────────────────────────────────────────────╮${COLOR[RESET]}\n"
+    printf "${COLOR[DIM]}│${COLOR[RESET]}                 ${COLOR[CYAN]}⌨️  MASTER KEYBINDING REFERENCE${COLOR[RESET]}                 ${COLOR[DIM]}│${COLOR[RESET]}\n"
+    printf "${COLOR[DIM]}╰────────────────────────────────────────────────────────────────╯${COLOR[RESET]}\n"
 
-    print "   To help you move faster, here are the essential shortcuts configured"
-    print "   for this shell environment.\n"
+    print "   System initialized. Here are the power tools available to you:\n"
 
     # 2. Navigation
-    printf "   ${COLOR[MAGENTA]}NAIVGATION${COLOR[RESET]}\n"
-    print_row "Ctrl + Left / Right" "Jump by whole words"
+    print_section "NAVIGATION"
+    print_row "Left / Right" "Move by character"
+    print_row "Ctrl + Left / Right" "Move by whole word"
     print_row "Home / End" "Jump to start / end of line"
-    print_row "Ctrl + U" "Clear line (Left of cursor)"
-    print_row "Ctrl + K" "Clear line (Right of cursor)"
-    echo ""
 
-    # 3. History & Search
-    printf "   ${COLOR[MAGENTA]}HISTORY & SEARCH${COLOR[RESET]}\n"
-    print_row "Up / Down Arrow" "Smart History Search (matches what you typed)"
-    print_row "Spacebar" "Auto-expand aliases (e.g. 'gco' -> 'git checkout')"
-    echo ""
+    # 3. Editing & Buffer
+    print_section "EDITING"
+    print_row "Ctrl + U" "Clear line (Cursor to Start)"
+    print_row "Ctrl + K" "Clear line (Cursor to End)"
+    print_row "Ctrl + W" "Delete previous word"
+    print_row "Ctrl + Delete" "Delete next word"
+    print_row "Ctrl + E" "Open command in full editor ($EDITOR)"
 
-    # 4. Power Macros (The cool stuff)
-    printf "   ${COLOR[MAGENTA]}POWER MACROS${COLOR[RESET]}\n"
-    print_row "Ctrl + E" "Edit current command in Vim/Nano/Editor"
-    print_row "Esc, Esc, Esc" "Toggle 'sudo' on the current command"
+    # 4. Smart Macros (Context Aware)
+    print_section "SMART MACROS"
+    print_row "Esc, Esc, Esc" "Toggle 'sudo' prefix"
+    print_row "..." "Magic Dot (Expands to '../..')"
+    print_row "Enter (Empty Line)" "Magic Enter (Runs ls/git status)"
+    print_row "Ctrl + Z" "Foreground/Background job toggle"
+    print_row "Spacebar" "Auto-expand history aliases (!!)"
+
+    # 5. Pro Workflows (Alt/Meta Keys)
+    print_section "PRO WORKFLOWS (ALT KEYS)"
+    print_row "Alt + C" "Copy current command to clipboard"
+    print_row "Alt + P" "Project Manager / Tmux Popup"
+    print_row "Alt + F" "Git Fixup (Select commit to squash)"
+    print_row "Alt + S" "Docker Connect (Shell into container)"
+
+    # 6. Completion & Autosuggest
+    print_section "COMPLETION & HISTORY"
     print_row "Ctrl + Space" "Accept Autosuggestion (Ghost text)"
-    echo ""
+    print_row "Up / Down Arrow" "Smart History Search (Filters by input)"
+    print_row "Tab / Shift+Tab" "Cycle completion menu"
 
-    # 5. Menu Selection (Tab)
-    printf "   ${COLOR[MAGENTA]}MENU SELECTION${COLOR[RESET]}\n"
-    print_row "Tab" "Open selection menu"
-    print_row "Shift + Tab" "Cycle backwards"
     if [[ "${ENABLE_VI_MODE:l}" == "yes" ]]; then
-        print_row "h / j / k / l" "Navigate menu (Vim style)"
-    else
-        print_row "Arrows" "Navigate menu"
+        print_row "h / j / k / l" "Navigate menu (Vim mode)"
     fi
+
     echo ""
 
-    # 6. Exit Interaction
-    printf "   ${COLOR[DIM]}──────────────────────────────────────────────────────────────${COLOR[RESET]}\n"
-    print "   ${COLOR[CYAN]}PRO TIP:${COLOR[RESET]} You can view these anytime by looking at the config file."
-    print -n "   ${COLOR[BOLD]}Press [ENTER] to finish setup...${COLOR[RESET]}"
+    # 7. Exit Interaction
+    printf "   ${COLOR[DIM]}────────────────────────────────────────────────────────────────${COLOR[RESET]}\n"
+    print "   ${COLOR[CYAN]}NOTE:${COLOR[RESET]} This screen will appear only once."
+    print -n "   ${COLOR[BOLD]}Press [ENTER] to begin...${COLOR[RESET]}\n"
     read -k1 -s
 
-
-    # ── Self-Destruction Sequence ──────────────────────────────────────────
-    # Removes the 'source .../ui.keybinds' line from .zshrc so this only
-    # shows up once.
-
-    # Detect OS for correct `sed` syntax
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS / BSD Sed (Requires empty string for backup)
-        sed -i '' '\|source "\ZSH_CONFIG_ROOT/lib/ui.keybinds"|d' "$ZDOTDIR/.zshrc"
-    else
-        # GNU / Linux Sed
-        sed -i '\|source "\ZSH_CONFIG_ROOT/lib/ui.keybinds"|d' "$ZDOTDIR/.zshrc"
-    fi
 
 } # End anonymous function

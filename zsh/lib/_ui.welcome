@@ -57,9 +57,9 @@
     clear
 
     # 1. Header Box
-    printf "${COLOR[DIM]}╭──────────────────────────────────────────────────────────────╮${COLOR[RESET]}\n"
-    printf "${COLOR[DIM]}│${COLOR[RESET]}                ${COLOR[CYAN]}👋 HELLO, WELCOME TO ZSH-CONF${COLOR[RESET]}                 ${COLOR[DIM]}│${COLOR[RESET]}\n"
-    printf "${COLOR[DIM]}╰──────────────────────────────────────────────────────────────╯${COLOR[RESET]}\n"
+    printf "${COLOR[DIM]}   ╭──────────────────────────────────────────────────────────────╮${COLOR[RESET]}\n"
+    printf "${COLOR[DIM]}   │${COLOR[RESET]}                ${COLOR[CYAN]}👋 HELLO, WELCOME TO ZSH-CONF${COLOR[RESET]}                 ${COLOR[DIM]}│${COLOR[RESET]}\n"
+    printf "${COLOR[DIM]}   ╰──────────────────────────────────────────────────────────────╯${COLOR[RESET]}\n"
 
     # 2. Introduction
     print "   Maybe it's your first time using a custom Zsh setup or maybe not."
