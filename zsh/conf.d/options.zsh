@@ -218,7 +218,7 @@ for entry in "${init_tools[@]}"; do
     local mode="${${parts[3]## #}%% #}"
 
     # Logic: Only run if installed
-    if [[ is_installed "$bin" ]]; then
+    if is_installed "$bin"; then
         _eval_cache "$bin" "$cmd" "$mode"
     fi
 done
