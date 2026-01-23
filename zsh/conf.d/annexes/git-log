@@ -87,11 +87,20 @@ local get_hash="grep -oE '[a-f0-9]{7,}' | head -1"
 # ------------------------------------------------------------------------------
 # 6. Execution & TUI Logic
 
-# Feed the colored log into FZF
+# Define the Column Headings
+#    Adjust the spaces inside this string to match your specific "$fmt" layout.
+#    \033[1;4;31m = Bold, Underline, Red
+HEADERS=$'\033[1;4;31mHash\033[0m       \033[1;4;31mAge\033[0m              \033[1;4;31mAuthor\033[0m            \033[1;4;31mMessage\033[0m\n'
+
+# Define the Shortcuts Help
+KEYS=$'\033[1;33m• Enter:\033[0m  View      \033[1;33m• Ctrl-Y:\033[0m Copy Hash \n\033[1;33m• Ctrl-X:\033[0m Copy Msg  \033[1;33m• Ctrl-O:\033[0m Checkout\n\n'
+
+# Feed into FZF
 git log --graph --color=always --format="$fmt" "$@" | \
 fzf --ansi --no-sort --reverse --tiebreak=index \
     --height=100% --border --layout=reverse --info=inline \
-    --header=$'• Enter: View       • Ctrl-Y: Copy Hash \n• Ctrl-X: Copy Msg  • Ctrl-O: Checkout\n\n' \
+    --border-label='  Git Log ' \
+    --header="${KEYS}${HEADERS}" \
     --preview-window=right:60%:border-left \
     --preview "echo {} | $get_hash | xargs -I % git show --color=always %" \
     \
