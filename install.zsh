@@ -108,7 +108,7 @@ Config::init() {
     # --------------------------------------------------------------------------
     # Tools required for the full experience.
     REQUIRED_PACKAGES=(
-        "atuin" "bat" "eza" "fd" "fzf" "gawk"
+        "ai-commit" "atuin" "bat" "eza" "fd" "fzf" "gawk"
         "git-delta" "lazygit" "lsd" "navi"
         "npm" "ranger" "ripgrep" "shellcheck"
         "starship" "tmux" "zoxide"
@@ -641,6 +641,4 @@ Installer::main() {
 
 if [[ "$0" == "${(%):-%x}" ]]; then
     Installer::main "$@"
-
-    # export ZDOTDIR="$HOME/.config/zsh-conf"
 fi
