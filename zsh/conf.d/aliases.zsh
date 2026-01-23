@@ -49,15 +49,6 @@ unalias -a
 local detected_os
 detected_os=$(uname -s)
 
-# ── helper function ────────────────────────────────────────────────────
-# We rely on 'is_installed' to check for binary existence before aliasing.
-# If it wasn't loaded by a previous module, we define a lightweight fallback.
-if ! typeset -f is_installed > /dev/null; then
-    function is_installed() {
-        command -v "$1" > /dev/null 2>&1
-    }
-fi
-
 
 # System & Privileges
 # ─────────────────────────────────────────────────────────────

@@ -63,6 +63,9 @@ export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_STATE_HOME="$HOME/.local/state"
 
+# Disable the "hint" messages you are seeing
+export HOMEBREW_NO_ENV_HINTS=1
+
 
 # Default Applications
 # ─────────────────────────────────────────────────────────────

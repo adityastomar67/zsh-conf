@@ -53,18 +53,16 @@ autoload -Uz "$ZSH_CONFIG_ROOT/conf.d/annexes/"*(N:t)
 # ------------------------------------------------------------------------------
 function _zsh_debug_startup() {
     # 1. Define Log Locations
-    local log_dir="${ZSH_CONFIG_ROOT:-$HOME/.config/zsh-conf}/logs"
+    local log_dir="$HOME/zsh-logs"
     local debug_log="$log_dir/zsh-debug.log"
-    local prof_log="$log_dir/zsh-profiler.log"
+    local prof_log="$log_dir/zsh-prof.log"
 
     # 2. Safety: Ensure directory exists
     [[ -d "$log_dir" ]] || mkdir -p "$log_dir"
 
     # 3. Optional Profiling (Zprof)
     if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
-        if (( $+commands[zprof] )); then
-            zprof > "$prof_log"
-        fi
+        zprof > "$prof_log"
     fi
 
     # 4. User Feedback

@@ -38,6 +38,14 @@
 setopt PROMPT_SUBST
 autoload -Uz vcs_info
 
+# Load zstat for microsecond file timestamp checking
+zmodload zsh/stat
+
+# Global variables to persist cache between prompt draws
+typeset -g _GH0ST_CACHE_KEY=""     # Stores "PWD + Last Modified Time"
+typeset -g _GH0ST_CACHE_VAL=""     # Stores the visual string
+typeset -g _GH0ST_GIT_INDEX=""     # Stores location of .git/index
+
 # Function: get_random_prompt_symbol
 # Description:
 #   Returns a random "ignition" symbol from a curated list.
@@ -230,43 +238,83 @@ function theme_orbit_setup() {
 
 function theme_z_setup() {
 
-    # ── vcs_info configuration ─────────────────────────────────────────────
+    # ── 1. Fast Git Status Function ────────────────────────────────────────
+    # Replaces vcs_info. Runs ONE git call to get Branch + Status + Untracked.
+    function _fast_git_status() {
+        # Fast Guard: Check if we are in a git repo
+        # 'command git' avoids aliases. '2>/dev/null' silences errors.
+        local ref
+        ref=$(command git symbolic-ref --quiet HEAD 2> /dev/null) || \
+        ref=$(command git rev-parse --short HEAD 2> /dev/null) || return
 
-    # Enable only Git for performance
-    zstyle ':vcs_info:*' enable git
-    zstyle ':vcs_info:*' check-for-changes true
+        # Get the branch name (strip refs/heads/)
+        local branch="${ref#refs/heads/}"
 
-    # Format String:
-    # %m = Misc info, %u = Unstaged, %c = Staged, %b = Branch
-    # We use ${COLOR[...]} variables assuming they are loaded from lib/_ui.color.zsh
-    zstyle ':vcs_info:git:*' formats \
-        " %{${COLOR[BLUE]}%}(%{${COLOR[RED]}%}%m%u%c%{${COLOR[YELLOW]}%}${icons[VCS_BRANCH_ICON]:-}%{${COLOR[MAGENTA]}%} %b%{${COLOR[BLUE]}%}) ${icons[VCS_GIT_GITHUB_ICON]:-}"
-
-    # Hook: Register custom function to handle untracked files
-    zstyle ':vcs_info:git*+set-message:*' hooks git-untracked
-
-    # Hook Implementation:
-    # Appends a bang (!) to the staged string if untracked files exist.
-    function +vi-git-untracked() {
-        if check_git_untracked_status; then
-            hook_com[staged]+='!'
+        # Performance: Truncate branch name if too long (>20 chars)
+        if (( ${#branch} > 20 )); then
+            branch="${branch:0:20}..."
         fi
+
+        # ── Status Indicators ──────────────────────────────────────────────
+        local misc=""      # %m
+        local unstaged=""  # %u
+        local staged=""    # %c
+
+        # Run git status ONCE.
+        # --porcelain: stable parsing format
+        # -b: include branch info
+        # -unormal: standard untracked file checking
+        local git_output
+        git_output=$(command git status --porcelain -b -unormal 2>/dev/null)
+
+        # Parse the output using Zsh string manipulation (Fast)
+        if [[ $git_output == *'?'* ]]; then
+            staged+='!' # Matching your hook for untracked files
+        fi
+
+        # Check for modified (unstaged) files (Lines starting with space-M, space-D, etc)
+        if [[ $git_output =~ $'(^|\n) .+' ]]; then
+            unstaged="●" # Or your preferred symbol for %u
+        fi
+
+        # Check for staged files (Lines starting with M, A, D, etc)
+        if [[ $git_output =~ $'(^|\n)[MADRC] .+' ]]; then
+            staged+="+" # Or your preferred symbol for %c
+        fi
+
+        # ── Construct the Visual String ────────────────────────────────────
+        # Format matches your old vcs_info string:
+        # Blue ( Red Misc Unstaged Staged Yellow Icon Magenta Branch Blue ) Icon
+
+        local branch_icon="${icons[VCS_BRANCH_ICON]:-}"
+        local github_icon="${icons[VCS_GIT_GITHUB_ICON]:-}"
+
+        # We construct the variable GIT_RPROMPT directly
+        GIT_RPROMPT=" %{${COLOR[BLUE]}%}(%{${COLOR[RED]}%}${misc}${unstaged}${staged}%{${COLOR[YELLOW]}%}${branch_icon}%{${COLOR[MAGENTA]}%} ${branch}%{${COLOR[BLUE]}%}) ${github_icon}"
     }
 
-    # ── prompt hooks ───────────────────────────────────────────────────────
+    # ── 2. Prompt Hook ─────────────────────────────────────────────────────
+    # Runs before every prompt draw
+    function _update_prompt_data() {
+        # Reset git info
+        GIT_RPROMPT=""
+        # Run the fast status check
+        _fast_git_status
+    }
 
-    # Ensure vcs_info runs before every prompt display
-    add-zsh-hook precmd vcs_info
+    add-zsh-hook precmd _update_prompt_data
 
-    # ── final assembly ─────────────────────────────────────────────────────
+    # ── 3. Final Assembly ──────────────────────────────────────────────────
 
+    # Move this TO precmd if you want the symbol to change every time.
+    # Kept here for static loading speed as per your snippet.
     local prompt_symbol=$(get_random_prompt_symbol)
 
-    # Left Prompt: Time | Symbol | Path
+    # Left Prompt
     PROMPT="%T %{${COLOR[YELLOW]}%}${prompt_symbol}%{${COLOR[RESET]}%} %{${COLOR[BLUE]}%}%1~%{${COLOR[RESET]}%} "
 
-    # Right Prompt: Git Info
-    RPROMPT=\$vcs_info_msg_0_
+    # Right Prompt: Uses the raw variable we built
+    RPROMPT='${GIT_RPROMPT}'
 }
 
 
@@ -505,102 +553,96 @@ function theme_10k_setup() {
 ## A sleek, modern prompt using manual Git status checking (no vcs_info).
 ## Features custom icons and a clean path view.
 
-
-
 function theme_gh0st_setup() {
-
-    # ── git status helper ──────────────────────────────────────────────────
-    # Manually calculates git branch and dirty status.
-    # Note: We use manual calculation instead of vcs_info for stricter control
-    # over icon placement and color.
-
+    # ── Git Status (Cached & Optimized) ───────────────────────────────────
     function _gh0st_git_status() {
-        # Check if git is installed
-        (( $+commands[git] )) || return
 
-        # Get the branch name (try symbolic-ref first, fall back to hash)
+        # 1. ⚡ FAST PATH: Cache Hit Check
+        # If we are in the same directory context as the last run...
+        if [[ -n "$_GH0ST_GIT_INDEX" && "${_GH0ST_CACHE_KEY%%::*}" == "$PWD" ]]; then
+            local current_mtime
+            # Check modification time of .git/index directly (No git command)
+            current_mtime=$(zstat +mtime "$_GH0ST_GIT_INDEX" 2>/dev/null)
+
+            # If timestamps match, reuse the string immediately
+            if [[ "${_GH0ST_CACHE_KEY##*::}" == "$current_mtime" ]]; then
+                GH0ST_GIT_INFO="$_GH0ST_CACHE_VAL"
+                return
+            fi
+        fi
+
+        # 2. 🐢 SLOW PATH: Cache Miss (Recalculate)
+
+        # Fast guard: Are we in a repo?
+        if ! command git rev-parse --is-inside-work-tree &>/dev/null; then
+            GH0ST_GIT_INFO=""
+            _GH0ST_GIT_INDEX="" # Reset index so we don't false-hit later
+            return
+        fi
+
+        # Find .git/index path for future caching
+        local git_dir
+        git_dir=$(command git rev-parse --git-dir 2>/dev/null)
+        local index_path="${git_dir}/index"
+
+        # Get current timestamp for the new cache key
+        local index_time=""
+        if [[ -f "$index_path" ]]; then
+            index_time=$(zstat +mtime "$index_path" 2>/dev/null)
+        fi
+
+        # Get Branch
         local ref
-        ref=$(command git symbolic-ref --quiet HEAD 2> /dev/null) || \
-        ref=$(command git rev-parse --short HEAD 2> /dev/null) || return
+        ref=$(command git symbolic-ref --short HEAD 2>/dev/null) || \
+        ref=$(command git rev-parse --short HEAD 2>/dev/null) || return
 
-        local branch_name=${ref#refs/heads/}
+        # Truncate Branch
+        local display_branch="${ref[1,20]}"
+        [[ ${#ref} -gt 20 ]] && display_branch="${display_branch}..."
 
-        # Truncate branch name if it's too long (over 20 chars)
-        local display_branch="${branch_name:0:20}"
-        if (( ${#branch_name} > ${#display_branch} )); then
-            display_branch="${display_branch}..."
+        # Dirty Check
+        # We use --no-optional-locks to prevent hanging on background gc
+        local status_symbol="%{${COLOR[GREEN]}%}✓"
+
+        # Check if dirty or untracked
+        # We assume if 'git status' returns ANY output, it's dirty.
+        # This is faster than running diff-index AND ls-files separately.
+        if [[ -n $(command git --no-optional-locks status --porcelain -b -unormal 2>/dev/null | head -n 1) ]]; then
+             # Check specifically for changes (not just branch info)
+             if [[ -n $(command git --no-optional-locks status --porcelain -unormal 2>/dev/null) ]]; then
+                status_symbol="%{${COLOR[RED]}%}✗"
+             fi
         fi
 
-        # Dirty Check (Optimized)
-        local status_symbol="%{${COLOR[GREEN]}%} ✓%{${COLOR[RESET]}%}"
+        # 3. Save to Cache
+        _GH0ST_CACHE_VAL="  %{${COLOR[MAGENTA]}%}${display_branch} ${status_symbol}%{${COLOR[RESET]}%}"
+        _GH0ST_CACHE_KEY="${PWD}::${index_time}"
+        _GH0ST_GIT_INDEX="$index_path"
 
-        # --porcelain: machine readable output
-        # -unormal: standard untracked file checking
-        if [[ -n $(command git status --porcelain --ignore-submodules -unormal 2>/dev/null | head -n1) ]]; then
-            status_symbol="${COLOR[RED]} ✗${COLOR[RESET]}"
-        fi
-
-        echo "  ${display_branch}${status_symbol}"
+        GH0ST_GIT_INFO="$_GH0ST_CACHE_VAL"
     }
 
-    # ── directory helper ───────────────────────────────────────────────────
-    # Evaluated dynamically at prompt draw time
-
-    function _gh0st_dir_icon() {
-        if [[ "$PWD" == "$HOME" ]]; then
-            # FIX: Wrapped colors in %{ ... %}
-            echo "%{${COLOR[BOLD]}${COLOR[BLACK]}%}%{${COLOR[RESET]}%}"
-        else
-            # FIX: Wrapped colors in %{ ... %}
-            echo "%{${COLOR[BOLD]}${COLOR[CYAN]}%}%{${COLOR[RESET]}%}"
-        fi
-    }
-
-    # ── precmd hook ────────────────────────────────────────────────────────
-    # Because we are not using vcs_info, we must manually trigger the git check
-    # before every prompt redraw.
+    # ── Directory Icon ────────────────────────────────────────────────────
+    # No changes needed, this ternary logic is already optimal
+    local dir_icon="%(~.%{${COLOR[BOLD]}${COLOR[BLACK]}%}.%{${COLOR[BOLD]}${COLOR[CYAN]}%})%{${COLOR[RESET]}%}"
 
     function _gh0st_precmd() {
-        # Capture the output of the git function into a global variable
-        GH0ST_GIT_INFO=$(_gh0st_git_status)
-
-        # Capture directory icon
-        GH0ST_DIR_ICON=$(_gh0st_dir_icon)
+        _gh0st_git_status
     }
     add-zsh-hook precmd _gh0st_precmd
 
-    # ── final assembly ─────────────────────────────────────────────────────
-
-    local prompt_symbol=$(get_random_prompt_symbol)
-
-    # Structure: <ICON>Home/Folder User(Blue) / Host(Yellow) [Dir](Grey) VCS Status_Symbol
-
-    # 1. User & Host
-    #    Note: We group the Bold+Color codes to reduce clutter.
+    # ── Prompt Assembly ───────────────────────────────────────────────────
     local p_user="%{${COLOR[BOLD]}${COLOR[BLUE]}%}%n"
     local p_sep="%{${COLOR[RED]}%}/"
-    local p_host="%{${COLOR[YELLOW]}%}%m%{${COLOR[RESET]}%}"
-
-    # 2. Directory
-    #    Using GREY for the brackets and path.
+    local p_host="%{${COLOR[YELLOW]}%}%m"
     local p_dir="%{${COLOR[ITALIC]}${COLOR[GREY]}%}[%~]%{${COLOR[RESET]}%}"
+    local prompt_symbol=$(get_random_prompt_symbol)
 
-    # 3. VCS (Git)
-    #    Referencing the global variable updated in precmd.
-    #    Using simple $VAR inside PS1 works because PROMPT_SUBST is on.
-    local p_vcs='${GH0ST_GIT_INFO}'
+    # Conditional coloring for prompt char (Green if 0, Red if error)
+    local p_status="%(?.%{${COLOR[GREEN]}%}.%{${COLOR[RED]}%})${prompt_symbol}%{${COLOR[RESET]}%}"
 
-    # 4. Status Symbol (Conditional)
-    #    Syntax: %(?.Success.Failure)
-    #    - Success: Green $prompt_symbol icon
-    #    - Failure: Red $prompt_symbol icon
-    local p_status="%(?.%{${COLOR[BOLD]}${COLOR[GREEN]}%}${prompt_symbol}.%{${COLOR[RED]}%}${prompt_symbol})%{${COLOR[RESET]}%}"
-
-
-    # ── FINAL EXPORT ───────────────────────────────────────────────────────
-    # Note: We use ${GH0ST_DIR_ICON} variable, populated by the hook.
-
-    PS1='${GH0ST_DIR_ICON} '"${p_user} ${p_sep} ${p_host} ${p_dir}${p_vcs} ${p_status} "
+    setopt PROMPT_SUBST
+    PS1="${dir_icon} ${p_user} ${p_sep} ${p_host} ${p_dir}\${GH0ST_GIT_INFO} ${p_status} "
 }
 
 

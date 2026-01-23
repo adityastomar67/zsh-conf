@@ -99,7 +99,7 @@ setopt NOBEEP                  # No beep on error
 # ─────────────────────────────────────────────────────────────
 
 # Async Mode: Prevents lagging while typing large commands
-ZSH_AUTOSUGGEST_USE_ASYNC="true"
+ZSH_AUTOSUGGEST_USE_ASYNC=1
 
 # Strategy: Try history first, then completion engine
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
@@ -107,8 +107,11 @@ ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 # Styling: Grey text (240 is standard dark grey)
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=240"
 
-# Performance limits
-ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=200
+# Increase the minimum length before a suggestion is fetched
+ZSH_AUTOSUGGEST_MIN_BUFFER_SIZE=4
+
+# Disable suggestions for long buffers (prevents lag on large pastes)
+ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
 
 # 7. Completion Engine Initialization
@@ -189,6 +192,9 @@ zstyle ':completion:*:*:*:*:warnings' format \
 # Default Fallback
 # zstyle ':completion:*' format \
 #     "${COLOR[B_YELLOW]}Suggesting: %d${COLOR[RESET]}"
+
+# Highlight aliases in Cyan and Underline to distinguish from commands
+ZSH_HIGHLIGHT_STYLES[alias]='fg=cyan,underline'
 
 
 # 9. Tool Initialization
