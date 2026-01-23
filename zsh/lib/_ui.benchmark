@@ -64,7 +64,7 @@ fi
 # ─────────────────────────────────────────────────────────────
 ## Draws the top box containing the total time and rating.
 
-# clear
+clear
 # Top Border
 printf "${COLOR[DIM]}╭───────────────────────────────────────────────────╮${COLOR[RESET]}\n"
 

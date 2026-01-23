@@ -74,8 +74,8 @@ function _zsh_debug_startup() {
         echo "   • Profile Log: ${COLOR[UNDERLINE]}$prof_log${COLOR[RESET]}"
     fi
 
-    echo "   • Shell:       Restarting with xtrace (-x) and verbose (-v)..."
-    echo ""
+    echo "   • Shell:       Restarting with ${COLOR[BLUE]}xtrace (-x)${COLOR[RESET]} and ${COLOR[BLUE]}verbose (-v)${COLOR[RESET]}..."
+    echo "                  Press \`exit\` to stop tracing and end Debug Shell."
 
     # 5. Launch Debug Shell
     #    -x: xtrace (print commands as they are executed)
