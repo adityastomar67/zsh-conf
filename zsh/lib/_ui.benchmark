@@ -39,24 +39,24 @@
 # ─────────────────────────────────────────────────────────────
 ## Categorizes the startup time into human-readable levels.
 
-local performance_label="Unknown"
-local label_color=${COLOR[WHITE]}
+local LABEL="Unknown"
+local COL=${COLOR[WHITE]}
 
 if (( total_duration_ms < 40 )); then
-    performance_label="🚀 Blazing"
-    label_color=${COLOR[GREEN]}
+    LABEL=" Blazing"
+    COL=${COLOR[GREEN]}
 
 elif (( total_duration_ms < 100 )); then
-    performance_label="⚡ Fast"
-    label_color=${COLOR[CYAN]}
+    LABEL="⚡ Fast"
+    COL=${COLOR[CYAN]}
 
 elif (( total_duration_ms < 200 )); then
-    performance_label="🐢 Acceptable"
-    label_color=${COLOR[YELLOW]} # Changed to Yellow for warning territory
+    LABEL=" Acceptable"
+    COL=${COLOR[YELLOW]}
 
 else
-    performance_label="🐌 Sluggish"
-    label_color=${COLOR[RED]}
+    LABEL=" Sluggish"
+    COL=${COLOR[RED]}
 fi
 
 
@@ -65,50 +65,24 @@ fi
 ## Draws the top box containing the total time and rating.
 
 clear
-# Top Border
-printf "${COLOR[DIM]}╭───────────────────────────────────────────────────╮${COLOR[RESET]}\n"
-
-# Content Row (Dynamic based on Minimal Mode)
+local DISP="BENCHMARK"
 if [[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]]; then
-    printf "${COLOR[DIM]}│${COLOR[RESET]}  ZSH ${COLOR[YELLOW]}[MINIMAL]${COLOR[RESET]}    ${label_color}%-16s${COLOR[RESET]}    ${label_color}%6.2f ms${COLOR[RESET]}  ${COLOR[DIM]}│${COLOR[RESET]}\n" \
-        "$performance_label" \
-        "$total_duration_ms"
-else
-    printf "${COLOR[DIM]}│${COLOR[RESET]}  ZSH BENCHMARK        ${label_color}%-16s${COLOR[RESET]} ${label_color}%6.2f ms${COLOR[RESET]} ${COLOR[DIM]}│${COLOR[RESET]}\n" \
-        "$performance_label" \
-        "$total_duration_ms"
+    DISP="${COLOR[YELLOW]}[MINIMAL]${COLOR[RESET]}"
 fi
 
+# Top Border
+printf "${COLOR[DIM]} ╭───────────────────────────────────────────────────╮${COLOR[RESET]}\n"
+
+# Single Printf (Standardized Spacing)
+#    We use literal spaces instead of %s padding to handle the color codes correctly.
+printf \
+    "${COLOR[DIM]} │${COLOR[RESET]}  ZSH %s        ${COL}%-16s${COLOR[RESET]} ${COL}%6.2f ms${COLOR[RESET]}  ${COLOR[DIM]}│${COLOR[RESET]}\n" \
+    "$DISP" \
+    "$LABEL" \
+    "$total_duration_ms"
+
 # Bottom Border
-printf "${COLOR[DIM]}╰───────────────────────────────────────────────────╯${COLOR[RESET]}\n"
-
-
-
-# # 2. Header Rendering [OPTION 2]
-# # ─────────────────────────────────────────────────────────────
-# # We use REVERSE mode (\e[7m) to make the header look like a solid bar.
-
-# # Top Border
-# printf "${COLOR[DIM]}╭───────────────────────────────────────────────────╮${COLOR[RESET]}\n"
-
-# # Prepare the "Big" looking text
-# # \033[1m = Bold, \033[7m = Reverse (Invert colors)
-# local style_big="\033[1;7m"
-
-# if [[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]]; then
-#     printf "${COLOR[DIM]}│${COLOR[RESET]} ${style_big} ZSH [MINI] ${COLOR[RESET]}      ${label_color}%-16s${COLOR[RESET]}    ${label_color}%6.2f ms${COLOR[RESET]}  ${COLOR[DIM]}│${COLOR[RESET]}\n" \
-#         "$performance_label" \
-#         "$total_duration_ms"
-# else
-#     # I added extra spaces inside " Z S H " to make it wider
-#     printf "${COLOR[DIM]}│${COLOR[RESET]} ${style_big} Z S H  B E N C H ${COLOR[RESET]}  ${label_color}%-16s${COLOR[RESET]}    ${label_color}%6.2f ms${COLOR[RESET]}  ${COLOR[DIM]}│${COLOR[RESET]}\n" \
-#         "$performance_label" \
-#         "$total_duration_ms"
-# fi
-
-# # Bottom Border
-# printf "${COLOR[DIM]}╰───────────────────────────────────────────────────╯${COLOR[RESET]}\n"
-
+printf "${COLOR[DIM]} ╰───────────────────────────────────────────────────╯${COLOR[RESET]}\n"
 
 
 # 3. Profiling Data Table
@@ -170,4 +144,5 @@ zprof | awk \
     }'
 
 # Final spacing
-printf "\n${COLOR[DIM]} For detailed analysis:${COLOR[RESET]}${COLOR[BLUE]} _zsh_debug_startup${COLOR[RESET]}\n\n"
+printf \
+    "\n${COLOR[DIM]} For detailed analysis:${COLOR[RESET]} ${COLOR[BOLD]}${COLOR[BLUE]}\`_zsh_debug_startup\`${COLOR[RESET]}\n\n"
