@@ -193,9 +193,6 @@ zstyle ':completion:*:*:*:*:warnings' format \
 # zstyle ':completion:*' format \
 #     "${COLOR[B_YELLOW]}Suggesting: %d${COLOR[RESET]}"
 
-# Highlight aliases in Cyan and Underline to distinguish from commands
-ZSH_HIGHLIGHT_STYLES[alias]='fg=cyan,underline'
-
 
 # 9. Tool Initialization
 # ─────────────────────────────────────────────────────────────
