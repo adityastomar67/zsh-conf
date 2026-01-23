@@ -89,16 +89,16 @@ Config::init() {
     # Directory Definitions
     # --------------------------------------------------------------------------
     # The root directory where the configuration will live
-    CONFIG_PATHS[REPO]="${ZDOTDIR:-$HOME}/.config/zsh-conf"
+    CONFIG_PATHS[REPO]="${ZDOTDIR:-$HOME/.config/zsh-conf}"
 
     # Target files
-    CONFIG_PATHS[RC]="${ZDOTDIR:-$HOME}/.zshrc"
-    CONFIG_PATHS[HIST]="${ZDOTDIR:-$HOME}/zhistory"
-    CONFIG_PATHS[DUMP]="${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump"
-    CONFIG_PATHS[ENV]="${ZDOTDIR:-$HOME}/.zshenv"
+    CONFIG_PATHS[RC]="${CONFIG_PATHS[REPO]}/.zshrc"
+    CONFIG_PATHS[ENV]="${CONFIG_PATHS[REPO]}/user.conf"
+    CONFIG_PATHS[HIST]="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-cache/zhistory"
+    CONFIG_PATHS[DUMP]="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-cache/.zcompdump"
 
     # Backup location (Time-stamped)
-    CONFIG_PATHS[BACKUP]="${ZDOTDIR:-$HOME}/.zsh_backups/$(date +%Y-%m-%d)"
+    CONFIG_PATHS[BACKUP]="${CONFIG_PATHS[REPO]}/.zsh_backups/$(date +%Y-%m-%d)"
 
     # External Binaries
     BIN_TARGET_DIR="${CONFIG_PATHS[REPO]}/zsh/bin"
@@ -108,8 +108,8 @@ Config::init() {
     # --------------------------------------------------------------------------
     # Tools required for the full experience.
     REQUIRED_PACKAGES=(
-        "atuin" "bat" "eza" "fd" "ffmpegthumbnailer"
-        "fzf" "git-delta" "lazygit" "lsd" "navi"
+        "atuin" "bat" "eza" "fd" "fzf" "gawk"
+        "git-delta" "lazygit" "lsd" "navi"
         "npm" "ranger" "ripgrep" "shellcheck"
         "starship" "tmux" "zoxide"
     )
@@ -307,7 +307,7 @@ System::cleanup() {
     Logger::info "Cleaning up..."
 
     # 2. Remove Install Artifacts inside the Destination
-    local artifacts=("install.zsh" ".gitignore" "README.md" "LICENSE")
+    local artifacts=("install.zsh" "README.md" "LICENSE")
 
     for item in "${artifacts[@]}"; do
         local target="${CONFIG_PATHS[REPO]}/$item"
@@ -464,15 +464,15 @@ Installer::configure_user_features() {
     sleep 2
 
     local feature_names=(
-        "Alias Expansion" "Custom Functions" "Custom Wallpapers"
-        "Minimalist Config" "Multi-Neovim Setup" "Temp Offline config"
+        "Alias Expansion" "Custom Functions" "Custom Wallpapers" "Use VI Mode"
+        "Fancy Startup stuff" "Minimalist Config" "Multi-Neovim Setup" "Temp Offline config"
         "Theme Engine" "Tmux Integration"
     )
 
     local config_keys=(
-        "USE_ALIAS" "USE_FUNCTION" "CUSTOM_WALL"
-        "MINIMALIST" "MULTI_NEOVIM" "TEMP_OFFLINE_CONFIG"
-        "OPT_THEME" "USE_TMUX"
+        "LOAD_CUSTOM_ALIASES" "LOAD_CUSTOM_FUNCTIONS" "ENABLE_WALLPAPER_SYNC" "ENABLE_VI_MODE"
+        "ENABLE_FANCY_STARTUP" "ENABLE_MINIMAL_MODE" "ENABLE_MULTI_NEOVIM" "LOAD_PRIVATE_CONFIG"
+        "ENABLE_THEME_SH_INTEGRATION" "ENABLE_AUTO_TMUX"
     )
 
     if [[ -f "${CONFIG_PATHS[ENV]}" ]]; then
@@ -535,13 +535,13 @@ Installer::main() {
 
     # Handle Directory Collision (Back up existing folder)
     if [[ -d "${CONFIG_PATHS[REPO]}" ]]; then
-        mv "${CONFIG_PATHS[REPO]}" "${CONFIG_PATHS[REPO]}_${DATE}_${TIMESTAMP}"
+        mv "${CONFIG_PATHS[REPO]}" "${CONFIG_PATHS[BACKUP]}/backup_${DATE}_${TIMESTAMP}"
     fi
 
     # Parallel Cloning
     {
         # A. Clone Main Config
-        git clone --depth=1 --quiet "https://github.com/adityastomar67/zsh-conf.git" "${CONFIG_PATHS[REPO]}" &
+        git clone -b remastered --single-branch --depth=1 --quiet "https://github.com/adityastomar67/zsh-conf.git" "${CONFIG_PATHS[REPO]}" &
 
         # B. Clone Scripts (Binary Dependencies)
         (
@@ -565,16 +565,11 @@ Installer::main() {
     Logger::success "Config downloaded to ${CONFIG_PATHS[REPO]}"
     sleep 2
 
-    # 7. Symlinking
-    FileSystem::create_symlink "${CONFIG_PATHS[REPO]}/.zshrc" "${CONFIG_PATHS[RC]}"
-    FileSystem::create_symlink "${CONFIG_PATHS[REPO]}/.zshenv" "${CONFIG_PATHS[ENV]}"
-
     # Move History and Compdump to new locations
     [[ -f "${CONFIG_PATHS[HIST]}" ]] && rm -f "${CONFIG_PATHS[HIST]}"
-    mv "${CONFIG_PATHS[REPO]}/zsh/zhistory" "${CONFIG_PATHS[HIST]}"
+    mv "${CONFIG_PATHS[REPO]}/zhistory" "${CONFIG_PATHS[HIST]}"
 
-    [[ -f "${CONFIG_PATHS[DUMP]}" ]] && rm -f "${CONFIG_PATHS[DUMP]}"
-    mv "${CONFIG_PATHS[REPO]}/zsh/zcompdump" "${CONFIG_PATHS[DUMP]}"
+    echo 'export ZDOTDIR="$HOME/.config/zsh-conf"' > $HOME/.zshenv &>/dev/null
 
     # 8. Dependencies & Features
     Installer::check_dependencies
@@ -583,11 +578,33 @@ Installer::main() {
     # 9. Finalization
     Interface::print_banner
     Logger::info "Finalizing..."
-    sleep 2
+    (
+        # 1. Branch & Header
+        git config --global color.status.header "#9e9e9e italic"
+        git config --global color.status.branch "#ffd700 bold"
+        git config --global color.status.nobranch "#00bfff bold"
 
-    # Attempt to pre-compile for performance
-    zsh -c "autoload -U zrecompile && zrecompile -p ${CONFIG_PATHS[REPO]}/.zshrc" &>/dev/null \
-        && Logger::success "Autoload -u zrecompile: RECOMPILED!!" || true
+        # 2. Staging Area (Index)
+        git config --global color.status.added "#a6e22e bold"
+        git config --global color.status.updated "#9fef66 bold"
+        git config --global color.status.changed "#fd971f bold"
+
+        # 3. Working Tree (Unstaged)
+        git config --global color.status.worktree "#f92672 bold"
+        git config --global color.status.untracked "#ae81ff"
+        git config --global color.status.ignored "#555555"
+
+        # 4. Critical Events (FIXED)
+        git config --global color.status.unmerged "#ffffff #ff0033 bold ul"
+
+        # 5. Diff Colors
+        git config --global color.diff.meta "#75715e"
+        git config --global color.diff.frag "#9fef66 bold"
+        git config --global color.diff.func "#f8f8f2"
+        git config --global color.diff.old "#f92672"
+        git config --global color.diff.new "#a6e22e"
+        git config --global color.diff.whitespace "red reverse"
+    ) &
     sleep 2
 
     # 10. Cleanup
@@ -603,8 +620,8 @@ Installer::main() {
     printf "\n${THEME_COLORS[GREEN]}  Installation Finished Successfully! ${THEME_COLORS[RESET]}\n"
 
     # Inject Welcome Screen source if missing
-    if ! grep -q "_welcome.ui" "$HOME/.zshrc"; then
-        echo 'source "$ZSH_PATH/zsh/conf/_welcome.ui"' >> "$HOME/.zshrc"
+    if ! grep -q "_ui.welcome" "${CONFIG_PATHS[REPO]}/.zshrc"; then
+        echo 'source "$ZSH_CONFIG_ROOT/lib/_ui.welcome"' >> "${CONFIG_PATHS[REPO]}/.zshrc"
     fi
     sleep 2
 
@@ -624,4 +641,6 @@ Installer::main() {
 
 if [[ "$0" == "${(%):-%x}" ]]; then
     Installer::main "$@"
+
+    # export ZDOTDIR="$HOME/.config/zsh-conf"
 fi

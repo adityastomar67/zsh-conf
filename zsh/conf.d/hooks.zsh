@@ -174,6 +174,7 @@ function chpwd_auto_ls() {
     [[ "$PWD" == "$HOME" ]] && return
 
     # Execute the pre-calculated command
+    echo
     "${_chpwd_ls_cmd[@]}"
 }
 

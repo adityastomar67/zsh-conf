@@ -1,5 +1,0 @@
-- Add welcome screen in the dotup commadn so it can show latest updates or changes
-- Transient prompt and aut git status in hook.zsh are not working together
-- write a custom fast syntax highlight theme with italic strings
-
-
