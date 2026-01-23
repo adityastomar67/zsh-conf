@@ -1,5 +1,3 @@
-#!/usr/bin/env zsh
-
 #    ░█▀▀░█░█░█▀█░█▀▀░▀█▀░█▀▀░█▀█░█▀▀
 #    ░█▀▀░█░█░█░█░█░░░░█░░█░█░█░█░▀▀█
 #    ░▀░░░▀▀▀░▀░▀░▀▀▀░░▀░░▀▀▀░▀▀▀░▀░▀
@@ -96,17 +94,19 @@ function _zsh_debug_startup() {
 #   Wraps the builtin 'alias' command to provide syntax highlighting.
 #   If no arguments are passed, it pipes the output to 'PrettyAlias'.
 # ------------------------------------------------------------------------------
-function alias() {
-    if [[ $# -gt 0 ]]; then
-        builtin alias "$@"
-    else
-        if is_installed PrettyAlias; then
-            builtin alias | PrettyAlias
+if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
+    function alias() {
+        if [[ $# -gt 0 ]]; then
+            builtin alias "$@"
         else
-            builtin alias
+            if is_installed PrettyAlias; then
+                builtin alias | PrettyAlias
+            else
+                builtin alias
+            fi
         fi
-    fi
-}
+    }
+fi
 
 
 # ........................[  4. Editor Wrapper (v)  ]........................ #
@@ -199,18 +199,49 @@ function lg() {
 # Description: Fetches weather report using wttr.in.
 # ------------------------------------------------------------------------------
 function weather() {
-    if ! is_installed curl; then
-        echo "Error: curl is required."
+    # 1. Dependency Check
+    if (( ! $+commands[curl] )); then
+        echo "❌ Error: curl is required."
         return 1
     fi
-    curl -s "wttr.in/${1:-}?mQ"
+
+    # 2. Configuration
+    local default_location="${WEATHER_DEFAULT_LOC:-Gwalior}"
+    local location="${1:-$default_location}"
+
+    # Handle spaces (New York -> New+York)
+    location="${location// /+}"
+
+    # 3. Smart Layout Logic
+    # We build the URL parameters dynamically.
+    # m = metric, Q = quiet (no message header)
+    local -a args=("m" "Q")
+
+    # Use native Zsh $COLUMNS variable (faster/safer than tput)
+    local width="${COLUMNS:-$(tput cols)}"
+
+    if [[ "$width" -lt 80 ]]; then
+        # Tiny screen? Show ONLY current weather (no forecast tables)
+        args+=("0")
+    elif [[ "$width" -lt 140 ]]; then
+        # Medium screen? Force narrow version (vertical stack)
+        args+=("n")
+    fi
+    # > 140 cols will use the standard wide view
+
+    # 4. Construct URL
+    # Join args with '&' to ensure wttr.in parses them correctly
+    # (zsh array joining magic: ${(j:&:)args})
+    local url_params="${(j:&:)args}"
+
+    curl -s "wttr.in/${location}?${url_params}"
 }
 
 
 # ........................[  9. Kubernetes Production Guard  ]........................ #
 
 # ------------------------------------------------------------------------------
-# Function: kubectl
+# Function: kubectl Overload
 # Description:
 #   A safety interceptor for kubectl. It prompts for confirmation if the current
 #   context is a production environment and the command is destructive.

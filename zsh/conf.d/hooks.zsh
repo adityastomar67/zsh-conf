@@ -1,5 +1,3 @@
-#!/usr/bin/env zsh
-
 #    ░█░█░█▀█░█▀█░█░█░█▀▀░░░░▀▀█░█▀▀░█░█
 #    ░█▀█░█░█░█░█░█▀▄░▀▀█░░░░▄▀░░▀▀█░█▀█
 #    ░▀░▀░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀░░▀▀▀░▀▀▀░▀░▀
@@ -43,10 +41,11 @@ zle -N down-line-or-beginning-search
 # Custom Editor Widgets
 # ─────────────────────────────────────────────────────────────
 
-# 4. Register as a Widget (so you can bind a key to it)
+## Advanced macros to speed up command line editing.
+
+# Register as a Widget (so you can bind a key to it)
 zle -N ftmux
 
-## Advanced macros to speed up command line editing.
 
 # ------------------------------------------------------------------------------
 # Widget: Edit Command Line

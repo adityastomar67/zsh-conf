@@ -1,8 +1,7 @@
 #!/usr/bin/env zsh
-
-#    ░█▀▀░▀█▀░█▀▀░░░█▀▀░█▀█░█▄█░█▀█░█░░░█▀▀░▀█▀░█▀█░█▀▄
-#    ░█▀▀░░█░░█▀▀░░░█░░░█░█░█░█░█▀▀░█░░░█▀▀░░█░░█░█░█▀▄
-#    ░▀░░░▀▀▀░▀░░░▀░▀▀▀░▀▀▀░▀░▀░▀░░░▀▀▀░▀▀▀░░▀░░▀▀▀░▀░▀
+#    ░█▀▀░█░█░▀▀█░▀▀█░█░█
+#    ░█▀▀░█░█░▄▀░░▄▀░░░█░
+#    ░▀░░░▀▀▀░▀▀▀░▀▀▀░░▀░
 
 # ------------------------------------------------------------------------------
 # File Purpose
@@ -32,8 +31,6 @@
 
 # ── initialization & dependencies ────────────────────────────────────────────
 
-
-
 # Guard: Ensure FZF is installed before proceeding
 if ! is_installed fzf; then
     printf "\n\033[0;33m[WARN] USE_FUNCTION='Yes' but 'fzf' is not installed.\033[0m\n"
@@ -59,8 +56,6 @@ fi
 
 
 # ── custom completion engines ────────────────────────────────────────────────
-
-
 
 # ------------------------------------------------------------------------------
 # Function: _fzf_compgen_dir
@@ -195,12 +190,10 @@ _fzf_comprun() {
 
 # ── global fzf options & keybindings ──────────────────────────────────────────
 
-
-
 export FZF_DEFAULT_OPTS="
     # 1. TOKYO NIGHT COLOR PALETTE
-    --color=fg:#c0caf5,bg:-1,hl:#36608a
-    --color=fg+:#ffffff,bg+:#1f2335,hl+:#76b9e0
+    --color=fg:#c0caf5,bg:-1,hl:#36608a:bold
+    --color=fg+:#ffffff,bg+:#1f2335,hl+:#76b9e0:bold
     --color=info:#7aa2f7,prompt:#f7768e,pointer:#f7768e
     --color=marker:#9ece6a,spinner:#9ece6a,header:#9ece6a
     --color=border:#414868,label:#aeaeae,query:#ddb6f2
@@ -208,6 +201,7 @@ export FZF_DEFAULT_OPTS="
     --gutter ' ' --color gutter:-1
 
     # 2. UI SETTINGS
+    --multi
     --border='rounded'
     --border-label='  Fuzzy Finder'
     --border-label-pos='4'
@@ -230,6 +224,7 @@ export FZF_DEFAULT_OPTS="
     --bind 'ctrl-e:execute(echo {+} | xargs -o nvim)'
     --bind 'ctrl-v:execute(code {+})'
     --bind 'tab:down,shift-tab:up'
+    --bind 'space:toggle'
     --bind 'ctrl-/:toggle-preview'
 "
 
@@ -294,4 +289,61 @@ unset _fzf_preview_file_cmd _fzf_preview_dir_cmd
 [[ -f /opt/homebrew/opt/fzf/shell/completion.zsh ]] && source /opt/homebrew/opt/fzf/shell/completion.zsh
 [[ -f /opt/homebrew/opt/fzf/shell/key-bindings.zsh ]] && source /opt/homebrew/opt/fzf/shell/key-bindings.zsh
 
-# Would you like me to add a custom FZF widget for searching and installing Homebrew packages or browsing Docker containers?
+
+# ── Fzf-Tab Configuration ────────────────────────────────────────────────
+
+## Configuration for the fzf-tab plugin (rich previews).
+zstyle ':completion:*' format ''    # Need to set it to none so that it behaves right
+
+# ── Behavior ──
+# Trigger fzf on path completion automatically
+zstyle ':fzf-tab:*' continuous-trigger '/'
+
+# ── Styling ──
+# Inherits FZF_DEFAULT_OPTS, but forces 45% height
+zstyle ':fzf-tab:*' fzf-flags --height=45% --layout=reverse
+
+# ── Context-Aware Previews ──
+# 'cd': Use 'eza' with tree view (limit level 2) to see folder structure
+zstyle ':fzf-tab:complete:cd:*' fzf-preview \
+    'eza --tree --level=2 --color=always --icons=always --group-directories-first --git $realpath'
+
+# 'systemctl': Preview service status
+zstyle ':fzf-tab:complete:systemctl-*:*' fzf-preview \
+    'SYSTEMD_COLORS=1 systemctl status $word'
+
+# 'command': Preview man page or file content
+zstyle ':fzf-tab:complete:(-command-):*' fzf-preview \
+    '[[ -n $builtins[$word] ]] && man $word || bat --color=always --style=plain $realpath 2>/dev/null'
+
+# 'bat': Smart bat for the config
+zstyle ':fzf-tab:complete:bat:*' fzf-preview \
+    'if [[ -d $realpath ]]; then
+        # If it is a directory, list it with eza
+        eza -1 --color=always --icons=always --group-directories-first $realpath
+     else
+        # If it is a file, show content with bat
+        bat --color=always --style=numbers,changes --line-range=:500 $realpath
+     fi'
+
+# EZA & LS: "Smart Switch"
+zstyle ':fzf-tab:complete:(eza|ls):*' fzf-preview \
+    'if [[ -d $realpath ]]; then
+        eza -1 --color=always --icons=always --git $realpath
+     else
+        bat --color=always --style=numbers,changes --line-range=:500 $realpath
+     fi'
+
+## Gh0stzk fzf-style
+zstyle ':fzf-tab:*' fzf-flags --style=full --height=45% --pointer '>' \
+    --color 'pointer:green:bold,bg+:-1:,fg+:green:bold,info:blue:bold,marker:yellow:bold,hl:gray:bold,hl+:yellow:bold' \
+    --input-label ' Search ' \
+    --color 'input-border:blue,input-label:blue:bold' \
+    --list-label ' Results ' \
+    --color 'list-border:green,list-label:green:bold' \
+    --preview-label ' Preview ' \
+    --color 'preview-border:magenta,preview-label:magenta:bold' \
+    --gutter ' ' --color gutter:-1
+zstyle ':fzf-tab:*' fzf-bindings 'space:accept'
+zstyle ':fzf-tab:*' accept-line enter
+

@@ -46,7 +46,7 @@ fi
 
 if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" ]] && is_installed tmux && [[ -z "$TMUX" && -t 0 ]]; then
     # Only load if we are NOT already inside a Tmux session or Tmux is enabled by user.
-    [[ -f "$ZSH_CONFIG_ROOT/plugins/tmux" ]] && source "$ZSH_CONFIG_ROOT/plugins/tmux"
+    [[ -f "$ZSH_CONFIG_ROOT/plugins/_tmux" ]] && source "$ZSH_CONFIG_ROOT/plugins/_tmux"
 fi
 
 
@@ -89,6 +89,8 @@ function _load_aux_stuff() {
 # Defer the whole operation
 zsh-defer _load_aux_stuff
 
+# Defer loading the plugins
+zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 
 # Background Optimization (Zcompile)
 # ─────────────────────────────────────────────────────────────

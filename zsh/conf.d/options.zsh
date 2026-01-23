@@ -149,21 +149,27 @@ fi
 # 1. Exact match
 # 2. Case insensitive (a=A)
 # 3. Partial matching (f-b -> foo-bar)
-zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+zstyle ':completion:*' matcher-list '' \
+    'm:{a-zA-Z}={A-Za-z}' \
+    'r:|[._-]=* r:|=*' \
+    'l:|=* r:|=*'
 
 # ── Caching ──
 zstyle ':completion:*' use-cache on
 zstyle ':completion:*' cache-path "${ZSH_CACHE}"
 
 # ── Grouping & Sorting ──
-zstyle ':completion:*' group-name ''       # Enable grouping
+zstyle ':completion:*' group-name ''        # Enable grouping
 zstyle ':completion:*' list-dirs-first true # Directories on top
-zstyle ':completion:*' verbose yes         # Show descriptions
+zstyle ':completion:*' verbose yes          # Show descriptions
 
 # ── Interaction ──
-zstyle ':completion:*' menu select         # Allow arrow key selection
+zstyle ':completion:*' menu select          # Allow arrow key selection
 
 # ── Visual Styling ──
+# Effectively passing the ls color rules
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+
 # Group Descriptions (Magenta Arrow -> Bold Text)
 zstyle ':completion:*:*:*:*:descriptions' format \
     "${COLOR[MAGENTA]} ${COLOR[BOLD]}${COLOR[DIM]}%d${COLOR[RESET]}"
@@ -185,48 +191,32 @@ zstyle ':completion:*:*:*:*:warnings' format \
 #     "${COLOR[B_YELLOW]}Suggesting: %d${COLOR[RESET]}"
 
 
-# 9. Fzf-Tab Configuration
-# ─────────────────────────────────────────────────────────────
-## Configuration for the fzf-tab plugin (rich previews).
-
-# ── Behavior ──
-# Trigger fzf on path completion automatically
-zstyle ':fzf-tab:*' continuous-trigger '/'
-
-# ── Styling ──
-# Inherits FZF_DEFAULT_OPTS, but forces 40% height
-zstyle ':fzf-tab:*' fzf-flags --height=40% --layout=reverse
-
-# ── Context-Aware Previews ──
-
-# 'cd': Preview directory contents using eza
-zstyle ':fzf-tab:complete:cd:*' fzf-preview \
-    'eza -1 --icons=always --color=always --group-directories-first $realpath'
-
-# 'systemctl': Preview service status
-zstyle ':fzf-tab:complete:systemctl-*:*' fzf-preview \
-    'SYSTEMD_COLORS=1 systemctl status $word'
-
-# 'command': Preview man page or file content
-zstyle ':fzf-tab:complete:(-command-):*' fzf-preview \
-    '[[ -n $builtins[$word] ]] && man $word || bat --color=always --style=plain $realpath 2>/dev/null'
-
-
-# 10. Tool Initialization
+# 9. Tool Initialization
 # ─────────────────────────────────────────────────────────────
 
-# Install Plugins (if ZPLUGINS array is set)
-plug
+# 1. Define your tools configuration
+#    Format: "Binary : Command : Mode"
+local -a init_tools=(
+    "starship  : starship init zsh : immediate"
+    "dircolors : dircolors -b      : immediate"
+    "zoxide    : zoxide init zsh   : defer"
+    "atuin     : atuin init zsh    : defer"
+)
 
-# 1. Starship (Prompt)
-is_installed starship  && _eval_cache "starship" "starship init zsh" "immediate"
+# 2. Iterate and Execute
+for entry in "${init_tools[@]}"; do
+    # Zsh Magic: Split the string by ':' into an array (@s/:/)
+    local parts=("${(@s/:/)entry}")
 
-# 2. Zoxide (Smart Navigation)
-is_installed zoxide    && _eval_cache "zoxide" "zoxide init zsh" "defer"
+    # Clean up whitespace using ${var// /} for single words
+    # and ${var## } to trim leading spaces for commands
+    local bin="${${parts[1]## #}%% #}"
+    local cmd="${${parts[2]## #}%% #}"
+    local mode="${${parts[3]## #}%% #}"
 
-# 3. Atuin (Magic History)
-is_installed atuin     && _eval_cache "atuin" "atuin init zsh" "defer"
-
-# 4. Dircolors (LS Colors)
-is_installed dircolors && _eval_cache "dircolors" "dircolors -b" "immediate"
+    # Logic: Only run if installed
+    if [[ is_installed "$bin" ]]; then
+        _eval_cache "$bin" "$cmd" "$mode"
+    fi
+done
 

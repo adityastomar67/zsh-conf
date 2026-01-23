@@ -42,11 +42,11 @@
 
     # ---- NOTE: History removal sometimes fails due to file locks.
     if [[ -f "$HOME/.zsh_history" ]]; then
-        command rm -f "$HOME/.zsh_history" &> /dev/null
+        zsh-defer command rm -f "$HOME/.zsh_history" &> /dev/null
     fi
 
     if [[ -f "$HOME/.zcompdump" ]]; then
-        command rm -f "$HOME/.zcompdump" &> /dev/null
+        zsh-defer command rm -f "$HOME/.zcompdump" &> /dev/null
     fi
 
 
@@ -123,10 +123,11 @@
     # Detect OS for correct `sed` syntax (macOS requires an empty string for backup extension)
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS / BSD Sed
-        sed -i '' '\|source "\ZSH_CONFIG_ROOT/lib/_welcome\.ui"|d' "$ZDOTDIR/.zshrc"
+        sed -i '' '\|source "\$ZSH_CONFIG_ROOT/lib/_ui\.welcome"|d' "$ZDOTDIR/.zshrc"
+
     else
         # GNU / Linux Sed
-        sed -i '\|source "\ZSH_CONFIG_ROOT/lib/_welcome\.ui"|d' "$ZDOTDIR/.zshrc"
+        sed -i '\|source "\$ZSH_CONFIG_ROOT/lib/_ui\.welcome"|d' "$ZDOTDIR/.zshrc"
     fi
 
     # Refresh the shell to apply the clean state
