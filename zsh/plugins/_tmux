@@ -27,24 +27,6 @@
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
-
-# ── initialization & safety checks ───────────────────────────────────────────
-
-
-
-# 1. Feature Flag Check
-# We use the ':l' modifier to convert the string to lowercase for robust comparison.
-[[ "${ENABLE_AUTO_TMUX:l}" != "yes" ]] && return
-
-
-# 2. Dependency Check
-# We use the Zsh hash $+commands to check for binary existence efficiently.
-if (( ! $+commands[tmux] )); then
-    print -P "\n%F{yellow}[WARN] USE_TMUX='Yes' but 'tmux' is not installed.%f"
-    return
-fi
-
-
 # ── aliases ──────────────────────────────────────────────────────────────────
 
 # Standard shortcuts for common Tmux operations to speed up workflow.
@@ -78,7 +60,7 @@ alias tK='tmux kill-server'            # Kill everything (Server shutdown)
 #   'main' session or drop into a standard shell.
 # ------------------------------------------------------------------------------
 if ! tmux has-session 2>/dev/null; then
-    print -P "\n%F{yellow}== No active Tmux sessions ==%f"
+    print "\n${COLOR[YELLOW]}== No active Tmux sessions ==${COLOR[RESET]}"
     print -n "Create new session 'main'? [Y/n] "
 
     local choice
@@ -184,10 +166,10 @@ if [[ -n "$target_session" ]]; then
     if tmux has-session -t "$target_session" 2>/dev/null; then
         exec tmux attach-session -t "$target_session"
     else
-        print -P "%F{red}[ERROR] Session '$target_session' not found.%f"
+        print "${COLOR[RED]}[ERROR] Session '$target_session' not found.${COLOR[RESET]}"
     fi
 elif [[ -n "$query" ]]; then
     # Case: User typed a new name and hit Enter (no match)
-    print -P "\n%F{green}::%f Creating new session: %B$query%b"
+    print "\n${COLOR[GREEN]}::${COLOR[RESET]} Creating new session: ${COLOR[BOLD]}$query${COLOR[RESET]}"
     exec tmux new-session -s "$query"
 fi
