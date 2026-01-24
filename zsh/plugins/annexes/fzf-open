@@ -16,6 +16,6 @@ function f_open() {
         # Open all files at once
         $EDITOR "${file_array[@]}"
     else
-        print -P "%F{red}Cancelled.%f"
+        print -P "${COLOR[RED]}Cancelled.${COLOR[RESET]}"
     fi
 }

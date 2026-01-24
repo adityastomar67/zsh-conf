@@ -44,26 +44,26 @@ function fzf_rm() {
         local -a files
         files=("${(@f)selected}")
 
-        print -P "\n%F{yellow}You are about to PERMANENTLY delete:%f"
-        print -P "%F{red}${files[*]}%f"
+        print "\n${COLOR[YELLOW]}You are about to PERMANENTLY delete:${COLOR[RESET]}"
+        print "${COLOR[RED]}${files[*]}${COLOR[RESET]}"
 
         # Confirmation Prompt
-        print -P -n "\n%B%F{red}Are you sure? [y/N]%f%b "
+        print -n "\n${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]} "
 
         if read -q choice; then
             echo
             command rm -rf "${files[@]}"
 
             if [[ $? -eq 0 ]]; then
-                 print -P "\n%F{green}✔ Deleted successfully.%f"
+                 print "\n${COLOR[GREEN]}✔ Deleted successfully.${COLOR[RESET]}"
             else
-                 print -P "\n%F{red}✘ Error deleting files.%f"
+                 print "\n${COLOR[RED]}✘ Error deleting files.${COLOR[RESET]}"
             fi
         else
             echo
-            print -P "\n%F{green}::%f Cancelled."
+            print "\n${COLOR[GREEN]}::${COLOR[RESET]} Cancelled."
         fi
     else
-        print -P "\n%F{240}:: No files selected.%f"
+        print "\n${COLOR[DIM]}:: No files selected.${COLOR[RESET]}"
     fi
 }

@@ -15,7 +15,7 @@ function fzf_uninstall() {
         preview_cmd="pacman -Qi {}"
         header_text="📦 Select Pacman packages to uninstall"
     else
-        print -P "%F{red}[ERROR]%f No supported package manager found."
+        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} No supported package manager found."
         return 1
     fi
 
@@ -23,7 +23,7 @@ function fzf_uninstall() {
     local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
 
     # 3. Run FZF Selection
-    print -P "%F{blue}::%f Loading package list..."
+    print "${COLOR[BLUE]}::${COLOR[RESET]} Loading package list..."
 
     local selected
     selected=$(eval "$list_cmd" | fzf \
@@ -42,24 +42,24 @@ function fzf_uninstall() {
         local -a pkgs
         pkgs=("${(@f)selected}")
 
-        print -P "\n%F{yellow}You are about to uninstall:%f"
+        print "\n${COLOR[YELLOW]}You are about to uninstall:${COLOR[RESET]}"
 
         # --- FIXED LINE HERE ---
         # We join the array elements with spaces for display
-        print -P "%F{240}${pkgs[*]}%f"
+        print "${COLOR[DIM]}${pkgs[*]}${COLOR[RESET]}"
         # -----------------------
         echo
 
-        print -P -n "\n%B%F{red}Are you sure? [y/N]%f%b "
+        print -n "\n${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]} "
         if read -q choice; then
             echo
-            print -P "\n%F{red}::%f Nuking selected packages..."
+            print "\n${COLOR[RED]}::${COLOR[RESET]} Nuking selected packages..."
             eval "$uninstall_cmd ${pkgs[@]}"
-            print -P "\n%F{green}✔ Operation complete.%f"
+            print "\n${COLOR[GREEN]}✔ Operation complete.${COLOR[RESET]}"
         else
-            print -P "\n%F{green}::%f Aborted safely."
+            print "\n${COLOR[GREEN]}::${COLOR[RESET]} Aborted safely."
         fi
     else
-        print -P "\n%F{240}:: No packages selected.%f"
+        print "\n${COLOR[DIM]}:: No packages selected.${COLOR[RESET]}"
     fi
 }

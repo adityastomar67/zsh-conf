@@ -4,7 +4,7 @@ function fzf_menu() {
     local tools_dir="${ZDOTDIR}/zsh/plugins/annexes"
 
     if [[ ! -d "$tools_dir" ]]; then
-        print -P "%F{red}[ERROR]%f Directory not found: $tools_dir"
+        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Directory not found: $tools_dir"
         return 1
     fi
 
@@ -36,12 +36,12 @@ function fzf_menu() {
 
         # Check if function exists after sourcing
         if functions "$func_name" > /dev/null; then
-            print -P "\n%F{green}::%f Running %B$func_name%b..."
+            print "\n${COLOR[GREEN]}::${COLOR[RESET]} Running ${COLOR[BOLD]}$func_name${COLOR[RESET]}..."
             "$func_name"
         else
             # Fallback: Maybe the function is named 'fzf-uninstall' (with hyphen) or something else?
-            print -P "%F{red}[ERROR]%f Loaded $script_file, but could not find function '$func_name'."
-            print -P "Ensure the function inside the file matches the filename pattern (e.g. fzf_uninstall)."
+            print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Loaded $script_file, but could not find function '$func_name'."
+            print "Ensure the function inside the file matches the filename pattern (e.g. fzf_uninstall)."
         fi
     fi
 }

@@ -3,7 +3,7 @@ function cd_work() {
     local projects_dir="${WORK_DIR:-$HOME/Work}" # Fallback if env var not set
 
     if [[ ! -d "$projects_dir" ]]; then
-        print -P "%F{red}[ERROR]%f Work directory not found: $projects_dir"
+        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Work directory not found: $projects_dir"
         return 1
     fi
 

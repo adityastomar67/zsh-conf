@@ -1,7 +1,7 @@
 function fzf_docker_rm_container() {
     # 1. Validation
     if ! command -v docker >/dev/null; then
-        print -P "%F{red}[ERROR]%f Docker is not installed or not in PATH."
+        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Docker is not installed or not in PATH."
         return 1
     fi
 
@@ -28,17 +28,17 @@ function fzf_docker_rm_container() {
         local -a ids
         ids=($(echo "$containers" | awk '{print $1}'))
 
-        print -P "\n%F{yellow}You are about to delete ${#ids[@]} container(s):%f"
-        print -P "%F{red}${ids[*]}%f"
+        print "\n${COLOR[YELLOW]}You are about to delete ${#ids[@]} container(s):${COLOR[RESET]}"
+        print "${COLOR[RED]}${ids[*]}${COLOR[RESET]}"
 
-        print -P -n "\n%B%F{red}Are you sure? [y/N]%f%b "
+        print -n "\n${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]}%b "
         if read -q choice; then
             echo
             docker rm -f "${ids[@]}"
-            print -P "\n%F{green}✔ Containers deleted.%f"
+            print "\n${COLOR[GREEN]}✔ Containers deleted.${COLOR[RESET]}"
         else
             echo
-            print -P "\n%F{green}::%f Cancelled."
+            print "\n${COLOR[GREEN]}::${COLOR[RESET]} Cancelled."
         fi
     fi
 }
