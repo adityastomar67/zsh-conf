@@ -1,33 +1,92 @@
+#!/usr/bin/env zsh
 
-    local file
-    local start_dir="${1:-.}"
+#    ░█▀▀░▀█▀░█░█░█▄█░█▀▀
+#    ░█▀▀░░█░░█░█░█░█░█▀▀
+#    ░▀░░░▀▀▀░▀▀▀░▀░▀░▀░░
 
-    # 1. Generate List (Files only)
-    local list_cmd
-    if (( $+commands[fd] )); then
-        list_cmd="fd --type f --hidden --follow --exclude .git . \"$start_dir\""
-    else
-        list_cmd="find \"$start_dir\" -type f -not -path '*/.git/*'"
-    fi
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Finds a file recursively and navigates (cd) to its parent directory.
+#
+# Problems Solved
+#   - Navigating to a deep path when you only recall a specific filename inside it.
+#   - Eliminates the need to `find ...`, copy path, paste, delete filename, then `cd`.
+#
+# Features
+#   - **Smart Search:** Prefers `fd` (fast, respects gitignore) over `find`.
+#   - **Content Preview:** Shows the file contents so you know you found the right one.
+#   - **One-Key Edit:** Includes a binding (Ctrl-E) to open the file instead of jumping.
+#
+# Usage
+#   - `fjump`        : Search from current directory.
+#   - `fjump /var`   : Search inside /var.
+# ------------------------------------------------------------------------------
 
-    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+# 1. Environment Sandbox
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
 
-    # 2. FZF Selection
-    file=$(eval "$list_cmd" | fzf \
+local start_dir="${1:-.}"
+local selected_file
+local preview_cmd
+
+# 2. Preview Strategy (Bat > Cat)
+if is_installed bat; then
+    # Bat: Syntax highlighting, line numbers
+    preview_cmd="bat --style=numbers --color=always --line-range :500 {} 2>/dev/null"
+else
+    # Fallback: Standard cat
+    preview_cmd="cat {} 2>/dev/null"
+fi
+
+# 3. Search & Select
+# We define the FZF interaction here. Note the addition of the 'ctrl-e' binding
+# which allows you to pivot and edit the file instead of jumping to the folder.
+
+# CASE A: Fast Search (fd)
+if is_installed fd; then
+    selected_file=$(fd --type f --hidden --follow --exclude .git . "$start_dir" | \
+        fzf \
         --no-multi \
-        --prompt="📄 Find File > " \
+        --prompt="📍 Jump to Parent > " \
+        --header="Enter: CD to folder • Ctrl-E: Edit file" \
         --preview-window="right:60%:wrap:nohidden" \
-        \
-        # PREVIEW: Show file content
-        --preview 'bat --style=numbers --color=always {} 2>/dev/null || cat {}' \
-        \
-        # BONUS: Ctrl-O to open file directly in EDITOR
-        --bind "ctrl-o:execute($EDITOR {})+abort"
+        --preview "$preview_cmd" \
+        --bind "ctrl-e:execute(${EDITOR:-vim} {})+abort"
     )
 
-    # 3. CD into Parent Directory
-    if [[ -n "$file" ]]; then
-        local dir=$(dirname "$file")
-        print -P "\n%F{green}::%f Jumping to %B$dir%b..."
-        cd "$dir" || return
+# CASE B: Universal Search (find)
+else
+    selected_file=$(find "$start_dir" -type f -not -path '*/.git/*' 2>/dev/null | \
+        fzf \
+        --no-multi \
+        --prompt="📍 Jump to Parent > " \
+        --header="Enter: CD to folder • Ctrl-E: Edit file" \
+        --preview-window="right:60%:wrap:nohidden" \
+        --preview "$preview_cmd" \
+        --bind "ctrl-e:execute(${EDITOR:-vim} {})+abort"
+    )
+fi
+
+# 4. Action: Jump to Parent
+if [[ -n "$selected_file" ]]; then
+    # Extract directory path
+    local parent_dir=$(dirname "$selected_file")
+
+    # Check if we are already there to avoid unnecessary messages
+    if [[ "$parent_dir" == "." || "$parent_dir" == "$PWD" ]]; then
+        print "${COLOR[YELLOW]}⚠${COLOR[RESET]} You are already in the parent directory."
+        return 0
     fi
+
+    print "\n${COLOR[GREEN]}::${COLOR[RESET]} Jumping to %B$parent_dir${COLOR[RESET]}..."
+
+    if builtin cd "$parent_dir"; then
+        # Optional: List contents upon arrival
+        # ls -F --color=auto
+        return 0
+    else
+        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Could not change directory."
+        return 1
+    fi
+fi

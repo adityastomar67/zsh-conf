@@ -1,34 +1,89 @@
+#!/usr/bin/env zsh
 
-    local dir
-    local start_dir="${1:-.}"
+#    ░█▀▀░█▀▀░█▀▄
+#    ░█▀▀░█░░░█░█
+#    ░▀░░░▀▀▀░▀▀░
 
-    # 1. Use 'fd' for speed if available, otherwise 'find'
-    local list_cmd
-    if (( $+commands[fd] )); then
-        # --type d: Directories only
-        # --strip-cwd-prefix: Clean output
-        list_cmd="fd --type d --hidden --follow --exclude .git . \"$start_dir\""
-    else
-        list_cmd="find \"$start_dir\" -type d -name .git -prune -o -type d -print"
-    fi
+# ------------------------------------------------------------------------------
+# File Purpose
+#   A robust "Fuzzy Change Directory" utility.
+#
+# Problems Solved
+#   - Navigating deep directory structures without knowing the exact path.
+#   - Visualizing the destination folder content *before* entering it.
+#   - Abstraction over underlying tools (works with or without `fd`/`eza`).
+#
+# Features
+#   - **Smart Search:** Prefers `fd` (fast, respects gitignore) over `find`.
+#   - **Rich Preview:** Cascading fallback (eza -> tree -> ls).
+#   - **Auto-List:** Automatically shows contents upon arrival.
+#
+# Usage
+#   - `fcd`        : Search from current directory.
+#   - `fcd path/`  : Search from specific path.
+# ------------------------------------------------------------------------------
 
-    # 2. FZF with Directory Preview
-    #    Use Local Override for consistent behavior
-    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+# 1. Environment Sandbox
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
 
-    dir=$(eval "$list_cmd" | fzf \
+local start_dir="${1:-.}"
+local selected_dir
+local preview_cmd
+
+# 2. Preview Strategy (Calculate once)
+# We build the command string here so the FZF subshell doesn't have to check
+# for existence on every single keystroke.
+if is_installed eza; then
+    preview_cmd="eza --tree --level=2 --color=always {} 2>/dev/null"
+elif is_installed tree; then
+    preview_cmd="tree -C {} 2>/dev/null"
+else
+    preview_cmd="ls -1 --color=always {}"
+fi
+
+# 3. Search & Select
+# We intentionally avoid 'eval' for security and handle the pipe directly.
+
+# CASE A: Fast Search (fd)
+if is_installed fd; then
+    selected_dir=$(fd --type d --hidden --follow --exclude .git . "$start_dir" | \
+        fzf \
         --no-multi \
         --prompt="📂 CD > " \
+        --header="Select directory" \
         --preview-window="right:60%:wrap:nohidden" \
-        \
-        # PREVIEW: Show tree structure
-        --preview 'eza --tree --level=2 --color=always {} 2>/dev/null || tree -C {} 2>/dev/null || ls -1 --color=always {}'
+        --preview "$preview_cmd" \
+        --bind 'tab:toggle+down,shift-tab:toggle+up'
     )
 
-    # 3. CD and List
-    if [[ -n "$dir" ]]; then
-        cd "$dir" || return
-        # Optional: Print current dir structure upon entering
-        # ls -F
-    fi
+# CASE B: Universal Search (find)
+else
+    selected_dir=$(find "$start_dir" -type d -name .git -prune -o -type d -print 2>/dev/null | \
+        fzf \
+        --no-multi \
+        --prompt="📂 CD > " \
+        --header="Select directory (using 'find')" \
+        --preview-window="right:60%:wrap:nohidden" \
+        --preview "$preview_cmd" \
+        --bind 'tab:toggle+down,shift-tab:toggle+up'
+    )
+fi
 
+# 4. Navigation & Feedback
+if [[ -n "$selected_dir" ]]; then
+    # builtin cd prevents recursive alias loops
+    if builtin cd "$selected_dir"; then
+        print "\n${COLOR[BLUE]}➜ Entered:${COLOR[RESET]} ${COLOR[BOLD]}$selected_dir${COLOR[RESET]}"
+
+        # Auto-List content on arrival
+        if is_installed eza; then
+            eza -G --color=always --icons --group-directories-first
+        else
+            ls -F --color=auto
+        fi
+    else
+        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Permission denied or directory missing."
+        return 1
+    fi
+fi

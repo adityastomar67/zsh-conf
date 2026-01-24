@@ -1,41 +1,111 @@
+#!/usr/bin/env zsh
 
-    local dir
+#    ░█▀▀░█▀▀░█▀▄
+#    ░█▀▀░█░░░█░█
+#    ░▀░░░▀▀▀░▀▀░
 
-    # 1. SEARCH LOGIC
-    #    Preference: fd (Fast, Rust-based) > find (Standard, slower)
-    if is_installed fd; then
-        dir=$(fd --type d --hidden --follow --exclude ".git" --exclude "node_modules" . "${1:-.}" | fzf \
-            --prompt="Change Dir > " \
-            --header="Select a directory to enter" \
-            --preview="eza --tree --level=2 --color=always --icons {} | head -200" \
-            --height=60% --layout=reverse --border --info=hidden \
-            --color='header:blue,prompt:yellow,pointer:red,marker:green,bg+:236' \
-        )
-    else
-        # Fallback for systems without 'fd'
-        dir=$(find "${1:-.}" -path '*/\.*' -prune -o -type d -print 2>/dev/null | fzf \
-            --prompt="Change Dir > " \
-            --preview="ls -A --color=always {} | head -200" \
-            --height=60% --layout=reverse --border --info=hidden \
-        )
-    fi
+# ------------------------------------------------------------------------------
+# File Purpose
+#   A "Turbo-Charged" directory navigation tool using FZF.
+#
+# Problems Solved
+#   - Eliminates "cd ... ls ... cd ... ls" loops by providing a live tree preview.
+#   - Uses modern tools (fd, eza) for speed but degrades gracefully to standard
+#     tools (find, ls) on older systems.
+#   - Automatically lists the directory contents upon entering, saving a keystroke.
+#
+# Features / Responsibilities
+#   - **Smart Search:** Prioritizes `fd` for respecting .gitignore and speed.
+#   - **Rich Preview:** Renders directory trees in the side panel.
+#   - **Auto-List:** Runs `ls` (or equivalent) immediately after navigation.
+#
+# Usage Notes
+#   - `fcd`       : Search from current directory.
+#   - `fcd /etc`  : Search starting from /etc.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
 
-    # 2. EXIT HANDLER
-    #    If user pressed Esc or Ctrl+C, $dir is empty. Return safely.
-    [ -z "$dir" ] && return
 
-    # 3. ACTION
-    cd "$dir" || return
+# ── navigation engine ────────────────────────────────────────────────────────
 
-    # 4. POST-ACTION LISTING
-    #    Print the entered path and list contents
-    print -P "%F{blue}➜ Entered:%f %B$dir%b"
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
 
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+local start_dir="${1:-.}"
+local selected_dir=""
+local preview_cmd=""
+
+# ------------------------------------------------------------------------------
+# 2. Preview Strategy (Dynamic)
+
+# We determine the previewer ONCE here, so both 'fd' and 'find' paths use the
+# best available tool.
+if is_installed eza; then
+    # eza: Tree view, level 2, git status, icons
+    preview_cmd="eza --tree --level=2 --color=always --icons --group-directories-first {} | head -200"
+elif is_installed tree; then
+    # tree: Standard tree view
+    preview_cmd="tree -C {} | head -200"
+else
+    # ls: Universal fallback
+    preview_cmd="ls -A --color=always {} | head -200"
+fi
+
+# ------------------------------------------------------------------------------
+# 3. Search Logic
+
+# Logic: Preference Order -> fd (Rust) > find (Standard)
+if is_installed fd; then
+    # --type d : Directories only
+    # --hidden : Search .dotfiles
+    # --follow : Follow symlinks
+    selected_dir=$(fd --type d --hidden --follow --exclude ".git" --exclude "node_modules" . "$start_dir" | \
+        fzf \
+        --prompt=" Change Dir > " \
+        --header="CTRL-C to Cancel" \
+        --preview="$preview_cmd" \
+        --height=60% --layout=reverse --border --info=hidden \
+        --color='header:blue,prompt:yellow,pointer:red,marker:green,bg+:236' \
+    )
+else
+    # Fallback: 'find' is slower and regex for exclusions is messier, but it works everywhere.
+    # -prune: Prevents descending into .git/node_modules to speed up indexing.
+    selected_dir=$(find "$start_dir" \
+        \( -name .git -o -name node_modules \) -prune -o \
+        -type d -print 2>/dev/null | \
+        fzf \
+        --prompt=" Change Dir > " \
+        --preview="$preview_cmd" \
+        --height=60% --layout=reverse --border --info=hidden \
+    )
+fi
+
+# ------------------------------------------------------------------------------
+# 4. Exit Handler
+
+# If user hits ESC or Ctrl-C, string will be empty.
+if [[ -z "$selected_dir" ]]; then
+    return 0
+fi
+
+# ------------------------------------------------------------------------------
+# 5. Action & Feedback
+
+# Use 'builtin cd' to avoid triggering recursive alias loops if 'cd' is aliased.
+if builtin cd "$selected_dir"; then
+    print "\n${COLOR[BLUE]}➜ Entered:${COLOR[RESET]} ${COLOR[BOLD]}$selected_dir${COLOR[RESET]}"
+
+    # Auto-List: Show context immediately on arrival
     if is_installed eza; then
         eza -al --color=always --icons --git --group-directories-first
-    elif is_installed exa; then
-        exa -al --color=always --icons --git --group-directories-first
     else
         ls -al
     fi
-
+else
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Could not enter directory."
+    return 1
+fi

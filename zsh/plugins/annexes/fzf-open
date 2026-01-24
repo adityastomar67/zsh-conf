@@ -1,20 +1,78 @@
+#!/usr/bin/env zsh
 
-    # 1. Local Override (Fixes Tab Selection)
-    #    We append the binding to the end so it overrides your global config.
-    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+#    ░█▀▀░█▀▀░█▀▄░█▀▀░█▀▄░█▀▀
+#    ░█▀▀░█▀▀░█░█░█░░░█░█░█▀▀
+#    ░▀░░░▀░░░▀▀░░▀▀▀░▀▀░░▀▀▀
 
-    # 2. Run FZF
-    local files
-    files=$(fzf --multi --prompt="  Open > " --exit-0)
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Select multiple files using fuzzy search and open them all in your $EDITOR.
+#
+# Problems Solved
+#   - Opening multiple specific files without typing out long paths.
+#   - Verifying file content via preview *before* opening.
+#   - Filtering out noise (node_modules, .git) using smart search tools.
+#
+# Features
+#   - **Multi-Select:** Use <Tab> to select multiple files, then Enter to open all.
+#   - **Smart Preview:** Syntax highlighting via `bat` if available.
+#   - **Git Aware:** Respects .gitignore if `fd` or `ripgrep` is installed.
+#
+# Usage
+#   - `fedit`       : Search current directory.
+#   - `fedit ./src` : Search specific directory.
+# ------------------------------------------------------------------------------
 
-    # 3. Check and Open
-    if [[ -n "$files" ]]; then
-        # Convert to array to handle spaces correctly
-        local -a file_array
-        file_array=("${(@f)files}")
+# 1. Environment Sandbox
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
 
-        # Open all files at once
-        $EDITOR "${file_array[@]}"
-    else
-        print -P "${COLOR[RED]}Cancelled.${COLOR[RESET]}"
-    fi
+local start_dir="${1:-.}"
+local search_cmd
+local preview_cmd
+
+# 2. Backend Selection (Priority: fd > rg > find)
+if is_installed fd; then
+    search_cmd="fd --type f --hidden --follow --exclude .git . \"$start_dir\""
+elif is_installed rg; then
+    search_cmd="rg --files --hidden --follow --glob '!.git' \"$start_dir\""
+else
+    search_cmd="find \"$start_dir\" -type f -not -path '*/.git/*'"
+fi
+
+# 3. Preview Selection (Priority: bat > cat)
+if is_installed bat; then
+    preview_cmd="bat --style=numbers --color=always --line-range :500 {} 2>/dev/null"
+else
+    preview_cmd="cat {} 2>/dev/null"
+fi
+
+# 4. FZF Execution
+#    We use --multi to allow selecting multiple files with TAB
+local selection
+selection=$(eval "$search_cmd" | fzf \
+    --multi \
+    --prompt="📝 Edit > " \
+    --header="Tab: Multi-select • Enter: Open" \
+    --preview-window="right:60%:wrap:hidden" \
+    --preview "$preview_cmd" \
+    --bind 'ctrl-/:toggle-preview' \
+    --bind 'tab:toggle+down,shift-tab:toggle+up' \
+    --height=80% --layout=reverse --border --info=inline
+)
+
+# 5. Output Handler
+if [[ -n "$selection" ]]; then
+    # Check if EDITOR is set, otherwise fallback to vim or nano
+    local editor_cmd="${EDITOR:-vim}"
+
+    # Zsh Magic: Split the newline-delimited string into an array
+    # (@f) = Split by line (newline)
+    local -a file_array
+    file_array=("${(@f)selection}")
+
+    print "\n${COLOR[GREEN]::${COLOR[RESET]} Opening ${COLOR[BOLD]}${#file_array[@]}${COLOR[RESET]} files in ${COLOR[UNDERLINE]}$editor_cmd${COLOR[RESET]}..."
+
+    # Execute the editor with all selected files as arguments
+    "$editor_cmd" "${file_array[@]}"
+fi

@@ -1,69 +1,110 @@
+#!/usr/bin/env zsh
 
-    # 1. Passthrough: If you typed arguments, just run rm and exit
-    if [[ "$#" -gt 0 ]]; then
-        command rm -rf "$@"
-        return
-    fi
+#    ░█▀▀░█▀▄░█▄█
+#    ░█▀▀░█▀▄░█░█
+#    ░▀░░░▀░▀░▀░▀
 
-    # 2. Local Override
-    #    - Fix Tab Selection
-    #    - Force Preview Window to be VISIBLE (overrides global hidden setting)
-    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+# ------------------------------------------------------------------------------
+# File Purpose
+#   A "Safety-First" interactive wrapper for the `rm` command.
+#
+# Problems Solved
+#   - Accidental deletion: Requires explicit confirmation before `rm -rf`.
+#   - Blind deletion: Provides a preview of the file/folder content before selection.
+#   - Binary safety: Detects binary files in the preview to prevent terminal corruption.
+#
+# Features
+#   - **Hybrid Mode:** Acts like normal `rm` if arguments are passed.
+#   - **MIME Detection:** Previews text files but just shows metadata for binaries.
+#   - **Batch Processing:** Select multiple files with <Tab> to delete in bulk.
+#
+# Usage
+#   - `frm`        : Open interactive menu.
+#   - `frm file.txt` : Behaves like `rm -v file.txt`.
+# ------------------------------------------------------------------------------
 
-    # 3. Generate Clean File List (Bypass 'eza' alias)
-    #    We prioritize 'fd' if installed, otherwise use raw 'ls'
-    local list_cmd
-    if (( $+commands[fd] )); then
-        list_cmd="fd --max-depth 1 --hidden --exclude .git --strip-cwd-prefix"
+# 1. Environment Sandbox
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# 2. Passthrough Mode
+#    If arguments are provided, pass them directly to 'rm' and exit.
+#    SAFETY: We use -v (verbose) but do NOT force -rf.
+if [[ "$#" -gt 0 ]]; then
+    command rm -v "$@"
+    return
+fi
+
+# 3. List Generation
+#    Prioritize 'fd' (fast, respects .gitignore) > 'ls' (fallback)
+local list_cmd
+if is_installed fd; then
+    list_cmd="fd --max-depth 1 --hidden --exclude .git --strip-cwd-prefix"
+else
+    list_cmd="command ls -A1"
+fi
+
+# 4. Preview Strategy (MIME-Aware)
+#    This script runs inside the FZF subshell.
+local preview_script='
+    file={};
+    if [ -d "$file" ]; then
+        eza --tree --level=2 --color=always "$file" 2>/dev/null || tree -C "$file" | head -200
     else
-        list_cmd="command ls -A1" # 'command' ignores your alias
-    fi
-
-    # 4. Run FZF
-    local selected
-    selected=$(eval "$list_cmd" | fzf \
-        --multi \
-        --prompt="💀 Delete > " \
-        --header="Tab: Select Multiple | Enter: Confirm" \
-        --preview-window="right:60%:wrap" \
-        --preview '
-            if [ -d {} ]; then
-                eza --tree --level=2 --color=always {} 2>/dev/null | head -200
-            else
-                mime=$(file --mime-type -b {} 2>/dev/null)
-                if [[ $mime == text/* || $mime == "application/json" ]]; then
-                    bat --style=numbers --color=always {} 2>/dev/null || cat {}
-                else
-                    echo "Binary File ($mime)"
-                fi
-            fi'
-    )
-
-    # 5. Safety Check & Execution
-    if [[ -n "$selected" ]]; then
-        local -a files
-        files=("${(@f)selected}")
-
-        print "\n${COLOR[YELLOW]}You are about to PERMANENTLY delete:${COLOR[RESET]}"
-        print "${COLOR[RED]}${files[*]}${COLOR[RESET]}"
-
-        # Confirmation Prompt
-        print -n "\n${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]} "
-
-        if read -q choice; then
-            echo
-            command rm -rf "${files[@]}"
-
-            if [[ $? -eq 0 ]]; then
-                 print "\n${COLOR[GREEN]}✔ Deleted successfully.${COLOR[RESET]}"
-            else
-                 print "\n${COLOR[RED]}✘ Error deleting files.${COLOR[RESET]}"
-            fi
+        mime=$(file --mime-type -b "$file" 2>/dev/null)
+        if [[ $mime == text/* || $mime == "application/json" || $mime == "inode/x-empty" ]]; then
+            bat --style=numbers --color=always "$file" 2>/dev/null || cat "$file"
         else
-            echo
-            print "\n${COLOR[GREEN]}::${COLOR[RESET]} Cancelled."
+            echo "Binary File ($mime)"
+        fi
+    fi
+'
+
+# 5. Interactive Selection
+local selected
+selected=$(eval "$list_cmd" | fzf \
+    --multi \
+    --prompt="💀 Delete > " \
+    --header="Tab: Select Multiple | Enter: Confirm" \
+    --preview-window="right:60%:wrap" \
+    --preview "$preview_script" \
+    --height=80% --layout=reverse --border --info=inline \
+    --color='header:yellow,prompt:red,pointer:red,marker:red,bg+:237' \
+    --bind 'tab:toggle+down,shift-tab:toggle+up'
+)
+
+# 6. Safety Confirmation & Execution
+if [[ -n "$selected" ]]; then
+    # Zsh Magic: Split newline-delimited string into array
+    local -a files
+    files=("${(@f)selected}")
+
+    print "\n${COLOR[YELLOW]}You are about to %BPERMANENTLY%b delete:${COLOR[RESET]}"
+
+    # Print list with red formatting
+    for f in "${files[@]}"; do
+        print "  ${COLOR[RED]}✘${COLOR[RESET]} $f"
+    done
+
+    # The "Are you sure?" Prompt
+    print -n "\n${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]} "
+
+    # Read 1 character (q)uickly
+    if read -q choice; then
+        echo # Newline after keypress
+
+        # !!! CRITICAL: The actual deletion
+        command rm -rf "${files[@]}"
+
+        if [[ $? -eq 0 ]]; then
+                print "\n${COLOR[GREEN]}✔ Deleted successfully.${COLOR[RESET]}"
+        else
+                print "\n${COLOR[RED]}✘ Error deleting files.${COLOR[RESET]}"
         fi
     else
-        print "\n${COLOR[DIM]}:: No files selected.${COLOR[RESET]}"
+        echo
+        print "\n${COLOR[GREEN]}::${COLOR[RESET]} Cancelled."
     fi
-
+else
+    print "\n${COLOR[DIM]}:: No files selected.${COLOR[RESET]}"
+fi

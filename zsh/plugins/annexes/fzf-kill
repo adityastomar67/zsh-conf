@@ -1,31 +1,82 @@
+#!/usr/bin/env zsh
 
-    # 1. Local Override (Fixes Tab Selection)
-    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+#    ░█▀▀░█░█░█░█░█░░░█░░
+#    ░█▀▀░█▀▄░█░█░█░░░█░░
+#    ░▀░░░▀░▀░▀▀▀░▀▀▀░▀▀▀
 
-    # 2. Run FZF
-    #    --header-lines=1: Treats the first line (UID PID...) as a sticky header
-    #    ctrl-r: Re-runs the 'ps' command to update the list
-    local pid
-    pid=$(ps -ef | fzf --multi \
-        --header-lines=1 \
-        --prompt="💀 Kill Process > " \
-        --preview 'echo {}' --preview-window='down:3:wrap' \
-        --bind 'ctrl-r:reload(ps -ef)' \
-        --color='preview-border:#f7768e' \
-        | awk '{print $2}')
+# ------------------------------------------------------------------------------
+# File Purpose
+#   A "Task Manager" for the terminal using FZF.
+#
+# Problems Solved
+#   - Finding a runaway process without manually grepping `ps`.
+#   - Killing multiple processes simultaneously (Multi-select).
+#   - Verifying the exact command arguments before killing.
+#
+# Features
+#   - **Live Reload:** Ctrl-R refreshes the process list.
+#   - **Smart Preview:** Shows process tree (pstree) or full details.
+#   - **Safety First:** Defaults to SIGTERM (15) to allow graceful shutdown.
+#
+# Usage
+#   - `fkill`      : Open menu (Defaults to SIGTERM).
+#   - `fkill -9`   : Open menu, force kill selected (SIGKILL).
+# ------------------------------------------------------------------------------
 
-    # 3. Kill execution
-    if [[ -n "$pid" ]]; then
-        # Default to signal 9 (KILL) if no argument is passed
-        local signal="-${1:-9}"
+# 1. Environment Sandbox
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
 
-        echo "$pid" | xargs kill "$signal"
+# 2. Determine Signal
+#    Default to -15 (SIGTERM) for graceful cleanup.
+#    User can pass -9 as argument to override.
+local signal="${1:-15}"
 
-        # Check if it worked
-        if [[ $? -eq 0 ]]; then
-            print -P "%F{red}Wait, that actually worked? Process killed.%f"
+# 3. Preview Strategy
+#    If 'pstree' exists, we show the hierarchy of the selected PID.
+#    Otherwise, we show the full process entry.
+local preview_cmd=""
+if is_installed pstree; then
+    # -p: show PIDs, -a: show arguments, -C: color
+    # {2}: The PID column from ps -ef
+    preview_cmd="pstree -p -a -C age {2} | head -20"
+else
+    preview_cmd="echo {}"
+fi
+
+# 4. Interactive Selection
+#    We use 'ps -ef' for broad compatibility (macOS & Linux).
+local selected
+selected=$(ps -ef | fzf \
+    --multi \
+    --header-lines=1 \
+    --prompt="💀 Kill ($signal) > " \
+    --header="Tab: Multi-select • Ctrl-R: Reload" \
+    --layout=reverse --border --height=60% --info=inline \
+    --preview-window="right:50%:wrap" \
+    --preview "$preview_cmd" \
+    --bind 'ctrl-r:reload(ps -ef)' \
+    --bind 'tab:toggle+down,shift-tab:toggle+up' \
+    --color='header:blue,prompt:red,pointer:red,marker:yellow'
+)
+
+# 5. Execution Logic
+if [[ -n "$selected" ]]; then
+    # Extract PIDs (Column 2) using awk
+    local pids
+    pids=$(echo "$selected" | awk '{print $2}')
+
+    print "\n${COLOR[RED]}::${COLOR[RESET]} Sending signal ${COLOR[BOLD]}$signal${COLOR[RESET]} to processes..."
+
+    # Iterate and Kill
+    echo "$pids" | while read -r pid; do
+        # Skip invalid/empty lines
+        [[ -z "$pid" ]] && continue
+
+        if kill "-$signal" "$pid" 2>/dev/null; then
+            print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Killed PID ${COLOR[DIM]}$pid${COLOR[RESET]}"
         else
-             print -P "%F{yellow}Failed to kill some processes (Permission denied?).%f"
+            print "   ${COLOR[RED]}✘${COLOR[RESET]} Failed to kill PID ${COLOR[DIM]}$pid${COLOR[RESET]} (Permission denied?)"
         fi
-    fi
-
+    done
+fi

@@ -1,25 +1,77 @@
+#!/usr/bin/env zsh
 
-    local out
+#    ░█▀▀░█▀▀░█▀▄░█░█
+#    ░█▀▀░█▀▀░█░█░▀▄▀
+#    ░▀░░░▀▀▀░▀░▀░░▀░
 
-    # 1. Run env and pipe to FZF
-    out=$(env | fzf --prompt="  Env > " \
-        --header="Enter: Print | Ctrl-y: Copy" \
-        \
-        # PREVIEW: Shows the full value wrapped nicely
-        --preview 'val=$(echo {} | cut -d= -f2-);
-                   if command -v bat > /dev/null; then
-                       echo "$val" | bat -l bash --style=plain --color=always --wrap=character;
-                   else
-                       echo "$val" | fold -w $(tput cols);
-                   fi' \
-        --preview-window="right:60%:wrap" \
-        \
-        # BINDING: Ctrl-Y to copy the value (using your detected clipboard tool)
-        --bind "ctrl-y:execute-silent(echo {} | cut -d= -f2- | ${CLIP_CMD:-pbcopy})"
-    )
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Interactive viewer for Shell Environment Variables.
+#
+# Problems Solved
+#   - Reading long, truncated variables (like $PATH or tokens) is difficult with
+#     standard `env` or `printenv`.
+#   - Copying complex values requires precise mouse selection.
+#
+# Features
+#   - **Smart Preview:** Wraps long lines and syntax highlights (if `bat` exists).
+#   - **Clipboard Integration:** One-key copy (Ctrl-Y) for tokens/keys.
+#   - **Search:** Instantly filter by variable name (e.g., "USER", "PATH").
+#
+# Usage
+#   - `fenv` : Open the inspector.
+# ------------------------------------------------------------------------------
 
-    # 2. Output the value (safely handles '=' in values)
-    if [[ -n "$out" ]]; then
-        echo "$out" | cut -d= -f2-
-    fi
+# 1. Environment Sandbox
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
 
+# 2. Clipboard Detection (Platform Agnostic)
+local copy_cmd="cat" # Fallback
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    copy_cmd="pbcopy"
+elif [[ -n "$WAYLAND_DISPLAY" ]] && is_installed wl-copy; then
+    copy_cmd="wl-copy"
+elif is_installed xclip; then
+    copy_cmd="xclip -selection clipboard"
+elif is_installed xsel; then
+    copy_cmd="xsel --clipboard --input"
+elif (( $+commands[clip.exe] )); then
+    copy_cmd="clip.exe" # WSL
+fi
+
+# 3. The Interactive Loop
+local selection
+
+# We pipe `env` into FZF.
+# The preview logic handles the extraction of the value (everything after the first =)
+# and formats it for readability.
+selection=$(env | fzf \
+    --prompt="  Env > " \
+    --header="Enter: Print • Ctrl-Y: Copy Value" \
+    --height=60% --layout=reverse --border --info=inline \
+    \
+    --preview '
+        # Extract Value (cut fields 2 onwards)
+        val=$(echo {} | cut -d= -f2-)
+
+        # Formatting Strategy
+        if command -v bat > /dev/null; then
+            # Use Bat for wrapping and color
+            echo "$val" | bat -l bash --style=plain --color=always --wrap=character
+        else
+            # Fallback: Fold to terminal width
+            echo "$val" | fold -w $COLUMNS
+        fi
+    ' \
+    --preview-window="right:60%:wrap" \
+    \
+    --bind "ctrl-y:execute-silent(echo {} | cut -d= -f2- | $copy_cmd)+abort"
+)
+
+# 4. Output Logic (If user pressed Enter)
+if [[ -n "$selection" ]]; then
+    # Print only the value to stdout
+    echo "$selection" | cut -d= -f2-
+fi

@@ -53,7 +53,7 @@ fi
 # Select a pager for the FZF preview window.
 # 'bat' provides beautiful terminal colors, 'cat' is the universal fallback.
 local preview_pager="cat"
-if (( $+commands[bat] )); then
+if is_installed bat; then
     preview_pager="bat -l man -p --color=always"
 fi
 

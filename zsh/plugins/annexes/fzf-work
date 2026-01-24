@@ -1,40 +1,108 @@
+#!/usr/bin/env zsh
 
-    # 1. Setup
-    local projects_dir="${WORK_DIR:-$HOME/Work}" # Fallback if env var not set
+#    ░█▀▀░█░█░█▀█░█▀▄░█░█
+#    ░█▀▀░█▄█░█░█░█▀▄░█▀▄
+#    ░▀░░░▀░▀░▀▀▀░▀░▀░▀░▀
 
-    if [[ ! -d "$projects_dir" ]]; then
-        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Work directory not found: $projects_dir"
-        return 1
+# ------------------------------------------------------------------------------
+# File Purpose
+#   A "Jump Station" for your coding projects.
+#
+# Problems Solved
+#   - Eliminates `cd ~/Work/Category/Project/`.
+#   - Provides an instant visual summary of what a project is (via README) before entering.
+#   - Standardizes your workflow entry point.
+#
+# Features
+#   - **Smart Discovery:** Scans your defined `$WORK_DIR`.
+#   - **Readme Preview:** Renders `README.md` (using Glow/Bat) to remind you of the project context.
+#   - **Tree Fallback:** Shows file structure if no documentation exists.
+#
+# Usage
+#   - `fwork` : Open the project selector.
+#   - Set `export WORK_DIR=~/MyProjects` in your config to customize location.
+# ------------------------------------------------------------------------------
+
+# 1. Environment Sandbox
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# 2. Configuration & Validation
+#    Default to $HOME/Work if WORK_DIR isn't set
+local projects_root="${WORK_DIR:-$HOME/Work}"
+
+if [[ ! -d "$projects_root" ]]; then
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Work directory not found: ${COLOR[UNDERLINE]}$projects_root${COLOR[RESET]}"
+    print "        Set ${COLOR[BOLD]}export WORK_DIR=\"/path/to/projects\"${COLOR[RESET]} in your zshrc."
+    return 1
+fi
+
+# 3. Preview Strategy (Dynamic Script)
+#    We construct a shell one-liner to be executed by FZF's preview window.
+#    Logic: Glow (Rendered MD) > Bat (Syntax MD) > Eza (Tree) > Ls (List)
+local preview_script="
+    target=\"$projects_root/{}\"
+    readme=\"\"
+
+    # Case-insensitive check for readme
+    if [[ -f \"\$target/README.md\" ]]; then readme=\"\$target/README.md\";
+    elif [[ -f \"\$target/readme.md\" ]]; then readme=\"\$target/readme.md\";
+    elif [[ -f \"\$target/README.txt\" ]]; then readme=\"\$target/README.txt\"; fi
+
+    if [[ -n \"\$readme\" ]]; then
+        if command -v glow >/dev/null; then
+            glow -s dark \"\$readme\"
+        elif command -v bat >/dev/null; then
+            bat --style=numbers --color=always \"\$readme\"
+        else
+            cat \"\$readme\"
+        fi
+    else
+        echo \"\033[33mNo README found. Showing structure:\033[0m\"
+        if command -v eza >/dev/null; then
+            eza --tree --level=2 --color=always --icons --group-directories-first --git-ignore \"\$target\"
+        else
+            ls -1 --color=always \"\$target\"
+        fi
     fi
+"
 
-    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+# 4. Search & Select
+#    'fd' is preferred for speed and skipping hidden system files.
+local selected_project
+local list_cmd
 
-    # 2. Get Project List (Depth 1)
-    #    We cd into the directory first so fzf produces clean output (just 'project-name')
-    #    then we cd back or use the result relative to projects_dir.
-    local project
-    project=$(cd "$projects_dir" && find . -maxdepth 1 -mindepth 1 -type d -not -path '*/.*' | sed 's|^\./||' | sort | \
-        fzf \
-        --no-multi \
-        --prompt="🚀 Projects > " \
-        --preview-window="right:65%:wrap:nohidden" \
-        \
-        # SMART PREVIEW:
-        # 1. Tries to show README.md (glow/bat/cat)
-        # 2. If no readme, shows directory tree
-        --preview "local p=\"$projects_dir/{}\";
-                   if [ -f \"\$p/README.md\" ]; then
-                       bat --style=numbers --color=always \"\$p/README.md\" 2>/dev/null || cat \"\$p/README.md\";
-                   elif [ -f \"\$p/readme.md\" ]; then
-                       bat --style=numbers --color=always \"\$p/readme.md\" 2>/dev/null || cat \"\$p/readme.md\";
-                   else
-                       eza --tree --level=2 --color=always \"\$p\" 2>/dev/null || ls -1 --color=always \"\$p\";
-                   fi"
-    )
+if (( $+commands[fd] )); then
+    # Max Depth 1 = Only direct subfolders of Work/
+    list_cmd="fd --maxdepth 1 --min-depth 1 --type d --base-directory '$projects_root'"
+else
+    # Find fallback (sed strips the leading ./)
+    list_cmd="cd '$projects_root' && find . -maxdepth 1 -mindepth 1 -type d -not -path '*/.*' | sed 's|^\./||'"
+fi
 
-    # 3. Enter Project
-    if [[ -n "$project" ]]; then
-        cd "$projects_dir/$project" || return
-        # print -P "%F{green}::%f Work hard!"
+selected_project=$(eval "$list_cmd" | fzf \
+    --no-multi \
+    --prompt="🚀 Projects > " \
+    --header="Select a project to work on" \
+    --preview-window="right:60%:wrap" \
+    --preview "$preview_script" \
+    --height=80% --layout=reverse --border --info=inline \
+    --color='header:blue,prompt:yellow,pointer:cyan,marker:cyan,bg+:237'
+)
+
+# 5. Enter Project
+if [[ -n "$selected_project" ]]; then
+    local target_path="$projects_root/$selected_project"
+
+    print "\n${COLOR[GREEN]}::${COLOR[RESET]} Entering ${COLOR[BOLD]}$selected_project${COLOR[RESET]}..."
+    builtin cd "$target_path" || return
+
+    # Optional: Run git status check upon entry
+    if [[ -d .git ]]; then
+            if (( $+commands[onefetch] )); then
+                onefetch --no-art 2>/dev/null
+            else
+                git status -sb 2>/dev/null
+            fi
     fi
-
+fi

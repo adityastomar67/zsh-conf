@@ -1,65 +1,120 @@
+#!/usr/bin/env zsh
 
-    emulate -L zsh
+#    ░█▀▀░█░█░█▀█░▀█▀░█▀█░█▀▀░▀█▀░█▀█░█░░░█░░
+#    ░█▀▀░█░█░█░█░░█░░█░█░▀▀█░░█░░█▀█░█░░░█░░
+#    ░▀░░░▀▀▀░▀░▀░▀▀▀░▀░▀░▀▀▀░░▀░░▀░▀░▀▀▀░▀▀▀
 
-    # 1. Detect Package Manager
-    local list_cmd uninstall_cmd preview_cmd header_text
+# ------------------------------------------------------------------------------
+# File Purpose
+#   A "Magic Eraser" for system packages using FZF.
+#
+# Problems Solved
+#   - cleaning up unused software without remembering exact package names.
+#   - Safe removal: Visualizes package details (size, description) before deleting.
+#   - Multi-Manager: Works on macOS (Brew), Arch (Pacman), Debian (Apt), Fedora (Dnf).
+#
+# Features
+#   - **Dependency Safety:** Lists only "explicitly installed" packages (leaves)
+#     to prevent accidentally breaking system dependencies.
+#   - **Batch Mode:** Select multiple apps with <Tab> to uninstall in one go.
+#   - **Metadata Preview:** Shows version, size, and description in the side pane.
+#
+# Usage
+#   - `funinstall` : Detects OS and opens the menu.
+# ------------------------------------------------------------------------------
 
-    if [[ "$OSTYPE" == "darwin"* ]] && (( $+commands[brew] )); then
-        list_cmd="brew leaves"
-        uninstall_cmd="brew uninstall"
-        preview_cmd="brew info {}"
-        header_text="🍺 Select Homebrew packages to uninstall"
-    elif (( $+commands[pacman] )); then
-        list_cmd="pacman -Qqe"
-        uninstall_cmd="sudo pacman -Rns"
-        preview_cmd="pacman -Qi {}"
-        header_text="📦 Select Pacman packages to uninstall"
-    else
-        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} No supported package manager found."
-        return 1
-    fi
+# 1. Environment Sandbox
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
 
-    # 2. Local Override (Fixes Tab Selection)
-    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+# 2. Detect Package Manager & Configuration
+#    We use arrays for the commands to handle spaces (e.g., "sudo pacman") safely.
+local list_cmd preview_cmd header_text
+local -a uninstall_cmd
 
-    # 3. Run FZF Selection
-    print "${COLOR[BLUE]}::${COLOR[RESET]} Loading package list..."
+if [[ "$OSTYPE" == "darwin"* ]] && (( $+commands[brew] )); then
+    # Homebrew (macOS)
+    list_cmd="brew leaves"
+    uninstall_cmd=(brew uninstall)
+    preview_cmd="brew info {}"
+    header_text="🍺 Homebrew (Leaves)"
 
-    local selected
-    selected=$(eval "$list_cmd" | fzf \
-        --multi \
-        --prompt="🗑  Uninstall > " \
-        --header="$header_text (TAB to select multiple)" \
-        --preview="$preview_cmd" \
-        --preview-window="right:60%:wrap" \
-        --height="80%" \
-        --color="header:yellow,prompt:red" \
-        --bind="ctrl-a:select-all"
-    )
+elif is_installed pacman; then
+    # Arch Linux
+    list_cmd="pacman -Qqe"
+    uninstall_cmd=(sudo pacman -Rns)
+    preview_cmd="pacman -Qi {}"
+    header_text="📦 Pacman (Explicit)"
 
-    # 4. Safety Check & Execution
-    if [[ -n "$selected" ]]; then
-        local -a pkgs
-        pkgs=("${(@f)selected}")
+elif is_installed apt; then
+    # Debian / Ubuntu
+    # apt-mark showmanual: Only list user-installed packages, not auto-deps
+    list_cmd="apt-mark showmanual"
+    uninstall_cmd=(sudo apt remove -y)
+    preview_cmd="apt-cache show {}"
+    header_text="🍥 Apt (Manual)"
 
-        print "\n${COLOR[YELLOW]}You are about to uninstall:${COLOR[RESET]}"
+elif is_installed dnf; then
+    # Fedora / RHEL
+    list_cmd="dnf repoquery --userinstalled --qf '%{name}'"
+    uninstall_cmd=(sudo dnf remove -y)
+    preview_cmd="dnf info {}"
+    header_text="🎩 DNF (User Installed)"
+else
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} No supported package manager found."
+    return 1
+fi
 
-        # --- FIXED LINE HERE ---
-        # We join the array elements with spaces for display
-        print "${COLOR[DIM]}${pkgs[*]}${COLOR[RESET]}"
-        # -----------------------
-        echo
+# 3. Fetch List & Run FZF
+print "${COLOR[BLUE]}::${COLOR[RESET]} Loading package list..."
 
-        print -n "\n${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]} "
-        if read -q choice; then
-            echo
-            print "\n${COLOR[RED]}::${COLOR[RESET]} Nuking selected packages..."
-            eval "$uninstall_cmd ${pkgs[@]}"
+local selected
+# We use 'eval' here because the list_cmd might contain pipes or flags
+selected=$(eval "$list_cmd" | fzf \
+    --multi \
+    --prompt="🗑  Uninstall > " \
+    --header="$header_text (Tab: Select | Enter: Confirm)" \
+    --preview="$preview_cmd" \
+    --preview-window="right:60%:wrap" \
+    --height="80%" --layout=reverse --border --info=inline \
+    --color="header:yellow,prompt:red,pointer:red,marker:red,bg+:237" \
+    --bind="ctrl-a:select-all"
+)
+
+# 4. Safety Check & Execution
+if [[ -n "$selected" ]]; then
+    # Zsh Array Magic: Split newline-delimited string into array
+    local -a pkgs
+    pkgs=("${(@f)selected}")
+
+    print "\n${COLOR[YELLOW]}You are about to uninstall ${COLOR[BOLD]}${#pkgs[@]}${COLOR[RESET]} packages:"
+
+    # Pretty print the list
+    for pkg in "${pkgs[@]}"; do
+        print "  ${COLOR[RED]}✘${COLOR[RESET]} $pkg"
+    done
+
+    # The "Are you sure?" Prompt
+    echo
+    print -n "${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]} "
+
+    if read -q choice; then
+        echo # Newline
+        print "\n${COLOR[RED]}::${COLOR[RESET]} Nuking selected packages..."
+
+        # Execute safely using the array expansion
+        # "${uninstall_cmd[@]}" expands to "sudo" "pacman" "-Rns"
+        "${uninstall_cmd[@]}" "${pkgs[@]}"
+
+        if [[ $? -eq 0 ]]; then
             print "\n${COLOR[GREEN]}✔ Operation complete.${COLOR[RESET]}"
         else
-            print "\n${COLOR[GREEN]}::${COLOR[RESET]} Aborted safely."
+            print "\n${COLOR[RED]}✘ Errors occurred during uninstall.${COLOR[RESET]}"
         fi
     else
-        print "\n${COLOR[DIM]}:: No packages selected.${COLOR[RESET]}"
+        echo
+        print "\n${COLOR[GREEN]}::${COLOR[RESET]} Aborted safely."
     fi
-
+else
+    print "\n${COLOR[DIM]}:: No packages selected.${COLOR[RESET]}"
+fi
