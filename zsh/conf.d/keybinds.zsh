@@ -203,7 +203,7 @@ bindkey '^[f' git_fzf_fixup
 bindkey '^[s' docker_connect_widget
 
 # Keybinding: Alt + p (for 'Popup')
-bindkey '^[p' ftmux
+bindkey '^[p' pop-command
 
 # Autosuggest Acceptance: Ctrl + Space.
 bindkey '^ ' autosuggest-accept

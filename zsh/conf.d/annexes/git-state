@@ -36,7 +36,7 @@ setopt localoptions no_xtrace pipefail
 
 # 2. Validation
 if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-    print -P "%F{red} [ERROR]%f Not a git repository."
+    print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
     exit 1
 fi
 
@@ -61,7 +61,7 @@ BEGIN {
 
     # Icons (Nerd Fonts)
     I_BRANCH  = ""
-    I_ARROW   = ""
+    I_ARROW   = " "
     I_ADDED   = ""
     I_MOD     = ""
     I_DEL     = ""

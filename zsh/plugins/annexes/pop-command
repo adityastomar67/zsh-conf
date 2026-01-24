@@ -1,0 +1,83 @@
+#!/usr/bin/env zsh
+
+#    ▀█▀░█▀▄▀█░█░█░█░█░░░█▀█░█▀█░█▀█░█░█░█▀█
+#    ░█░░█░▀░█░█░█░▄▀▄░░░█▀▀░█░█░█▀▀░█░█░█▀▀
+#    ░▀░░▀░░░▀░▀▀▀░▀░▀░░░▀░░░▀▀▀░▀░░░▀▀▀░▀░░
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a wrapper for the Tmux `display-popup` functionality.
+#   It creates a floating window over the current terminal session.
+#
+# Problems Solved
+#   - Context Switching: allows running quick tasks (htop, git, man) without
+#     splitting panes or creating new windows.
+#   - Directory Persistence: Automatically opens in the current pane's path.
+#   - Visual Focus: Dimming the background (if supported) focuses the task.
+#
+# Features / Responsibilities
+#   - **Smart Defaults:** Opens $SHELL if no command is provided.
+#   - **Argument Handling:** Joins multiple arguments into a single command string.
+#   - **UI Styling:** Adds a title bar and rounded borders (Tmux 3.2+).
+#
+# Usage Notes
+#   - `tpop`            : Opens a floating shell.
+#   - `tpop htop`       : Opens htop in a popup.
+#   - `tpop git status` : Runs git command in popup.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── popup engine ─────────────────────────────────────────────────────────────
+
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
+
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# ------------------------------------------------------------------------------
+# 2. Execution Guard
+
+# !!! CRITICAL: Context Check
+# Attempting to run display-popup outside of a Tmux client will fail.
+# We check $TMUX to ensure we are attached to a session.
+if [[ -z "$TMUX" ]]; then
+    print -P "${COLOR[RED]}[ERROR]${COLOR[RESET]} This function only works inside a Tmux session."
+    return 1
+fi
+
+# ------------------------------------------------------------------------------
+# 3. Command Construction
+
+local target_cmd=""
+local title=""
+
+# Logic: If arguments exist, join them. Otherwise, default to SHELL.
+if [[ $# -gt 0 ]]; then
+    target_cmd="$*"       # e.g., "git log --oneline"
+    title=" ⚡ $1 "       # Use the binary name as the title
+else
+    target_cmd="$SHELL"
+    title=" 🐚 Shell "
+fi
+
+# ------------------------------------------------------------------------------
+# 4. The Popup Launcher
+
+# Flags Breakdown:
+# -E : Close the popup automatically if the command exits successfully.
+# -w : Width (85% of screen).
+# -h : Height (85% of screen).
+# -d : Start in "#{pane_current_path}" (Current working dir of the background pane).
+# -b : Border style (rounded looks modern).
+# -T : Title displayed on the top border.
+
+tmux display-popup \
+    -E \
+    -w 85% -h 85% \
+    -d "#{pane_current_path}" \
+    -b "rounded" \
+    -T "$title" \
+    "$target_cmd"
