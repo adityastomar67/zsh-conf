@@ -15,6 +15,7 @@
 if [[ $# -gt 0 ]]; then
    echo "${COLOR[RED]}[ERROR]${COLOR[DIM]} Cannot set aliases via an external script (subprocess isolation).${COLOR[RESET]}"
     echo "       Use the builtin ${CLOR[YELLOW]}${COLOR[BOLD]}alias${COLOR[RESET]} command to set new aliases."
+    echo "       Usage: alias | pretty-alias"
     exit 1
 fi
 
@@ -30,29 +31,46 @@ if [[ -t 0 ]]; then
     exit 0
 fi
 
-local -A colors
-colors[name]='\033[1;34m'   # Bold Blue
-colors[eq]='\033[2m'        # Dim (Grey)
-colors[value]='\033[32m'    # Green
-colors[reset]='\033[0m'
+# Get terminal width
+cols=$(tput cols)
 
-# Process the piped input (cat)
-cat | sort | awk -v C_NAME="${colors[name]}" \
-                 -v C_EQ="${colors[eq]}" \
-                 -v C_VAL="${colors[value]}" \
-                 -v C_RST="${colors[reset]}" \
+# 3. Rendering Logic
+sort | awk -v C_NAME="${COLOR[BOLD]}${COLOR[BLUE]}" \
+                 -v C_EQ="${COLOR[DIM]}" \
+                 -v C_VAL="${COLOR[GREEN]}" \
+                 -v C_RST="${COLOR[RESET]}" \
+                 -v TERM_WIDTH="$cols" \
 '
 {
-    # Find index of first equals sign
     idx = index($0, "=")
-
-    # Handle lines that might not be aliases (safety)
     if (idx == 0) next;
 
-    # Split string manually to handle aliases that contain "=" in the value
     name = substr($0, 1, idx - 1)
     val  = substr($0, idx + 1)
 
-    # Print with padding (Width 20 for name)
-    printf "  %s%-20s%s %s::%s %s%s%s\n", C_NAME, name, C_RST, C_EQ, C_RST, C_VAL, val, C_RST
-}'
+    # Define layout dimensions
+    name_width = 20
+    prefix_total = 2 + name_width + 4 # spaces + name + " :: "
+    available_width = TERM_WIDTH - prefix_total - 2
+
+    # Print the first line (Name + start of Value)
+    printf "  %s%-20s%s %s::%s %s", C_NAME, name, C_RST, C_EQ, C_RST, C_VAL
+
+    # Logic to wrap the value
+    if (length(val) <= available_width) {
+        print val C_RST
+    } else {
+        # Print first chunk
+        print substr(val, 1, available_width) C_RST
+
+        # Calculate remaining string
+        remaining = substr(val, available_width + 1)
+
+        # Loop to print wrapped lines with indentation
+        while (length(remaining) > 0) {
+            # Create the indentation string (matches name_width + spacers)
+            printf "  %20s    %s%s%s\n", "", C_VAL, substr(remaining, 1, available_width), C_RST
+            remaining = substr(remaining, available_width + 1)
+        }
+    }
+}' | less -RFX

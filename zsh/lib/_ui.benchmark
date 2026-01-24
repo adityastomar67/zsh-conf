@@ -145,4 +145,4 @@ zprof | awk \
 
 # Final spacing
 printf \
-    "\n${COLOR[DIM]} For detailed analysis:${COLOR[RESET]} ${COLOR[BOLD]}${COLOR[BLUE]}\`_zsh_debug_startup\`${COLOR[RESET]}\n\n"
+    "\n${COLOR[DIM]}  For detailed analysis:${COLOR[RESET]} ${COLOR[BOLD]}${COLOR[BLUE]}\`_zsh_debug_startup\`${COLOR[RESET]}\n\n"

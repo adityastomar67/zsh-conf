@@ -1,0 +1,169 @@
+#!/usr/bin/env zsh
+#    ░█▀▀░▀█▀░▀█▀░░░░░█▀▀░▀█▀░█▀█░▀█▀░█▀▀
+#    ░█░█░░█░░░█░░▄▄▄░▀▀█░░█░░█▀█░░█░░█▀▀
+#    ░▀▀▀░▀▀▀░░▀░░░░░░▀▀▀░░▀░░▀░▀░░▀░░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   A "High-Fidelity" wrapper for 'git status'.
+#
+# Problems Solved
+#   - Transforms the utilitarian 'git status -sb' output into a visually
+#     scannable dashboard.
+#   - Clearly distinguishes between Staged, Modified, and Untracked files via icons.
+#   - Visualizes "Ahead/Behind" commits with directional arrows.
+#
+# Features / Responsibilities
+#   - **Header Parsing:** Extracts branch names and upstream tracking info.
+#   - **Status Mapping:** Maps short-codes (M, A, D, ??) to Nerd Fonts.
+#   - **Summary:** Provides a clean footer with file counts.
+#
+# Usage Notes
+#   - Requires a Nerd Font installed in your terminal.
+#   - Best used as an alias: `alias st='path/to/this_script.zsh'`
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
+
+
+# ── initialization ───────────────────────────────────────────────────────────
+
+
+
+# 1. Environment Sandbox
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# 2. Validation
+if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    print -P "%F{red} [ERROR]%f Not a git repository."
+    exit 1
+fi
+
+
+# ── status engine ────────────────────────────────────────────────────────────
+
+# We pipe `git status -sb` (short, branch info) into a robust AWK parser.
+git status -sb | awk '
+BEGIN {
+    # ─── CONFIGURATION ──────────────────────────────────────────────
+
+    # Colors (ANSI Escape Codes)
+    C_RESET   = "\033[0m"
+    C_BOLD    = "\033[1m"
+    C_DIM     = "\033[2m"
+    C_RED     = "\033[31m"
+    C_GREEN   = "\033[32m"
+    C_YELLOW  = "\033[33m"
+    C_BLUE    = "\033[34m"
+    C_MAGENTA = "\033[35m"
+    C_CYAN    = "\033[36m"
+
+    # Icons (Nerd Fonts)
+    I_BRANCH  = ""
+    I_ARROW   = ""
+    I_ADDED   = ""
+    I_MOD     = ""
+    I_DEL     = ""
+    I_UNTRACK = ""
+    I_RENAME  = ""
+    I_FILE    = ""
+    I_CLEAN   = ""
+
+    total_files = 0
+}
+
+# ─── PROCESS BRANCH HEADER (## line) ────────────────────────────
+/^##/ {
+    # Strip the leading hash markers
+    sub(/^## /, "")
+    line = $0
+
+    # --- Complex Logic: Edge Case Handling ---
+    # Git output varies for new repos: "No commits yet on main..."
+    if (line ~ /Initial commit on/ || line ~ /No commits yet on/) {
+        sub(/Initial commit on /, "", line)
+        sub(/No commits yet on /, "", line)
+    }
+
+    # --- Ahead / Behind Logic ---
+    # Extracts text like "[ahead 1, behind 2]" and colorizes arrows
+    bracket_info = ""
+    if (match(line, /\[.*\]/)) {
+        bracket_info = substr(line, RSTART, RLENGTH)
+
+        # Colorize the numbers and arrows
+        gsub(/ahead/,  C_GREEN  "⇡" C_RESET, bracket_info)
+        gsub(/behind/, C_RED    "⇣" C_RESET, bracket_info)
+
+        # Remove the bracket info from the main line so we can parse branch names
+        sub(/\[.*\]/, "", line)
+    }
+
+    # Split: "main...origin/main"
+    # We use explicit regex escape for dots
+    split(line, branches, "\\.\\.\\.")
+    local_br = branches[1]
+    remote_br = branches[2]
+
+    # Trim trailing whitespace (artifact of removing bracket info)
+    gsub(/[[:space:]]+$/, "", local_br)
+
+    # --- Render Header ---
+    printf "\n  " C_MAGENTA C_BOLD "%s %s" C_RESET, I_BRANCH, local_br
+
+    if (remote_br != "") {
+        printf " " C_DIM "%s" C_RESET " " C_BLUE "%s" C_RESET, I_ARROW, remote_br
+    }
+
+    if (bracket_info != "") {
+        printf " %s", bracket_info
+    }
+
+    printf "\n  " C_DIM "────────────────────────────────────────────" C_RESET "\n"
+    next
+}
+
+# ─── PROCESS FILE STATUS ────────────────────────────────────────
+{
+    # $1 is the status code (e.g., "M", "??", "A")
+    # We capture it, then clear it to reconstruct the filename from the rest of the line
+    status_code = $1
+    $1 = ""; sub(/^ /, "", $0) # Remove leading space left by $1
+    filename = $0
+
+    icon  = I_FILE
+    color = C_RESET
+
+    # --- Logic: Status Mapping ---
+    # We use regex to match "M " (Staged) vs " M" (Unstaged) if needed,
+    # but here we simplify based on general category.
+
+    if (status_code == "A" || status_code == "AM" || status_code == "AD") {
+        icon = I_ADDED; color = C_GREEN
+    } else if (status_code == "M" || status_code == "MM") {
+        icon = I_MOD; color = C_YELLOW
+    } else if (status_code == "D" || status_code == "RD") {
+        icon = I_DEL; color = C_RED
+    } else if (status_code == "R" || status_code == "RM") {
+        icon = I_RENAME; color = C_MAGENTA
+    } else if (status_code == "??") {
+        icon = I_UNTRACK; color = C_CYAN
+    } else if (status_code == "UU") {
+        icon = ""; color = C_RED # Unmerged / Conflict
+    }
+
+    printf "    %s%s%s  %s\n", color, icon, C_RESET, filename
+    total_files++
+}
+
+# ─── SUMMARY FOOTER ─────────────────────────────────────────────
+END {
+    if (total_files == 0) {
+        printf "    " C_GREEN "%s" C_RESET "  " C_DIM "No changes. Working tree clean." C_RESET "\n", I_CLEAN
+    } else {
+        printf "\n    " C_DIM "(%d files changed)" C_RESET "\n", total_files
+    }
+    printf "\n"
+}
+'

@@ -129,7 +129,7 @@ magic_enter() {
     if git rev-parse --is-inside-work-tree &>/dev/null; then
         if [[ -n $(git status --porcelain) ]]; then
             print "${COLOR[YELLOW]}::: Git Status (Dirty) :::${COLOR[RESET]}"
-            git status -sb
+            git-state
         else
             print "${COLOR[GREEN]}::: Git Status (Clean) :::${COLOR[RESET]}"
             git log -n 3 --oneline --color=always

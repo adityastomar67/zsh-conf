@@ -35,7 +35,9 @@
 
 if [[ -z "$ZSH_CONFIG_ROOT" ]]; then
     # Fallback if user.conf wasn't sourced (e.g., specific non-login shells)
-    [[ -f "${ZDOTDIR:-$HOME/.config/zsh-conf}/user.conf" ]] && source "${ZDOTDIR:-$HOME/.config/zsh-conf}/user.conf"
+    [[ -f "${ZDOTDIR:-$HOME/.config/zsh-conf}/user.conf" ]] \
+        && source "${ZDOTDIR:-$HOME/.config/zsh-conf}/user.conf" \
+        || return
 fi
 
 
