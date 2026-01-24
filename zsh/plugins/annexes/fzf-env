@@ -1,4 +1,4 @@
-function fenv() {
+
     local out
 
     # 1. Run env and pipe to FZF
@@ -22,4 +22,4 @@ function fenv() {
     if [[ -n "$out" ]]; then
         echo "$out" | cut -d= -f2-
     fi
-}
+

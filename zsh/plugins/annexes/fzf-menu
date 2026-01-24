@@ -1,4 +1,4 @@
-function fzf_menu() {
+
     # 1. SETUP: Where do your functions live?
     #    Change this to your actual directory path.
     local tools_dir="${ZDOTDIR}/zsh/plugins/annexes"
@@ -44,4 +44,4 @@ function fzf_menu() {
             print "Ensure the function inside the file matches the filename pattern (e.g. fzf_uninstall)."
         fi
     fi
-}
+

@@ -1,4 +1,4 @@
-function fzf_uninstall() {
+
     emulate -L zsh
 
     # 1. Detect Package Manager
@@ -62,4 +62,4 @@ function fzf_uninstall() {
     else
         print "\n${COLOR[DIM]}:: No packages selected.${COLOR[RESET]}"
     fi
-}
+

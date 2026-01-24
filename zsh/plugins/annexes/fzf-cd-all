@@ -1,4 +1,4 @@
-function fcd_all() {
+
     local dir
     local start_dir="${1:-.}"
 
@@ -31,4 +31,4 @@ function fcd_all() {
         # Optional: Print current dir structure upon entering
         # ls -F
     fi
-}
+

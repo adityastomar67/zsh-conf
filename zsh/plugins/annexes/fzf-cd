@@ -1,4 +1,4 @@
-function fcd() {
+
     local dir
 
     # 1. SEARCH LOGIC
@@ -38,4 +38,4 @@ function fcd() {
     else
         ls -al
     fi
-}
+

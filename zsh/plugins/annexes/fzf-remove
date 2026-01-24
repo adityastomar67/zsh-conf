@@ -1,4 +1,4 @@
-function fzf_rm() {
+
     # 1. Passthrough: If you typed arguments, just run rm and exit
     if [[ "$#" -gt 0 ]]; then
         command rm -rf "$@"
@@ -66,4 +66,4 @@ function fzf_rm() {
     else
         print "\n${COLOR[DIM]}:: No files selected.${COLOR[RESET]}"
     fi
-}
+

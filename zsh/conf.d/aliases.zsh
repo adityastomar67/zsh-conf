@@ -34,14 +34,12 @@
 
 # 1. Feature Guard
 # Exit immediately if the user has disabled aliases in the main config.
-# Note: ${LOAD_CUSTOM_ALIASES} was renamed in 'env.zsh'; we support the old
-# 'USE_ALIAS' for backward compatibility.
+# Note: ${LOAD_CUSTOM_ALIASES} was renamed in 'user.conf'
 if [[ "${LOAD_CUSTOM_ALIASES:l}" != "yes" ]]; then
     return
 fi
 
-# 2. Reset
-# Remove all existing aliases to prevent conflicts or stale definitions.
+# 2. Reset: Remove all existing aliases to prevent conflicts or stale definitions.
 unalias -a
 
 # 3. Environment Detection

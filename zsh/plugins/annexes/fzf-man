@@ -1,54 +1,106 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 
-function fman() {
-    # 1. Direct Usage
-    if [ -n "$1" ]; then
-        /usr/bin/man "$@"
-        return
-    fi
+#    ░█▄█░█▀█░█▄░█░░░█▀█░█▀█░█▀▀░█▀▀░█▀▄
+#    ░█░█░█▀█░█░▀█░░░█▀▀░█▀█░█░█░█▀▀░█▀▄
+#    ░▀░▀░▀░▀░▀░░▀░▀░▀░░░▀░▀░▀▀▀░▀▀▀░▀░▀
 
-    # 2. Dependency Check (Bat for colors)
-    local preview_pager="cat"
-    if command -v bat >/dev/null; then
-        preview_pager="bat -l man -p --color=always"
-    fi
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a visual, interactive interface for browsing system manual pages.
+#
+# Problems Solved
+#   - Eliminates the need to guess exact man-page names or sections.
+#   - Provides an instant side-by-side preview of the documentation while searching.
+#   - Normalizes varied 'man -k' output formats across macOS and Linux.
+#
+# Features / Responsibilities
+#   - **Smart Parsing:** Uses AWK to unify "name(section)" and "name (section)" formats.
+#   - **FZF TUI:** Offers a fuzzy-searchable list with a scrollable preview window.
+#   - **Enhanced Visuals:** Integrates with 'bat' for syntax highlighting if present.
+#
+# Usage Notes
+#   - `fman`           : Open the interactive browser.
+#   - `fman <query>`   : Behaves like standard 'man'.
+#
+# Project: Zsh-conf
+# ------------------------------------------------------------------------------
 
-    # 3. The Logic
-    man -k . | \
-    awk '
-    {
-        # --- NORMALIZATION ---
-        name = $1
-        sub(/,$/, "", name) # Remove trailing commas
 
-        # Handle "git(1)" vs "git (1)"
-        if (name ~ /\([0-9a-zA-Z]+\)/) {
-            sub(/\(/, " ", name)
-            sub(/\)/, "", name)
-            $1 = name
-        }
-        else if ($2 ~ /^\([0-9a-zA-Z]+\)/) {
-            sub(/\(/, "", $2)
-            sub(/\)/, "", $2)
-        }
+# ── manual browser engine ────────────────────────────────────────────────────
 
-        # Output format: "name section description..."
-        print $0
-    }' | \
-    fzf \
-        --reverse \
-        --prompt="Manual > " \
-        --preview-window="right:75%:wrap" \
-        \
-        --bind "ctrl-e:change-preview-window(hidden|)" \
-        \
-        --with-nth=1 \
-        \
-        --preview="
-             echo {1} | sed 's/,//g' | xargs -I % sh -c 'MANPAGER=cat man {2} % | col -bx' | $preview_pager
-        " \
-        --header=$'[Enter]  Open\n[Ctrl-E] Toggle Preview\n[Ctrl-Q] Quit\n\n' | \
-    awk '{print $2, $1}' | \
-    sed 's/,//g' | \
-    xargs -r man
-}
+
+
+
+# ------------------------------------------------------------------------------
+# 1. Environment Sandbox
+
+# emulate -L zsh: Restricts configuration changes to this local scope.
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+# ------------------------------------------------------------------------------
+# 2. Direct Usage Passthrough
+
+# If a specific argument is provided, bypass the browser and run man directly.
+if [[ -n "$1" ]]; then
+    /usr/bin/man "$@"
+    return
+fi
+
+# ------------------------------------------------------------------------------
+# 3. Dependency Detection
+
+# Select a pager for the FZF preview window.
+# 'bat' provides beautiful terminal colors, 'cat' is the universal fallback.
+local preview_pager="cat"
+if (( $+commands[bat] )); then
+    preview_pager="bat -l man -p --color=always"
+fi
+
+# ------------------------------------------------------------------------------
+# 4. The Interactive Logic
+
+# man -k .: Generates a list of all available manual pages.
+man -k . | \
+awk '
+{
+    # --- NORMALIZATION ---
+    # Different "man" implementations output names differently.
+    # We ensure a standard "name section description" format.
+
+    name = $1
+    sub(/,$/, "", name) # Remove trailing commas from aliases
+
+    # Logic: Transform "git(1)" into "git 1"
+    if (name ~ /\([0-9a-zA-Z]+\)/) {
+        sub(/\(/, " ", name)
+        sub(/\)/, "", name)
+        $1 = name
+    }
+    # Logic: Transform "git (1)" into "git 1"
+    else if ($2 ~ /^\([0-9a-zA-Z]+\)/) {
+        sub(/\(/, "", $2)
+        sub(/\)/, "", $2)
+    }
+
+    print $0
+}' | \
+fzf \
+    --ansi \
+    --reverse \
+    --prompt="Manual > " \
+    --border-label='  Fuzzy Manpager' \
+    --height=100% \
+    --preview-window="right:75%:wrap" \
+    --header=$'[Enter] Open • [Ctrl-/] Toggle Preview • [Ctrl-Q] Quit\n\n' \
+    --with-nth=1,2 \
+    \
+    --preview="
+            # Extract name {1} and section {2} for the preview command.
+            # col -bx: Removes backspaces/overstrikes for a clean cat/bat view.
+            echo {1} | sed 's/,//g' | xargs -I % sh -c 'MANPAGER=cat man {2} % | col -bx' | $preview_pager
+    " | \
+awk '{print $2, $1}' | \
+sed 's/,//g' | \
+xargs -r man
+

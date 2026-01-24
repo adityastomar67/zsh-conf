@@ -1,4 +1,4 @@
-function fzf_kill() {
+
     # 1. Local Override (Fixes Tab Selection)
     local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
 
@@ -28,4 +28,4 @@ function fzf_kill() {
              print -P "%F{yellow}Failed to kill some processes (Permission denied?).%f"
         fi
     fi
-}
+

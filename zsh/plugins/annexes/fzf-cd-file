@@ -1,4 +1,4 @@
-function fcd_file() {
+
     local file
     local start_dir="${1:-.}"
 
@@ -31,4 +31,3 @@ function fcd_file() {
         print -P "\n%F{green}::%f Jumping to %B$dir%b..."
         cd "$dir" || return
     fi
-}

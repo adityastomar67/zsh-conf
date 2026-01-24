@@ -1,4 +1,4 @@
-function f_open() {
+
     # 1. Local Override (Fixes Tab Selection)
     #    We append the binding to the end so it overrides your global config.
     local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
@@ -18,4 +18,3 @@ function f_open() {
     else
         print -P "${COLOR[RED]}Cancelled.${COLOR[RESET]}"
     fi
-}

@@ -1,4 +1,4 @@
-function cd_work() {
+
     # 1. Setup
     local projects_dir="${WORK_DIR:-$HOME/Work}" # Fallback if env var not set
 
@@ -37,4 +37,4 @@ function cd_work() {
         cd "$projects_dir/$project" || return
         # print -P "%F{green}::%f Work hard!"
     fi
-}
+
