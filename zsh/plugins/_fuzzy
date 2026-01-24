@@ -300,8 +300,6 @@ zstyle ':completion:*' format ''    # Need to set it to none so that it behaves 
 zstyle ':fzf-tab:*' continuous-trigger '/'
 
 # ── Styling ──
-# Inherits FZF_DEFAULT_OPTS, but forces 45% height
-zstyle ':fzf-tab:*' fzf-flags --height=45% --layout=reverse
 
 # ── Context-Aware Previews ──
 # 'cd': Use 'eza' with tree view (limit level 2) to see folder structure
@@ -334,16 +332,26 @@ zstyle ':fzf-tab:complete:(eza|ls):*' fzf-preview \
         bat --color=always --style=numbers,changes --line-range=:500 $realpath
      fi'
 
-## Gh0stzk fzf-style
-zstyle ':fzf-tab:*' fzf-flags --style=full --height=45% --pointer '>' \
-    --color 'pointer:green:bold,bg+:-1:,fg+:green:bold,info:blue:bold,marker:yellow:bold,hl:gray:bold,hl+:yellow:bold' \
+# ── Global FZF-Tab Options ────────────────────────────────────────────────
+# Inherits FZF_DEFAULT_OPTS
+zstyle ':fzf-tab:*' fzf-flags \
+    --multi \
+    --bind 'space:toggle' \
+    --style=full \
+    --height=45% \
+    --pointer '>' \
+    --color 'pointer:green:bold' \
+    --color 'bg+:-1:,fg+:green:bold,hl+:yellow:bold,hl:gray:bold' \
+    --color 'info:blue:bold,marker:yellow:bold' \
     --input-label ' Search ' \
     --color 'input-border:blue,input-label:blue:bold' \
     --list-label ' Results ' \
     --color 'list-border:green,list-label:green:bold' \
     --preview-label ' Preview ' \
     --color 'preview-border:magenta,preview-label:magenta:bold' \
-    --gutter ' ' --color gutter:-1
+    --gutter ' ' \
+    --color 'gutter:-1'
+    
 zstyle ':fzf-tab:*' fzf-bindings 'space:accept'
 zstyle ':fzf-tab:*' accept-line enter
 

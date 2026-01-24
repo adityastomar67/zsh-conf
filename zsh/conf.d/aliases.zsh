@@ -355,20 +355,20 @@ fi
 ## not just at the beginning. They act like pipes.
 
 # Usage:  cat file.txt |G pattern
-alias -g '|G'="| grep"
+alias -g ':G'="| grep"
 
 # Usage:  long_command |L
-alias -g '|L'="| less"
+alias -g ':L'="| less"
 
 # Usage:  ls -la |H
-alias -g '|H'="| head"
-alias -g '|T'="| tail"
-alias -g '|S'="| sed"
+alias -g ':H'="| head"
+alias -g ':T'="| tail"
+alias -g ':S'="| sed"
 
 # Redirection Shortcuts
-alias -g 'NE'="2> /dev/null"        # Silence Errors
-alias -g 'NUL'="> /dev/null 2>&1"   # Silence Everything (Output + Errors)
-alias -g 'LL'="2>&1 | less"         # Pipe Output+Errors to Less
+alias -g ':NE'="2> /dev/null"        # Silence Errors
+alias -g ':NUL'="> /dev/null 2>&1"   # Silence Everything (Output + Errors)
+alias -g ':LL'="2>&1 | less"         # Pipe Output+Errors to Less
 
 
 # Suffix Aliases

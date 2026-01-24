@@ -72,13 +72,6 @@ export HOMEBREW_NO_ENV_HINTS=1
 ## Sets the preferred programs for editing text and viewing system manuals.
 
 # ------------------------------------------------------------------------------
-# Text Editor
-if is_installed nvim; then
-    export EDITOR="nvim"
-    export VISUAL="nvim"
-fi
-
-# ------------------------------------------------------------------------------
 # Sudo Prompt
 # Custom prompt when asking for root password (displays username).
 export SUDO_PROMPT="${COLOR[RED]}[NOTE]${COLOR[RESET]} Deploying root access for ${COLOR[YELLOW]}${COLOR[BOLD]}%u${COLOR[RESET]}, Password pls: "
@@ -88,6 +81,9 @@ export SUDO_PROMPT="${COLOR[RED]}[NOTE]${COLOR[RESET]} Deploying root access for
 # Priority: Neovim (Syntax Highlight + Nav) > Bat (Colors) > Vim > Less
 
 if is_installed nvim; then
+    export EDITOR="nvim"
+    export VISUAL="nvim"
+
     # Use Neovim as a pager:
     # --clean      : No plugins (fast startup)
     # -c ...       : Run Vim commands to optimize for reading (no line nums, etc)

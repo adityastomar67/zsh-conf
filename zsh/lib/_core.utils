@@ -45,7 +45,7 @@ autoload -Uz Defer && Defer
 
 # Load custom modules based on config flags
 if [[ "${ENABLE_MULTI_NEOVIM:l}" == "yes" ]]; then
-    autoload -Uz MultiVim && MultiVim
+    autoload -Uz MultiVim && MultiVim &!
 fi
 
 if [[ "${ENABLE_THEME_SH_INTEGRATION:l}" == "yes" ]]; then
@@ -345,9 +345,10 @@ function _safe_edit() {
 
 # Temporary Offline Config
 # Creates a placeholder file for non-git-tracked aliases if requested.
-local temp_file="$HOME/User-Overrides.zsh"
-if [[ ! -f "$temp_file" ]]; then
-    cat > "$temp_file" <<'EOF'
+(
+    local temp_file="$HOME/User-Overrides.zsh"
+    if [[ ! -f "$temp_file" ]]; then
+        cat > "$temp_file" <<'EOF'
 ## Put temporary/offline config here. Not tracked by Git.
 ## NOTE: This file is auto-created if missing. and will be auto-loaded.
 
@@ -365,12 +366,13 @@ if [[ ! -f "$temp_file" ]]; then
 # --------------------------------------------------------------------------
 
 EOF
-fi
+    fi
+) &!
 
 # Wallpaper Sync
 # Lazy load the wallpaper randomizer if the binary exists.
 if [[ "${ENABLE_WALLPAPER_SYNC:l}" == "yes" ]] && is_installed RandomWall; then
-    zsh-defer RandomWall
+    RandomWall &!
 fi
 
 

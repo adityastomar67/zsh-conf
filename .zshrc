@@ -120,7 +120,7 @@ fi
 ## Anything defined here will override the managed configuration above.
 ## Loads work-specific or private settings that are custom to every different user and ignored by Git.
 
-[[ -f "$HOME/User-Overrides.zsh" ]] && source "$HOME/User-Overrides.zsh" &> /dev/null
+[[ -f "$HOME/User-Overrides.zsh" ]] && source "$HOME/User-Overrides.zsh"
 
 
 # Benchmarking Report
