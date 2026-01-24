@@ -41,17 +41,6 @@
 emulate -L zsh
 setopt localoptions no_xtrace pipefail
 
-# UI Color Palette (High-fidelity Zsh formatting)
-local c_red="%F{196}"
-local c_green="%F{46}"
-local c_yellow="%F{226}"
-local c_blue="%F{39}"
-local c_grey="%F{240}"
-local c_white="%F{255}"
-local c_reset="%f"
-local c_bold="%B"
-local c_unbold="%b"
-
 # ------------------------------------------------------------------------------
 # 2. Input Validation
 
@@ -59,8 +48,8 @@ local search_pattern="$1"
 
 # Check for empty input
 if [[ -z "$search_pattern" ]]; then
-    print -P "${c_red}[ERROR]${c_reset} Usage: rm_pattern ${c_white}<filename_pattern>${c_reset}"
-    print -P "        Example: rm_pattern '*.log'"
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Usage: rm_pattern ${COLOR[WHITE]}<filename_pattern>${COLOR[RESET]}"
+    print "        Example: rm_pattern '*.log'"
     return 1
 fi
 
@@ -68,7 +57,7 @@ fi
 # We explicitly block patterns that could wipe the root, current, or parent
 # directories to prevent catastrophic data loss.
 if [[ "$search_pattern" == "/" || "$search_pattern" == "." || "$search_pattern" == ".." || "$search_pattern" == "*" ]]; then
-    print -P "${c_red}[FATAL]${c_reset} Pattern '${c_bold}$search_pattern${c_unbold}' is too broad/dangerous."
+    print "${COLOR[RED]}[FATAL]${COLOR[RESET]} Pattern '${COLOR[BOLD]}$search_pattern${COLOR[RESET]}' is too broad/dangerous."
     return 1
 fi
 
@@ -78,7 +67,7 @@ fi
 # We use a 'while true' loop so the user can jump to the [V]iewer
 # and return to the dashboard without exiting the function.
 while true; do
-    print -P -n "${c_blue}::${c_reset} Scanning for '${c_bold}$search_pattern${c_unbold}'..."
+    print -n "${COLOR[BLUE]}::${COLOR[RESET]} Scanning for '${COLOR[BOLD]}$search_pattern${COLOR[RESET]}'..."
 
     # Calculate exact number of matches
     local match_count
@@ -90,36 +79,36 @@ while true; do
 
     # Exit if no targets are found
     if [[ "$match_count" -eq 0 ]]; then
-        print -P "${c_green}✔${c_reset} No files found matching '${c_bold}$search_pattern${c_unbold}'."
+        print "${COLOR[GREEN]}✔${COLOR[RESET]} No files found matching '${COLOR[BOLD]}$search_pattern${COLOR[RESET]}'."
         return 0
     fi
 
     # ------------------------------------------------------------------------------
     # 4. Dashboard UI
 
-    print -P "${c_red}╭──────────────────────────────────────╮${c_reset}"
-    print -P "${c_red}│      🗑  DELETE PATTERN MATCHES      │${c_reset}"
-    print -P "${c_red}├──────────────────────────────────────┤${c_reset}"
-    print -P "${c_red}│${c_reset}  Pattern: ${c_white}$search_pattern${c_reset}"
-    print -P "${c_red}│${c_reset}  Matches: ${c_white}$match_count files${c_reset}"
-    print -P "${c_red}╰──────────────────────────────────────╯${c_reset}"
+    print "${COLOR[RED]}╭──────────────────────────────────────╮${COLOR[RESET]}"
+    print "${COLOR[RED]}│      🗑  DELETE PATTERN MATCHES      │${COLOR[RESET]}"
+    print "${COLOR[RED]}├──────────────────────────────────────┤${COLOR[RESET]}"
+    print "${COLOR[RED]}│${COLOR[RESET]}  Pattern: ${COLOR[WHITE]}$search_pattern${COLOR[RESET]}"
+    print "${COLOR[RED]}│${COLOR[RESET]}  Matches: ${COLOR[WHITE]}$match_count files${COLOR[RESET]}"
+    print "${COLOR[RED]}╰──────────────────────────────────────╯${COLOR[RESET]}"
 
     # Render a mini-preview of the first 3 files to give immediate context.
-    print -P "${c_grey}Preview:${c_reset}"
+    print "${COLOR[GREY]}Preview:${COLOR[RESET]}"
     find . -type f -name "$search_pattern" 2>/dev/null | head -n 3 | while read -r file; do
-        print -P "  ${c_red}×${c_reset} $file"
+        print "  ${COLOR[RED]}×${COLOR[RESET]} $file"
     done
 
     if (( match_count > 3 )); then
-        print -P "  ${c_grey}...and $((match_count - 3)) more.${c_reset}"
+        print "  ${COLOR[GREY]}...and $((match_count - 3)) more.${COLOR[RESET]}"
     fi
 
-    print -P "\n${c_yellow}⚠  Warning:${c_reset} This will ${c_bold}permanently delete${c_unbold} these files."
+    print "\n${COLOR[YELLOW]}⚠  Warning:${COLOR[RESET]} This will ${COLOR[BOLD]}permanently delete${COLOR[RESET]} these files."
 
     # ------------------------------------------------------------------------------
     # 5. Interactive Input
 
-    print -P -n "   [y]es  [N]o  [v]iew full list > "
+    print -n "   [y]es  [N]o  [v]iew full list > "
 
     local user_key
     read -k 1 user_key
@@ -128,9 +117,9 @@ while true; do
     case "$user_key" in
         [yY])
             # --- Execution Path ---
-            print -P -n "${c_blue}::${c_reset} Deleting..."
+            print -n "${COLOR[BLUE]}::${COLOR[RESET]} Deleting..."
             find . -type f -name "$search_pattern" -delete
-            print -P "\r\e[K   ${c_green}✔${c_reset} Successfully deleted ${c_bold}$match_count${c_unbold} files."
+            print "\r\e[K   ${COLOR[GREEN]}✔${COLOR[RESET]} Successfully deleted ${COLOR[BOLD]}$match_count${COLOR[RESET]} files."
             return 0
             ;;
 
@@ -156,7 +145,7 @@ while true; do
 
         *)
             # ---- SAFE: Abort on any other key (Default to No)
-            print -P "   ${c_grey}Operation aborted.${c_reset}"
+            print "   ${COLOR[GREY]}Operation aborted.${COLOR[RESET]}"
             return 0
             ;;
     esac

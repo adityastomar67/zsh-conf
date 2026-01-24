@@ -42,18 +42,8 @@
 emulate -L zsh
 setopt localoptions no_xtrace pipefail
 
-# UI Color Palette (High-fidelity Zsh formatting)
-local c_blue="%F{blue}"
-local c_green="%F{green}"
-local c_red="%F{red}"
-local c_yellow="%F{yellow}"
-local c_grey="%F{240}"
-local c_reset="%f"
-local c_bold="%B"
-local c_unbold="%b"
-
 # Header Output
-print -P "\n${c_blue}::${c_reset} ${c_bold}Initializing Project Repository${c_unbold}..."
+print "\n${COLOR[BLUE]}::${COLOR[RESET]} ${COLOR[BOLD]}Initializing Project Repository${COLOR[RESET]}..."
 
 # ------------------------------------------------------------------------------
 # 2. Pre-Flight Safety Checks
@@ -61,7 +51,7 @@ print -P "\n${c_blue}::${c_reset} ${c_bold}Initializing Project Repository${c_un
 # !!! CRITICAL: Check for existing Git metadata
 # We abort if .git exists to prevent overwriting history or remote pointers.
 if [[ -d ".git" ]]; then
-    print -P "${c_red}[ERROR]${c_reset} This directory is already a git repository." >&2
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} This directory is already a git repository." >&2
     return 1
 fi
 
@@ -70,7 +60,7 @@ fi
 
 # We force 'main' as the branch name to align with modern Git standards.
 git init --quiet --initial-branch=main
-print -P "   ${c_green}✔${c_reset} Git initialized (${c_grey}branch: main${c_reset})"
+print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Git initialized (${COLOR[GREY]}branch: main${COLOR[RESET]})"
 
 # ------------------------------------------------------------------------------
 # 4. Scaffolding Logic
@@ -82,9 +72,9 @@ print -P "   ${c_green}✔${c_reset} Git initialized (${c_grey}branch: main${c_r
 # Uses the current directory name as the primary H1 title.
 if [[ ! -f "README.md" ]]; then
     echo "# $(basename "$PWD")" > README.md
-    print -P "   ${c_green}✔${c_reset} Created README.md"
+    print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Created README.md"
 else
-    print -P "   ${c_yellow}⚠${c_reset} README.md exists (skipped)"
+    print "   ${COLOR[YELLOW]}⚠${COLOR[RESET]} README.md exists (skipped)"
 fi
 
 # B. Robust .gitignore
@@ -111,9 +101,9 @@ __pycache__/
 venv/
 .venv/
 EOF
-    print -P "   ${c_green}✔${c_reset} Created robust .gitignore"
+    print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Created robust .gitignore"
 else
-    print -P "   ${c_yellow}⚠${c_reset} .gitignore exists (skipped)"
+    print "   ${COLOR[YELLOW]}⚠${COLOR[RESET]} .gitignore exists (skipped)"
 fi
 
 # ------------------------------------------------------------------------------
@@ -121,7 +111,7 @@ fi
 
 git add .
 git commit -m "Initial Commit" --quiet
-print -P "   ${c_green}✔${c_reset} Initial commit created"
+print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Initial commit created"
 
 # ------------------------------------------------------------------------------
 # 6. Remote Integration
@@ -133,22 +123,22 @@ local remote_url="$1"
 # Scenario A: Explicit URL provided by user
 if [[ -n "$remote_url" ]]; then
     git remote add origin "$remote_url"
-    print -P "   ${c_green}✔${c_reset} Remote added: ${c_grey}$remote_url${c_reset}"
+    print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Remote added: ${COLOR[GREY]}$remote_url${COLOR[RESET]}"
 
-    print -P "   ${c_blue}::${c_reset} Pushing to origin..."
+    print "   ${COLOR[BLUE]}::${COLOR[RESET]} Pushing to origin..."
     # -u (set-upstream) is used to track the local branch to the remote
     if git push -u origin main --quiet; then
-        print -P "   ${c_green}🚀 SUCCESS: Repository is live!${c_reset}"
+        print "   ${COLOR[GREEN]}🚀 SUCCESS: Repository is live!${COLOR[RESET]}"
     else
-        print -P "   ${c_red}[ERROR]${c_reset} Push failed. Check URL or Auth."
+        print "   ${COLOR[RED]}[ERROR]${COLOR[RESET]} Push failed. Check URL or Auth."
     fi
 
 # Scenario B: Interactive GitHub Integration
 # If GitHub CLI ('gh') is found in the path, we offer a seamless cloud setup.
 elif (( $+commands[gh] )); then
     echo
-    print -P "${c_blue}::${c_reset} No remote URL provided."
-    print -P "${c_blue}::${c_reset} GitHub CLI detected. Create remote repo now? [y/N]"
+    print "${COLOR[BLUE]}::${COLOR[RESET]} No remote URL provided."
+    print "${COLOR[BLUE]}::${COLOR[RESET]} GitHub CLI detected. Create remote repo now? [y/N]"
 
     local ans
     read -k 1 ans
@@ -157,14 +147,14 @@ elif (( $+commands[gh] )); then
     if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
         # 'gh repo create' handles API calls, remote assignment, and the first push.
         gh repo create "$(basename "$PWD")" --source=. --public --push
-        print -P "\n   ${c_green}🚀 SUCCESS: GitHub repo created and pushed!${c_reset}"
+        print "\n   ${COLOR[GREEN]}🚀 SUCCESS: GitHub repo created and pushed!${COLOR[RESET]}"
     else
-        print -P "   ${c_grey}Skipping remote creation. Local repo ready.${c_reset}"
+        print "   ${COLOR[GREY]}Skipping remote creation. Local repo ready.${COLOR[RESET]}"
     fi
 
 # Scenario C: Local only fallback
 else
-    print -P "\n   ${c_green}✔${c_reset} Local repository ready."
-    print -P "   ${c_grey}(Run 'git remote add origin <url>' later)${c_reset}"
+    print "\n   ${COLOR[GREEN]}✔${COLOR[RESET]} Local repository ready."
+    print "   ${COLOR[GREY]}(Run 'git remote add origin <url>' later)${COLOR[RESET]}"
 fi
 echo

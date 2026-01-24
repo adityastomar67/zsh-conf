@@ -100,7 +100,8 @@
 
     # · Updates
     printf "   ${COLOR[DIM]}•${COLOR[RESET]} ${COLOR[BOLD]}Updates:\n${COLOR[RESET]}"
-    printf "     Keep this config fresh easily. Just run ${COLOR[YELLOW]}dotup -z${COLOR[RESET]} in the terminal. It handles git pulls and resets automatically.\n\n"
+    printf "     Keep this config fresh easily. Just run ${COLOR[YELLOW]}dotup -z${COLOR[RESET]} in the terminal. It handles git pulls and resets automatically.\n"
+    printf "     Also, the suggested font in the terminal is: ${COLOR[DIM]}${COLOR[MAGENTA]}JetBrains Mono Nerd Font${COLOR[RESET]}.\n\n"
 
     # 5. Footer & Help
     printf "   ${COLOR[DIM]}──────────────────────────────────────────────────────────────────────────────────────────────────────────────────${COLOR[RESET]}\n"

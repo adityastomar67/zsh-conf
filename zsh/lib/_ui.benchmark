@@ -47,7 +47,7 @@ if (( total_duration_ms < 40 )); then
     COL=${COLOR[GREEN]}
 
 elif (( total_duration_ms < 100 )); then
-    LABEL="⚡ Fast"
+    LABEL=" Fast"
     COL=${COLOR[CYAN]}
 
 elif (( total_duration_ms < 200 )); then

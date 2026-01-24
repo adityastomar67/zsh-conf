@@ -40,18 +40,9 @@
 emulate -L zsh
 setopt localoptions no_xtrace pipefail
 
-# UI Color Palette (High-fidelity Zsh codes)
-local c_blue="%F{39}"
-local c_green="%F{46}"
-local c_yellow="%F{226}"
-local c_grey="%F{240}"
-local c_reset="%f"
-local c_bold="%B"
-local c_unbold="%b"
-
 # Argument check: provide usage instructions if no input is detected.
 if [[ $# -eq 0 ]]; then
-    print -P "${c_yellow}Usage:${c_reset} mkfile <path/to/file> [file2 ...]"
+    print "${COLOR[YELLOW]}Usage:${COLOR[RESET]} mkfile <path/to/file> [file2 ...]"
     return 1
 fi
 
@@ -64,7 +55,7 @@ for file in "$@"; do
     # --- Safety Check: Directory mismatch ---
     # If the input ends in a slash, it's technically a directory path.
     if [[ "$file" == */ ]]; then
-            print -P "${c_yellow}⚠${c_reset} Skipped '$file' (It's a directory, use mkdir)"
+            print "${COLOR[YELLOW]}⚠${COLOR[RESET]} Skipped '$file' (It's a directory, use mkdir)"
             continue
     fi
 
@@ -76,7 +67,7 @@ for file in "$@"; do
     # If the target directory doesn't exist, create it silently.
     if [[ ! -d "$dir_path" ]]; then
         mkdir -p "$dir_path"
-        print -P "   ${c_grey}📂 Created directory structure: $dir_path${c_reset}"
+        print "   ${COLOR[GREY]}📂 Created directory structure: $dir_path${COLOR[RESET]}"
     fi
 
     # B. Existence Check
@@ -84,7 +75,7 @@ for file in "$@"; do
     # avoiding template overwriting to prevent data loss.
     if [[ -f "$file" ]]; then
         touch "$file"
-        print -P "   ${c_yellow}⚠${c_reset} File '${c_bold}$file${c_unbold}' already exists. Timestamp updated."
+        print "   ${COLOR[YELLOW]}⚠${COLOR[RESET]} File '${COLOR[BOLD]}$file${COLOR[RESET]}' already exists. Timestamp updated."
         continue
     fi
 
@@ -146,17 +137,17 @@ for file in "$@"; do
     # strings are correctly interpreted as actual line breaks in the file.
     if [[ -n "$template" ]]; then
         printf "%b\n" "$template" > "$file"
-        print -P "   ${c_green}✔${c_reset} Created '${c_bold}$file${c_unbold}' ${c_grey}(with $ext template)${c_reset}"
+        print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Created '${COLOR[BOLD]}$file${COLOR[RESET]}' ${COLOR[GREY]}(with $ext template)${COLOR[RESET]}"
     else
         touch "$file"
-        print -P "   ${c_green}✔${c_reset} Created '${c_bold}$file${c_unbold}' ${c_grey}(empty)${c_reset}"
+        print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Created '${COLOR[BOLD]}$file${COLOR[RESET]}' ${COLOR[GREY]}(empty)${COLOR[RESET]}"
     fi
 
     # Auto-Executable Logic
     # If the file was identified as a script, we apply the execution bit.
     if (( is_script_file )); then
         chmod +x "$file"
-        print -P "   ${c_blue}⚡${c_reset} Made executable (chmod +x)"
+        print "   ${COLOR[BLUE]}⚡${COLOR[RESET]} Made executable (chmod +x)"
     fi
 done
 

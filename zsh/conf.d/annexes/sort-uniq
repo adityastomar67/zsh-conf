@@ -42,43 +42,32 @@
 emulate -L zsh
 setopt localoptions no_xtrace pipefail
 
-# UI Color Palette (High-fidelity Zsh formatting)
-local c_blue="%F{39}"
-local c_green="%F{46}"
-local c_red="%F{196}"
-local c_yellow="%F{226}"
-local c_grey="%F{240}"
-local c_white="%F{255}"
-local c_reset="%f"
-local c_bold="%B"
-local c_unbold="%b"
-
 # ------------------------------------------------------------------------------
 # 2. Input Validation
 
 local source_file="$1"
 
 if [[ -z "$source_file" ]]; then
-    print -P "${c_red}[ERROR]${c_reset} Usage: sort_uniq <filename>"
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Usage: sort_uniq <filename>"
     return 1
 fi
 
 # Check if the file physically exists and is a regular file
 if [[ ! -f "$source_file" ]]; then
-    print -P "${c_red}[ERROR]${c_reset} File '${c_bold}$source_file${c_unbold}' not found."
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} File '${COLOR[BOLD]}$source_file${COLOR[RESET]}' not found."
     return 1
 fi
 
 # -s: checks if file size is greater than zero
 if [[ ! -s "$source_file" ]]; then
-    print -P "${c_yellow}⚠${c_reset} File is empty. Nothing to do."
+    print "${COLOR[YELLOW]}⚠${COLOR[RESET]} File is empty. Nothing to do."
     return 0
 fi
 
 # ------------------------------------------------------------------------------
 # 3. Pre-Processing Analysis
 
-print -P -n "${c_blue}::${c_reset} Analyzing..."
+print -n "${COLOR[BLUE]}::${COLOR[RESET]} Analyzing..."
 
 # Extract the line count before modification.
 # We use 'tr -d' to ensure no leading/trailing spaces interfere with math logic.
@@ -97,14 +86,14 @@ printf "\r\e[K"
 local tmp_output
 tmp_output=$(mktemp)
 
-print -P -n "${c_blue}::${c_reset} Sorting & Deduplicating..."
+print -n "${COLOR[BLUE]}::${COLOR[RESET]} Sorting & Deduplicating..."
 
 # ---- NOTE: LC_ALL=C Optimization
 # By default, 'sort' respects system locale (e.g., UTF-8 collation rules).
 # Forcing LC_ALL=C tells the binary to sort by raw byte values, which is
 # significantly faster and produces consistent results for unique IDs/logs.
 if ! LC_ALL=C sort -u "$source_file" > "$tmp_output"; then
-    print -P "\n${c_red}[ERROR]${c_reset} Sort failed. Original file untouched."
+    print "\n${COLOR[RED]}[ERROR]${COLOR[RESET]} Sort failed. Original file untouched."
     rm -f "$tmp_output"
     return 1
 fi
@@ -121,7 +110,7 @@ local removed_count=$(( lines_before - lines_after ))
 
 # If no duplicates were found, clean up and exit early to save IO
 if (( removed_count == 0 )); then
-    print -P "${c_green}✔${c_reset} File is already sorted and unique. No changes made."
+    print "${COLOR[GREEN]}✔${COLOR[RESET]} File is already sorted and unique. No changes made."
     rm -f "$tmp_output"
     return 0
 fi
@@ -140,14 +129,14 @@ mv "$tmp_output" "$source_file"
 # Calculate percentage of data reduction
 local reclaim_pct=$(( (removed_count * 100) / lines_before ))
 
-print -P "${c_blue}╭──────────────────────────────────────╮${c_reset}"
-print -P "${c_blue}│      📉  OPTIMIZATION REPORT         │${c_reset}"
-print -P "${c_blue}├──────────────────────────────────────┤${c_reset}"
-print -P "${c_blue}│${c_reset}  Before:  ${c_white}$lines_before lines${c_reset}"
-print -P "${c_blue}│${c_reset}  After:   ${c_white}$lines_after lines${c_reset}"
-print -P "${c_blue}│${c_reset}  Removed: ${c_red}-$removed_count lines ($reclaim_pct%)${c_reset}"
-print -P "${c_blue}╰──────────────────────────────────────╯${c_reset}"
+print "${COLOR[BLUE]}╭──────────────────────────────────────╮${COLOR[RESET]}"
+print "${COLOR[BLUE]}│      📉  OPTIMIZATION REPORT         │${COLOR[RESET]}"
+print "${COLOR[BLUE]}├──────────────────────────────────────┤${COLOR[RESET]}"
+print "${COLOR[BLUE]}│${COLOR[RESET]}  Before:  ${COLOR[WHITE]}$lines_before lines${COLOR[RESET]}"
+print "${COLOR[BLUE]}│${COLOR[RESET]}  After:   ${COLOR[WHITE]}$lines_after lines${COLOR[RESET]}"
+print "${COLOR[BLUE]}│${COLOR[RESET]}  Removed: ${COLOR[RED]}-$removed_count lines ($reclaim_pct%)${COLOR[RESET]}"
+print "${COLOR[BLUE]}╰──────────────────────────────────────╯${COLOR[RESET]}"
 
-print -P "   ${c_green}✔${c_reset} Optimized file saved to: ${c_bold}$source_file${c_unbold}"
-print -P "   ${c_grey}Backup saved to: $source_file.bak${c_reset}"
+print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Optimized file saved to: ${COLOR[BOLD]}$source_file${COLOR[RESET]}"
+print "   ${COLOR[GREY]}Backup saved to: $source_file.bak${COLOR[RESET]}"
 
