@@ -1,0 +1,275 @@
+#!/usr/bin/env zsh
+
+#    ░█▀▀░█░█░█▀▀░█░█░█░█░█▀▀░█░░░█░░
+#    ░▀▀█░█▀▄░█▀▀░█▀▄░█▀▄░█▀▀░█░░░█░░
+#    ░▀▀▀░▀░▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀▀▀░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   A "High-Fidelity" wrapper for the Git CLI.
+#   Updated with Zsh ANSI-C quoting to fix "033" output artifacts.
+# ------------------------------------------------------------------------------
+
+
+# 1. Environment Sandbox
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+
+# ── module: clone ────────────────────────────────────────────────────────────
+
+function _git_clone() {
+
+    local i_down=' '
+    local i_folder=' '
+
+    # 1. Argument Parsing
+    local args=("$@")
+    local repo_url=""
+    local target_dir=""
+
+    for arg in "${args[@]}"; do
+        [[ "$arg" =~ ^- ]] && continue
+        if [[ -z "$repo_url" ]]; then
+            repo_url="$arg"
+        else
+            target_dir="$arg"
+        fi
+    done
+
+    if [[ -z "$target_dir" && -n "$repo_url" ]]; then
+        target_dir=$(basename "$repo_url" .git)
+    fi
+
+    # 2. Render Header
+    printf "\n${COLOR[BLUE]}%s  CLONING REPOSITORY${COLOR[RESET]}\n" "$i_down"
+    printf "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}\n"
+    printf "Source:  ${COLOR[MAGENTA]}%s${COLOR[RESET]}\n" "$repo_url"
+    printf "Dest:    ${COLOR[DIM]}%s %s${COLOR[RESET]}\n\n" "$i_folder" "$target_dir"
+
+    # 3. Execution & Stream Coloring
+    # We pipe 2>&1 to capture output, and use sed to inject the raw escape bytes
+    command git clone --progress "$@" 2>&1 | sed \
+        -e "s/\(remote:\)/${COLOR[BLUE]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Cloning into\)/${COLOR[DIM]}${COLOR[BOLD]}\1${COLOR[RESET]}/g" \
+        -e "s/\(100%\)/${COLOR[GREEN]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Receiving objects:\)/${COLOR[MAGENTA]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Resolving deltas:\)/${COLOR[BLUE]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Updating files:\)/${COLOR[MAGENTA]}\1${COLOR[RESET]}/g"
+
+    local exit_code=${pipestatus[1]}
+
+    # 4. Render Footer
+    if [[ $exit_code -eq 0 ]]; then
+        printf "\n${COLOR[GREEN]}  SUCCESS${COLOR[RESET]} Repository ready.\n"
+        printf "${COLOR[DIM]}   Run:${COLOR[RESET]} \033[1mcd $PWD/%s${COLOR[RESET]}\n\n" "$target_dir"
+    else
+        printf "\n${COLOR[RED]}  FAILED${COLOR[RESET]} Clone encountered errors.\n\n"
+    fi
+
+    return $exit_code
+}
+
+# ── module: pull ─────────────────────────────────────────────────────────────
+
+function _git_pull() {
+
+    local i_down=' '
+    local i_branch=' '
+    local i_remote=' '
+
+    local current_branch=$(command git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    local remote_name=$(command git remote 2>/dev/null | head -n1)
+    [[ -z "$remote_name" ]] && remote_name="origin"
+
+    printf "\n${COLOR[BLUE]}%s  SYNCING CHANGES${COLOR[RESET]}\n" "$i_down"
+    printf "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}\n"
+    printf "Local:   ${COLOR[MAGENTA]}%s %s${COLOR[RESET]}\n" "$i_branch" "$current_branch"
+    printf "Remote:  ${COLOR[DIM]}%s %s${COLOR[RESET]}\n\n" "$i_remote" "$remote_name"
+
+    command git pull --progress "$@" 2>&1 | sed \
+        -e "s/\(Updating\)/${COLOR[BLUE]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Fast-forward\)/${COLOR[MAGENTA]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Unpacking objects:\)/${COLOR[DIM]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Already up to date.\)/${COLOR[GREEN]}\1${COLOR[RESET]}/g" \
+        -e "s/ \+/ ${COLOR[GREEN]}+${COLOR[RESET]}/g" \
+        -e "s/ -/ ${COLOR[RED]}-${COLOR[RESET]}/g" \
+        -e "s/\(files changed\)/${COLOR[RESET]}\033[1m\1${COLOR[RESET]}/g" \
+        -e "s/\(insertions\)/${COLOR[GREEN]}\1${COLOR[RESET]}/g" \
+        -e "s/\(deletions\)/${COLOR[RED]}\1${COLOR[RESET]}/g"
+
+    local exit_code=${pipestatus[1]}
+
+    if [[ $exit_code -eq 0 ]]; then
+        printf "\n${COLOR[GREEN]}  UPDATE COMPLETE${COLOR[RESET]}\n\n"
+    else
+        printf "\n${COLOR[RED]}  MERGE CONFLICT / ERROR${COLOR[RESET]}\n"
+        printf "${COLOR[DIM]}Check the output above for details.${COLOR[RESET]}\n\n"
+    fi
+
+    return $exit_code
+}
+
+# ── module: status ───────────────────────────────────────────────────────────
+
+function _git_status() {
+    if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        exit 1
+    fi
+
+    # We pipe `git status -sb` (short, branch info) into a robust AWK parser.
+    git status -sb | awk '
+BEGIN {
+    # ─── CONFIGURATION ──────────────────────────────────────────────
+
+    # Colors (ANSI Escape Codes)
+    C_RESET   = "\033[0m"
+    C_BOLD    = "\033[1m"
+    C_DIM     = "\033[2m"
+    C_RED     = "\033[31m"
+    C_GREEN   = "\033[32m"
+    C_YELLOW  = "\033[33m"
+    C_BLUE    = "\033[34m"
+    C_MAGENTA = "\033[35m"
+    C_CYAN    = "\033[36m"
+
+    # Icons (Nerd Fonts)
+    I_BRANCH  = ""
+    I_ARROW   = " "
+    I_ADDED   = ""
+    I_MOD     = ""
+    I_DEL     = ""
+    I_UNTRACK = ""
+    I_RENAME  = ""
+    I_FILE    = ""
+    I_CLEAN   = ""
+
+    total_files = 0
+}
+
+# ─── PROCESS BRANCH HEADER (## line) ────────────────────────────
+/^##/ {
+    # Strip the leading hash markers
+    sub(/^## /, "")
+    line = $0
+
+    # --- Complex Logic: Edge Case Handling ---
+    # Git output varies for new repos: "No commits yet on main..."
+    if (line ~ /Initial commit on/ || line ~ /No commits yet on/) {
+        sub(/Initial commit on /, "", line)
+        sub(/No commits yet on /, "", line)
+    }
+
+    # --- Ahead / Behind Logic ---
+    # Extracts text like "[ahead 1, behind 2]" and colorizes arrows
+    bracket_info = ""
+    if (match(line, /\[.*\]/)) {
+        bracket_info = substr(line, RSTART, RLENGTH)
+
+        # Colorize the numbers and arrows
+        gsub(/ahead/,  C_GREEN  "⇡" C_RESET, bracket_info)
+        gsub(/behind/, C_RED    "⇣" C_RESET, bracket_info)
+
+        # Remove the bracket info from the main line so we can parse branch names
+        sub(/\[.*\]/, "", line)
+    }
+
+    # Split: "main...origin/main"
+    # We use explicit regex escape for dots
+    split(line, branches, "\\.\\.\\.")
+    local_br = branches[1]
+    remote_br = branches[2]
+
+    # Trim trailing whitespace (artifact of removing bracket info)
+    gsub(/[[:space:]]+$/, "", local_br)
+
+    # --- Render Header ---
+    printf "\n  " C_MAGENTA C_BOLD "%s %s" C_RESET, I_BRANCH, local_br
+
+    if (remote_br != "") {
+        printf " " C_DIM "%s" C_RESET " " C_BLUE "%s" C_RESET, I_ARROW, remote_br
+    }
+
+    if (bracket_info != "") {
+        printf " %s", bracket_info
+    }
+
+    printf "\n  " C_DIM "────────────────────────────────────────────" C_RESET "\n"
+    next
+}
+
+# ─── PROCESS FILE STATUS ────────────────────────────────────────
+{
+    # $1 is the status code (e.g., "M", "??", "A")
+    # We capture it, then clear it to reconstruct the filename from the rest of the line
+    status_code = $1
+    $1 = ""; sub(/^ /, "", $0) # Remove leading space left by $1
+    filename = $0
+
+    icon  = I_FILE
+    color = C_RESET
+
+    # --- Logic: Status Mapping ---
+    # We use regex to match "M " (Staged) vs " M" (Unstaged) if needed,
+    # but here we simplify based on general category.
+
+    if (status_code == "A" || status_code == "AM" || status_code == "AD") {
+        icon = I_ADDED; color = C_GREEN
+    } else if (status_code == "M" || status_code == "MM") {
+        icon = I_MOD; color = C_YELLOW
+    } else if (status_code == "D" || status_code == "RD") {
+        icon = I_DEL; color = C_RED
+    } else if (status_code == "R" || status_code == "RM") {
+        icon = I_RENAME; color = C_MAGENTA
+    } else if (status_code == "??") {
+        icon = I_UNTRACK; color = C_CYAN
+    } else if (status_code == "UU") {
+        icon = ""; color = C_RED # Unmerged / Conflict
+    }
+
+    printf "    %s%s%s  %s\n", color, icon, C_RESET, filename
+    total_files++
+}
+
+# ─── SUMMARY FOOTER ─────────────────────────────────────────────
+END {
+    if (total_files == 0) {
+        printf "    " C_GREEN "%s" C_RESET "  " C_DIM "No changes. Working tree clean." C_RESET "\n", I_CLEAN
+    } else {
+        printf "\n    " C_DIM "(%d files changed)" C_RESET "\n", total_files
+    }
+    printf "\n"
+}
+'
+}
+
+
+# ── wrapper engine ───────────────────────────────────────────────────────────
+
+# 1. TTY Guard (Don't mess with pipes)
+if [[ ! -t 1 ]]; then
+    command git "$@"
+    return
+fi
+
+# 2. Command Interceptor
+local cmd="$1"
+
+case "$cmd" in
+    status|st|state)
+        _git_status
+        ;;
+    clone|down)
+        shift
+        _git_clone "$@"
+        ;;
+    pull|up)
+        shift
+        _git_pull "$@"
+        ;;
+    *)
+        command git "$@"
+        ;;
+esac
+
