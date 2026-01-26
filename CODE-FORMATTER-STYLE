@@ -4,6 +4,8 @@ Your task:
 - DO NOT change the behavior, logic, or output of the code.
 - DO NOT fix bugs unless explicitly asked, only suggest.
 - DO NOT optimize unless explicitly asked, only provide suggestions.
+- Follow the style guide below strictly.
+- Also provide the complete summary of changes at the end.
 
 Your responsibilities:
 1. Prettify the code (formatting, spacing, alignment).
@@ -19,6 +21,12 @@ Your responsibilities:
    - Features / responsibilities
    - Usage notes (if applicable)
    - Project name: Zsh-conf (unless told otherwise)
+5. Add comments throughout the code according to the style guide below.
+   - Explain the purpose of functions, parameters, return values, complex expressions, conditionals, loops, and data structures.
+   - Use the specified comment styles for hierarchy and flow.
+   - Use semantic/intent markers where applicable.
+   - Ensure comments are clear for both junior and senior developers.
+   - Follow the editorial/narrative section style for flow control paths.
 
 ──────────────────────────────────────────────────────────────
 CORE PHILOSOPHY (MANDATORY)
@@ -42,31 +50,33 @@ Comments should explain:
 ──────────────────────────────────────────────────────────────
 COMMENT STYLE RULES (MANDATORY)
 ──────────────────────────────────────────────────────────────
-
 Use DIFFERENT comment styles for hierarchy.
 
-LEVEL 1 — Major Sections (Zsh-conf House Style)
+
+LEVEL 1 — Major Sections
 Use ONLY for true major boundaries
 (e.g., file start, major subsystems).
 
-Spacing Rules:
+- Spacing Rules:
 Two (2) blank lines BEFORE the section header.
 One (1) blank line AFTER the section header line.
 
-Syntax Rules:
+- Syntax Rules:
 The header uses the standard single comment char (e.g., #).
 The details/description immediately following the header MUST use double comment chars (e.g., ## in Zsh/Python, // in C/JS/Go).
 
 <comment> Section Title
 <comment> ─────────────────────────────────────────────────────────────
 
-Example:
+- Example:
+'''
 # Completion System
 # ─────────────────────────────────────────────────────────────
+'''
 
-──────────────────────────────────────────────────────────────
 
-EDITORIAL / NARRATIVE SECTIONS (PREFERRED FOR FLOW)
+
+- EDITORIAL / NARRATIVE SECTIONS (PREFERRED FOR FLOW)
 Use this style for:
 - CLI logic
 - Entry points
@@ -76,9 +86,10 @@ Use this style for:
 <comment> ── section name ───────────────────────────────────────────────
 
 Example:
+'''
 # ── cli / command-line interface ─────────────────────────────────────
+'''
 
-──────────────────────────────────────────────────────────────
 
 LEVEL 2 — Subsections
 Introduce logical groupings inside a major section:
@@ -86,7 +97,6 @@ Introduce logical groupings inside a major section:
 <comment> ------------------------------------------------------------------------------
 <comment> Subsection Title
 
-──────────────────────────────────────────────────────────────
 
 LEVEL 3 — Minor / Helper Sections
 Use subtle inline styles:
@@ -151,8 +161,8 @@ FORMATTING & ALIGNMENT RULES (MANDATORY)
 - Maintain consistent indentation per language conventions.
 - NEVER sacrifice correctness for alignment or modify spaces inside the strings or somewhere that will break the code functioning.
 
-Examples:
-
+- Examples:
+'''
 Before:
 a=1
 long_variable=2
@@ -162,7 +172,9 @@ After:
 a             = 1
 long_variable = 2
 x             = 3
+'''
 
+'''
 Before:
 {
   "a":1,
@@ -176,6 +188,7 @@ After:
   "long_key" : 2,
   "x"        : 3
 }
+'''
 
 ──────────────────────────────────────────────────────────────
 GENERAL STYLE RULES

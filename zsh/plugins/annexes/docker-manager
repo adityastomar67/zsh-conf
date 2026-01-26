@@ -1,0 +1,138 @@
+#!/usr/bin/env zsh
+
+# ─────────────────────────────────────────────────────────────────────────────
+# File: docker_fzf_manager.zsh
+# Purpose: Provides an interactive terminal dashboard for Docker containers.
+# Problem: Managing Docker containers via CLI often involves repetitive typing
+#          of IDs and memorizing specific subcommands.
+# Features:
+#   - Interactive container selection with live logs preview.
+#   - Context-aware action menu (Logs, Attach, Start, Stop, etc.).
+#   - Seamless integration with Zsh Line Editor (ZLE) to populate commands.
+#   - Visual indicators for container status.
+#
+# Usage:
+#   1. Source this file in your .zshrc.
+#   2. Press Alt+D (or mapped key) to invoke the widget.
+#
+# Project: Zsh-conf
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── cli / command-line interface ─────────────────────────────────────────────
+
+#region Docker Widget
+
+##
+# interactive Docker container manager.
+#
+# Displays a list of all containers (running and stopped). Upon selection,
+# offers a menu of actions. The final command is pushed to the Zsh
+# command buffer for execution.
+#
+# @return Void (Modifies ZLE BUFFER).
+##
+# ── initialization & guard ───────────────────────────────────────────────
+
+# Check if the Docker daemon is actually running before proceeding.
+# We redirect output to /dev/null because we only care about the exit code.
+if ! docker ps > /dev/null 2>&1; then
+    # Use zle -M to print a message below the current command line
+    # without disrupting the prompt.
+    zle -M "⚠️  Docker is not running."
+    return
+fi
+
+local selected_line
+local container_id
+local selected_action_raw
+local final_command
+
+# ── container selection ──────────────────────────────────────────────────
+
+# 1. List all containers with specific columns (ID, Names, Image, Status).
+# 2. Pipe to FZF for fuzzy searching.
+# 3. Show a preview window with logs (trying 'bat' for color, falling back to 'tail').
+selected_line=$(docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}" | \
+    fzf --header-lines=1 \
+        --prompt="🐳 Container > " \
+        --height=80% \
+        --preview "docker logs --tail 50 {1} 2>&1 | bat --color=always --style=numbers --language=log 2>/dev/null || docker logs --tail 50 {1}" \
+        --preview-window="bottom:50%:wrap" \
+        --pointer="➜"
+)
+
+# ── id extraction ────────────────────────────────────────────────────────
+
+# Extract the Container ID (first column) from the selected line.
+# If the user pressed ESC, this variable will be empty.
+container_id=$(echo "$selected_line" | awk '{print $1}')
+
+# Only proceed if a container was actually selected.
+if [[ -n "$container_id" ]]; then
+
+    # ── action selection ─────────────────────────────────────────────────
+
+    # Define the menu map.
+    # Format: "Display Label : Command String"
+    local menu_options=(
+        "📜 Logs (Follow)   : docker logs -f"
+        "💻 Attach (Bash)   : docker exec -it /bin/bash"
+        "🐚 Attach (Sh)     : docker exec -it /bin/sh"
+        "▶️  Start          : docker start"
+        "yw  Stop           : docker stop"
+        "🔄 Restart         : docker restart"
+        "🗑️  Remove         : docker rm"
+        "🔍 Inspect         : docker inspect"
+    )
+
+    # Pipe options to fzf.
+    # We use awk -F ':' to split by colon and take the second part (the command).
+    # We use xargs to trim leading/trailing whitespace from the command.
+    selected_action_raw=$(printf "%s\n" "${menu_options[@]}" | fzf \
+        --prompt="⚡ Action for $container_id > " \
+        --height=40% \
+        --layout=reverse \
+        | awk -F ':' '{print $2}' | xargs)
+
+    # ── command buffer construction ──────────────────────────────────────
+
+    if [[ -n "$selected_action_raw" ]]; then
+
+        # ---- NOTE: Action Handling
+        # Docker 'exec' commands require the syntax: `docker exec [flags] CONTAINER COMMAND`.
+        # Other commands (start/stop) use: `docker command [flags] CONTAINER`.
+        # We must detect if we are doing an 'exec' to inject the ID in the middle.
+
+        if [[ "$selected_action_raw" == *"exec"* ]]; then
+            # Split the raw string to insert the ID.
+            # Example raw: "docker exec -it /bin/bash"
+            # Base: "docker exec -it"
+            # Shell: "/bin/bash"
+            local base_cmd  = "${selected_action_raw% /*}"
+            local shell_cmd = "${selected_action_raw##* }"
+
+            # Construct: docker exec -it <ID> /bin/bash
+            BUFFER="$base_cmd $container_id $shell_cmd"
+        else
+            # Standard commands: docker start <ID>
+            BUFFER="$selected_action_raw $container_id"
+        fi
+
+        # Tell ZLE to accept the current line (simulate pressing Enter).
+        zle accept-line
+    fi
+fi
+
+# Repaint the prompt to ensure no visual artifacts remain.
+zle reset-prompt
+
+
+#endregion
+
+# ── bindings ─────────────────────────────────────────────────────────────────
+
+# Register the function as a ZLE widget.
+zle -N docker_container_manager
+
+# Bind to Alt+D (Meta+D).
+bindkey '^[d' docker_container_manager

@@ -1,44 +1,100 @@
-function fzf_docker_rm_container() {
-    # 1. Validation
-    if ! command -v docker >/dev/null; then
-        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Docker is not installed or not in PATH."
-        return 1
+#!/usr/bin/env zsh
+
+# ─────────────────────────────────────────────────────────────────────────────
+# File: docker_cleanup.zsh
+# Purpose: Provides an interactive interface to bulk-remove Docker containers.
+# Problem: Deleting multiple containers requires manual ID copying or complex
+#          one-liners. This provides a visual multi-select interface.
+# Features:
+#   - Multi-selection support (Tab/Shift-Tab).
+#   - Live log preview using 'bat' (with color) or 'tail'.
+#   - Safety confirmation step before deletion.
+#   - Automatic column alignment for readability.
+#
+# Usage:
+#   1. Ensure global associative array 'COLOR' is defined (e.g., in .zshrc).
+#   2. Run 'interactive_container_remove'.
+#
+# Project: Zsh-conf
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── cli / interactive utilities ──────────────────────────────────────────────
+
+#region Container Cleanup
+
+##
+# Interactive Docker container removal utility.
+#
+# Launches an FZF interface listing all containers. Allows the user to select
+# multiple containers via TAB. prompts for confirmation before force-removing
+# the selected instances.
+#
+# @global COLOR (Associative Array): Used for terminal output coloring.
+# @return 0 on success/cancel, 1 if Docker is missing.
+##
+
+# ── validation ───────────────────────────────────────────────────────────
+
+# Check if the docker binary exists in the system PATH.
+# We redirect stdout to null; we only care about the exit status.
+if ! command -v docker >/dev/null; then
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Docker is not installed or not in PATH."
+    return 1
+fi
+
+# ── configuration ────────────────────────────────────────────────────────
+
+# 1. Local Override for FZF Options.
+#    We append to the existing default options to ensure we don't break
+#    global theming, but we enforce Tab/Shift-Tab for multi-selection.
+local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+
+local selected_rows
+local -a container_ids
+
+# ── selection logic ──────────────────────────────────────────────────────
+
+# 1. List containers with specific columns for the table view.
+# 2. Pipe into FZF with multi-select enabled.
+# 3. Use 'bat' for syntax-highlighted log previews, falling back to 'tail'.
+selected_rows=$(docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Image}}" | \
+    fzf --multi \
+        --header-lines=1 \
+        --prompt="🐳 Rm Container > " \
+        --height=60% \
+        --preview-window="right:65%:wrap:nohidden" \
+        --preview 'docker logs --tail 50 {1} 2>&1 | bat --color=always --style=numbers --language=log 2>/dev/null || tail -n 50'
+)
+
+# ── execution logic ──────────────────────────────────────────────────────
+
+# Proceed only if the user selected at least one line (variable is not empty).
+if [[ -n "$selected_rows" ]]; then
+
+    # Parse the output to get just the Container IDs (Column 1).
+    # We use awk to print the first column and store it in an array.
+    container_ids=($(echo "$selected_rows" | awk '{print $1}'))
+
+    # ---- UI: Confirmation Prompt
+    print "\n${COLOR[YELLOW]}You are about to delete ${#container_ids[@]} container(s):${COLOR[RESET]}"
+    print "${COLOR[RED]}${container_ids[*]}${COLOR[RESET]}"
+
+    # Print the prompt without a newline (-n) so the cursor stays on the same line.
+    # %b handles echo escape sequences if necessary.
+    print -n "\n${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]}%b "
+
+    # 'read -q' reads a single character. Returns 0 (true) if 'y' or 'Y'.
+    if read -q user_confirmed; then
+        echo # Print a newline to clean up the terminal output
+
+        # Force remove (-f) the selected containers.
+        docker rm -f "${container_ids[@]}"
+        print "\n${COLOR[GREEN]}✔ Containers deleted.${COLOR[RESET]}"
+    else
+        echo # Print a newline
+        print "\n${COLOR[GREEN]}::${COLOR[RESET]} Cancelled."
     fi
+fi
 
-    # 2. Local Override (Fixes Tab Selection & Preview)
-    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
 
-    # 3. Get List (Formatted nicely)
-    #    We use --format table so columns align perfectly
-    local containers
-    containers=$(docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Image}}" | \
-        fzf --multi \
-            --header-lines=1 \
-            --prompt="🐳 Rm Container > " \
-            --height=60% \
-            \
-            # PREVIEW: Shows container logs (colored)
-            --preview-window="right:65%:wrap:nohidden" \
-            --preview 'docker logs --tail 50 {1} 2>&1 | bat --color=always --style=numbers --language=log 2>/dev/null || tail -n 50'
-    )
-
-    # 4. Execution
-    if [[ -n "$containers" ]]; then
-        # Extract just the Container IDs (Column 1)
-        local -a ids
-        ids=($(echo "$containers" | awk '{print $1}'))
-
-        print "\n${COLOR[YELLOW]}You are about to delete ${#ids[@]} container(s):${COLOR[RESET]}"
-        print "${COLOR[RED]}${ids[*]}${COLOR[RESET]}"
-
-        print -n "\n${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]}%b "
-        if read -q choice; then
-            echo
-            docker rm -f "${ids[@]}"
-            print "\n${COLOR[GREEN]}✔ Containers deleted.${COLOR[RESET]}"
-        else
-            echo
-            print "\n${COLOR[GREEN]}::${COLOR[RESET]} Cancelled."
-        fi
-    fi
-}
+#endregion

@@ -1,45 +1,100 @@
-function fzf_docker_rm_image() {
-    # 1. Validation
-    if ! command -v docker >/dev/null; then
-        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Docker is not installed."
-        return 1
+#!/usr/bin/env zsh
+
+# ─────────────────────────────────────────────────────────────────────────────
+# File: docker_image_cleanup.zsh
+# Purpose: Provides an interactive interface to bulk-remove Docker images.
+# Problem: identifying and deleting multiple images (dangling or old) often
+#          requires manual ID lookup and repetitive typing.
+# Features:
+#   - Multi-selection support (Tab/Shift-Tab).
+#   - Insightful preview showing image history/layers.
+#   - Safety confirmation step before deletion.
+#   - "Force" removal handling for images with existing tags.
+#
+# Usage:
+#   1. Ensure global associative array 'COLOR' is defined (e.g., in .zshrc).
+#   2. Run 'interactive_image_remove'.
+#
+# Project: Zsh-conf
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── cli / interactive utilities ──────────────────────────────────────────────
+
+#region Image Cleanup
+
+##
+# Interactive Docker image removal utility.
+#
+# Launches an FZF interface listing all local images. Allows the user to select
+# multiple images via TAB. Prompts for confirmation before force-removing
+# the selected IDs.
+#
+# @global COLOR (Associative Array): Used for terminal output coloring.
+# @return 0 on success/cancel, 1 if Docker is missing.
+##
+
+# ── validation ───────────────────────────────────────────────────────────
+
+# Check if the docker binary exists in the system PATH.
+if ! command -v docker >/dev/null; then
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Docker is not installed."
+    return 1
+fi
+
+# ── configuration ────────────────────────────────────────────────────────
+
+# 1. Local Override for FZF Options.
+#    We append to the existing default options to ensure we don't break
+#    global theming, but we enforce Tab/Shift-Tab for multi-selection.
+local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
+
+local selected_rows
+local -a image_ids
+
+# ── selection logic ──────────────────────────────────────────────────────
+
+# 1. List images with specific columns (ID, Repository, Tag, Size, Age).
+# 2. Pipe into FZF with multi-select enabled.
+# 3. Use 'docker history' for the preview to see layers, falling back to 'inspect'.
+selected_rows=$(docker images --format "table {{.ID}}\t{{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" | \
+    fzf --multi \
+        --header-lines=1 \
+        --prompt="💾 Rm Image > " \
+        --height=60% \
+        --preview-window="right:65%:wrap:nohidden" \
+        --preview 'docker history {1} | head -n 20 | bat --color=always --style=plain --language=dockerfile 2>/dev/null || docker inspect {1}'
+)
+
+# ── execution logic ──────────────────────────────────────────────────────
+
+# Proceed only if the user selected at least one line.
+if [[ -n "$selected_rows" ]]; then
+
+    # Parse the output to get just the Image IDs (Column 1).
+    # We use awk to print the first column and store it in an array.
+    image_ids=($(echo "$selected_rows" | awk '{print $1}'))
+
+    # ---- UI: Confirmation Prompt
+    print "\n${COLOR[YELLOW]}You are about to delete ${#image_ids[@]} image(s):${COLOR[RESET]}"
+    print "${COLOR[RED]}${image_ids[*]}${COLOR[RESET]}"
+
+    # Print the prompt without a newline (-n).
+    print -n "\n${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]}%b "
+
+    # 'read -q' reads a single character (y/n).
+    if read -q user_confirmed; then
+        echo # Print a newline to clean up terminal output
+
+        # ---- NOTE: Force Removal
+        # We use 'rmi -f' to ensure images are deleted even if they have
+        # multiple tags pointing to the same ID, or if they are intermediate
+        # images (though this acts on IDs).
+        docker rmi -f "${image_ids[@]}"
+        print "\n${COLOR[GREEN]}✔ Images deleted.${COLOR[RESET]}"
+    else
+        echo # Print a newline
+        print "\n${COLOR[GREEN]}::${COLOR[RESET]} Cancelled."
     fi
+fi
 
-    # 2. Local Override
-    local FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} --bind 'tab:toggle+down,shift-tab:toggle+up'"
-
-    # 3. Get List
-    #    We show ID, Repo, Tag, and Size
-    local images
-    images=$(docker images --format "table {{.ID}}\t{{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" | \
-        fzf --multi \
-            --header-lines=1 \
-            --prompt="💾 Rm Image > " \
-            --height=60% \
-            \
-            # PREVIEW: Shows image history/layers
-            --preview-window="right:65%:wrap:nohidden" \
-            --preview 'docker history {1} | head -n 20 | bat --color=always --style=plain --language=dockerfile 2>/dev/null || docker inspect {1}'
-    )
-
-    # 4. Execution
-    if [[ -n "$images" ]]; then
-        # Extract just the Image IDs (Column 1)
-        local -a ids
-        ids=($(echo "$images" | awk '{print $1}'))
-
-        print "\n${COLOR[YELLOW]}You are about to delete ${#ids[@]} image(s):${COLOR[RESET]}"
-        print "${COLOR[RED]}${ids[*]}${COLOR[RESET]}"
-
-        print -n "\n${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]}%b "
-        if read -q choice; then
-            echo
-            # We use -f (force) to ensure it deletes even if untagged
-            docker rmi -f "${ids[@]}"
-            print "\n${COLOR[GREEN]}✔ Images deleted.${COLOR[RESET]}"
-        else
-            echo
-            print "\n${COLOR[GREEN]}::${COLOR[RESET]} Cancelled."
-        fi
-    fi
-}
+#endregion
