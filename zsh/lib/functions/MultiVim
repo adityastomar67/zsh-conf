@@ -1,90 +1,169 @@
 #!/usr/bin/env zsh
-# ------------------------[  MULTI-NEOVIM SWITCHER  ]------------------------ #
+# ─────────────────────────────────────────────────────────────────────────────
+# File: MultiVim
+# Purpose: Manages and switches between multiple Neovim configurations.
+# Problem: Neovim only supports one init.lua by default. Using NVIM_APPNAME
+#          allows multiple "distros" (LazyVim, AstroNvim, etc.), but switching
+#          between them manually is tedious.
+# Features:
+#   - Wraps the standard 'nvim' command.
+#   - Flag detection: Maps arguments (e.g., 'nvim --lazy') to specific configs.
+#   - Interactive Menu: Uses FZF to select a profile if no args are passed.
+#   - Auto-Installation: Background cloning of defined distros if missing.
+#
+# Usage:
+#   1. Define 'typeset -A NVIM_DISTROS' in your .zshrc before sourcing this.
+#      Format: NVIM_DISTROS[name]="--flag|https://github.com/repo.git"
+#   2. Source this file.
+#   3. Run 'nvim' for menu, or 'nvim --flag' for direct access.
+#
+# Project: Zsh-conf
+# ─────────────────────────────────────────────────────────────────────────────
 
-# ........................[  1. Initialization  ]........................ #
+# ── cleanup ──────────────────────────────────────────────────────────────────
 
-if (( ${#NVIM_DISTROS} == 0 )); then return; fi
-if ! (( $+commands[git] )); then print -P "%F{yellow}[WARN] MultiVim missing git.%f"; return; fi
+# Remove existing aliases to ensure the function definition takes precedence.
+# We redirect error output to /dev/null in case the alias doesn't exist.
+unalias nvim 2>/dev/null
 
-# RESOLVE BASE DIRECTORY
-# Use the user variable, or fallback to standard XDG config location
-local base_dir="${NVIM_CONFIG_BASE:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+# ── core logic ───────────────────────────────────────────────────────────────
 
-# ........................[  2. Auto-Install  ]........................ #
+#region Main Wrapper
 
-for distro in "${(@k)NVIM_DISTROS}"; do
-    local config_path="$base_dir/$distro"
-    local data="${NVIM_DISTROS[$distro]}"
-    local repo_url="${data#*|}"
-
-    if [[ ! -d "$config_path" ]]; then
-        print -P "%F{blue}:: Cloning $distro into $config_path...%f" >/dev/null 2>&1
-        # Create parent dir if it doesn't exist (e.g. nvim-profiles)
-        mkdir -p "$base_dir"
-        git clone --quiet --depth 1 "$repo_url" "$config_path" >/dev/null 2>&1
-    fi
-done
-
-# ........................[  3. Switcher Function  ]........................ #
-
+##
+# The primary Neovim wrapper function.
+#
+# Intercepts the 'nvim' command to check for profile-switching flags or
+# to display an interactive menu. Falls back to standard Neovim behavior
+# if a file argument is provided or a profile is selected.
+#
+# @global NVIM_DISTROS (Associative Array): Map of config names to flags/URLs.
+# @global NVIM_CONFIG_BASE (String): Optional override for config location.
+##
 function nvim() {
-    local nvim_version=$(command nvim --version | head -n1 | cut -d ' ' -f2)
-    if [[ "$nvim_version" < "v0.9" ]]; then
-        command nvim "$@"
-        return
-    fi
+    # ── initialization ───────────────────────────────────────────────────────
 
-    # Helper to run Neovim with the correct environment
-    # If base_dir is custom, we must override XDG_CONFIG_HOME
-    function _run_nvim_distro() {
-        local app_name="$1"
-        shift
+    # Resolve the configuration root directory.
+    # Priority: Env Var -> XDG Config -> Home Config.
+    local config_base_dir="${NVIM_CONFIG_BASE:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 
-        if [[ "$base_dir" == "${XDG_CONFIG_HOME:-$HOME/.config}" ]]; then
-            # Standard Path: Just use APPNAME
-            NVIM_APPNAME="$app_name" command nvim "$@"
+    # ── helper definition ────────────────────────────────────────────────────
+
+    ##
+    # Launches Neovim with the specified application name (profile).
+    #
+    # @param $1 (String): The profile name (directory name).
+    # @param $@ (Args):   Remaining arguments to pass to Neovim.
+    ##
+    function _launch_neovim_profile() {
+        local profile_name="$1"
+        shift # Remove profile name from arguments
+
+        # If we are using the standard XDG location, just set NVIM_APPNAME.
+        if [[ "$config_base_dir" == "${XDG_CONFIG_HOME:-$HOME/.config}" ]]; then
+            NVIM_APPNAME="$profile_name" command nvim "$@"
         else
-            # Custom Path: Override Config Home + APPNAME
-            XDG_CONFIG_HOME="$base_dir" NVIM_APPNAME="$app_name" command nvim "$@"
+            # If using a custom base, we must override XDG_CONFIG_HOME for the session.
+            XDG_CONFIG_HOME="$config_base_dir" NVIM_APPNAME="$profile_name" command nvim "$@"
         fi
     }
 
-    # ---------------------------------------------------------
-    # MODE A: CLI Arguments
-    # ---------------------------------------------------------
-    if [[ $# -gt 0 && ! -f "$1" && ! -d "$1" ]]; then
-        local arg="$1"
-        for distro in "${(@k)NVIM_DISTROS}"; do
-            local data="${NVIM_DISTROS[$distro]}"
-            local flag="${data%%|*}"
+    # ── mode a: flag detection ───────────────────────────────────────────────
 
-            if [[ "$arg" == "$flag" ]]; then
-                shift
-                _run_nvim_distro "$distro" "$@"
+    # Condition: Arguments exist, AND the first arg is NOT a file/directory.
+    # This implies the user might be passing a flag like --lazy or --astro.
+    if [[ $# -gt 0 && ! -f "$1" && ! -d "$1" ]]; then
+        local input_arg="$1"
+        local distro_name
+        local distro_data
+        local distro_flag
+
+        # Iterate over defined distros to find a matching flag.
+        # ${(@k)NVIM_DISTROS} expands to the list of keys (distro names).
+        for distro_name in "${(@k)NVIM_DISTROS}"; do
+            distro_data = "${NVIM_DISTROS[$distro_name]}"
+
+            # Parsing: "flag|url" -> Take everything before the first pipe.
+            distro_flag = "${distro_data%%|*}"
+
+            if [[ "$input_arg" == "$distro_flag" ]]; then
+                shift # Remove the flag from arguments
+                _launch_neovim_profile "$distro_name" "$@"
                 return
             fi
         done
     fi
 
-    # ---------------------------------------------------------
-    # MODE B: Interactive Menu
-    # ---------------------------------------------------------
-    if ! (( $+commands[fzf] )); then
-        command nvim "$@"
+    # ── mode b: interactive menu ─────────────────────────────────────────────
+
+    # Condition: No arguments provided AND 'fzf' is installed.
+    if [[ $# -eq 0 ]] && (( $+commands[fzf] )); then
+
+        # Prepare menu options (Default + Distro Keys).
+        local menu_options=("default" "${(@k)NVIM_DISTROS}")
+        local selected_profile
+
+        # Launch FZF selector.
+        selected_profile=$(printf "%s\n" "${menu_options[@]}" | fzf \
+            --prompt=" Neovim Config ($config_base_dir)  " \
+            --height=~40% \
+            --layout=reverse \
+            --border \
+            --exit-0
+        )
+
+        # Handle selection result.
+        if [[ -z "$selected_profile" ]]; then
+            # User cancelled (ESC).
+            return 0
+        elif [[ "$selected_profile" == "default" ]]; then
+            # Run standard vanilla Neovim.
+            command nvim
+        else
+            # Run selected distro.
+            _launch_neovim_profile "$selected_profile"
+        fi
         return
     fi
 
-    local choices=("default" "${(@k)NVIM_DISTROS}")
-    local config
-    config=$(printf "%s\n" "${choices[@]}" | fzf \
-        --prompt=" Neovim Config ($base_dir)  " \
-        --height=~40% --layout=reverse --border --exit-0)
+    # ── mode c: fallback ─────────────────────────────────────────────────────
 
-    if [[ -z "$config" ]]; then
-        return 0
-    elif [[ "$config" == "default" ]]; then
-        command nvim "$@"
-    else
-        _run_nvim_distro "$config" "$@"
-    fi
+    # If args were files, or fzf is missing, just run nvim normally.
+    command nvim "$@"
 }
+
+#endregion
+
+# ── background maintenance ───────────────────────────────────────────────────
+
+#region Async Installer
+
+# Run in a subshell in the background to avoid blocking shell startup.
+# '&!' is Zsh specific: disowns the process immediately (same as 'disown').
+(
+    # Only proceed if distros are defined and git is available.
+    if (( ${#NVIM_DISTROS} > 0 )) && (( $+commands[git] )); then
+
+        local config_base_dir="${NVIM_CONFIG_BASE:-${XDG_CONFIG_HOME:-$HOME/.config}}"
+        local distro_name
+        local config_path
+        local distro_data
+        local repo_url
+
+        for distro_name in "${(@k)NVIM_DISTROS}"; do
+            config_path = "$config_base_dir/$distro_name"
+            distro_data = "${NVIM_DISTROS[$distro_name]}"
+
+            # Parsing: "flag|url" -> Take everything after the first pipe.
+            repo_url    = "${distro_data#*|}"
+
+            # If the config directory doesn't exist, clone it.
+            if [[ ! -d "$config_path" ]]; then
+                mkdir -p "$config_base_dir"
+                git clone --quiet --depth 1 "$repo_url" "$config_path" &>/dev/null
+            fi
+        done
+    fi
+) &!
+
+#endregion

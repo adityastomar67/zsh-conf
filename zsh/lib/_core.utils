@@ -45,7 +45,7 @@ autoload -Uz Defer && Defer
 
 # Load custom modules based on config flags
 if [[ "${ENABLE_MULTI_NEOVIM:l}" == "yes" ]]; then
-    autoload -Uz MultiVim && MultiVim &!
+    autoload -Uz MultiVim && MultiVim
 fi
 
 if [[ "${ENABLE_THEME_SH_INTEGRATION:l}" == "yes" ]]; then
