@@ -160,7 +160,8 @@ fi
 # Modern Editor Replacements
 # If Neovim is installed, make 'vim' use it.
 is_installed nvim  && alias vim="nvim" \
-                   && alias vimdiff="nvim -d"
+                   && alias vimdiff="nvim -d" \
+                   && alias v="nvim"
 
 # If Emacs is installed, try to use the client for speed.
 is_installed emacs && alias em="/usr/bin/emacs -nw" \

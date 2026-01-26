@@ -107,62 +107,7 @@ if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
 fi
 
 
-# ........................[  4. Editor Wrapper (v)  ]........................ #
-
-# ------------------------------------------------------------------------------
-# Function: v
-# Description:
-#   A smart wrapper for Neovim that handles configuration switching and permission
-#   elevation automatically.
-#
-# Logic:
-#   1. Process flags to set NVIM_APPNAME (Switching configs).
-#   2. Check [[ -w "$file" ]] to see if current user can write.
-#   3. If not, use 'sudo -E' (Preserve Environment) to maintain user UI themes.
-# ------------------------------------------------------------------------------
-function v() {
-    local app_name=""
-    local use_sudo="no"
-    local file="${1:-.}"
-
-    # 1. App Name Selection (Multi-Neovim)
-    if [[ "$ENABLE_MULTI_NEOVIM" == "Yes" ]]; then
-        case "$1" in
-            -a | --astro)  app_name="AstroNvim"; shift ;;
-            -l | --lazy)   app_name="LazyVim";   shift ;;
-            -c | --chad)   app_name="NvChad";    shift ;;
-            -n | --nv)     app_name="LazyNV";    shift ;;
-        esac
-        file="${1:-.}"
-    fi
-
-    # 2. Permissions Check (-w: writable)
-    if [[ -e "$file" && ! -w "$file" ]]; then
-        use_sudo="yes"
-    elif [[ ! -e "$file" ]]; then
-        local parent=$(dirname "$file")
-        [[ -d "$parent" && ! -w "$parent" ]] && use_sudo="yes"
-    fi
-
-    # 3. Execution Path
-    if [[ "$use_sudo" == "yes" ]]; then
-        print "${COLOR[YELLOW]}:: File requires root permissions.${COLOR[RESET]}"
-        if [[ -n "$app_name" ]]; then
-            echo ":: Opening with sudo ($app_name)..."
-            # sudo -E is the 'secret sauce'—it preserves YOUR Zsh/Nvim theme
-            sudo -E env NVIM_APPNAME="$app_name" nvim "$@"
-        else
-            echo ":: Opening with sudo..."
-            sudoedit "$@"
-        fi
-    else
-        [[ -n "$app_name" ]] && export NVIM_APPNAME="$app_name"
-        nvim "$@"
-    fi
-}
-
-
-# ........................[  6. Developer Tools  ]........................ #
+# ........................[  4. Developer Tools  ]........................ #
 
 # ------------------------------------------------------------------------------
 # Function: lg
@@ -190,7 +135,7 @@ function lg() {
 }
 
 
-# ........................[  7. Utilities  ]........................ #
+# ........................[  5. Utilities  ]........................ #
 
 # ------------------------------------------------------------------------------
 # Function: weather
@@ -198,7 +143,7 @@ function lg() {
 # ------------------------------------------------------------------------------
 function weather() {
     # 1. Dependency Check
-    if (( ! $+commands[curl] )); then
+    if is_installed curl; then
         echo "❌ Error: curl is required."
         return 1
     fi
@@ -236,7 +181,7 @@ function weather() {
 }
 
 
-# ........................[  9. Kubernetes Production Guard  ]........................ #
+# ........................[  6. Kubernetes Production Guard  ]........................ #
 
 # ------------------------------------------------------------------------------
 # Function: kubectl Overload

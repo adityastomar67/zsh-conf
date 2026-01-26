@@ -1,100 +1,90 @@
 #!/usr/bin/env zsh
-#    ░█▄█░█░█░█░░░▀█▀░▀█▀░█░█░▀█▀░█▄█
-#    ░█░█░█░█░█░░░░█░░░█░░▀▄▀░░█░░█░█
-#    ░▀░▀░▀▀▀░▀▀▀░░▀░░▀▀▀░░▀░░▀▀▀░▀░▀
-
 # ------------------------[  MULTI-NEOVIM SWITCHER  ]------------------------ #
-# Utility function for easy Nvim config switching by @elijahmanor.
-# Requires NVIM_APPNAME support (Neovim >= 0.9.0).
 
+# ........................[  1. Initialization  ]........................ #
 
-# ........................[  1. Initialization & Guard  ]........................ #
+if (( ${#NVIM_DISTROS} == 0 )); then return; fi
+if ! (( $+commands[git] )); then print -P "%F{yellow}[WARN] MultiVim missing git.%f"; return; fi
 
-# Cleanup: If explicitly set to "No", remove the config directories
-if [[ "$MULTI_NEOVIM" != "Yes" ]]; then
-    [ -d ~/.config/LazyVim ]   && rm -rf ~/.config/LazyVim
-    [ -d ~/.config/NvChad ]    && rm -rf ~/.config/NvChad
-    [ -d ~/.config/LazyNV ]    && rm -rf ~/.config/LazyNV
-    [ -d ~/.config/AstroNvim ] && rm -rf ~/.config/AstroNvim
+# RESOLVE BASE DIRECTORY
+# Use the user variable, or fallback to standard XDG config location
+local base_dir="${NVIM_CONFIG_BASE:-${XDG_CONFIG_HOME:-$HOME/.config}}"
 
-    # Exit if disabled or if git is missing (Git is strictly required for installation)
-    return
-fi
+# ........................[  2. Auto-Install  ]........................ #
 
-if ! is_installed git; then
-    printf "\n\033[0;33m[WARN] MULTI_NEOVIM='Yes' but 'git' is not installed.\033[0m\n"
-    return
-fi
+for distro in "${(@k)NVIM_DISTROS}"; do
+    local config_path="$base_dir/$distro"
+    local data="${NVIM_DISTROS[$distro]}"
+    local repo_url="${data#*|}"
 
-
-
-# ........................[  2. Auto-Install Configs  ]........................ #
-
-# LazyVim
-[ ! -d ~/.config/LazyVim ] && \
-    git clone --quiet https://github.com/LazyVim/starter ~/.config/LazyVim && \
-    echo "Cloning LazyVim configs..."
-
-# NvChad
-[ ! -d ~/.config/NvChad ] && \
-    git clone --quiet --depth 1 https://github.com/adityastomar67/NvChad ~/.config/NvChad && \
-    echo "Cloning NvChad configs..."
-
-# LazyNV
-[ ! -d ~/.config/LazyNV ] && \
-    git clone --quiet --depth 1 https://github.com/adityastomar67/LazyNV ~/.config/LazyNV && \
-    echo "Cloning LazyNV configs..."
-
-# AstroNvim
-[ ! -d ~/.config/AstroNvim ] && \
-    git clone --quiet --depth 1 https://github.com/AstroNvim/AstroNvim ~/.config/AstroNvim && \
-    echo "Cloning AstroNvim configs..."
-
+    if [[ ! -d "$config_path" ]]; then
+        print -P "%F{blue}:: Cloning $distro into $config_path...%f" >/dev/null 2>&1
+        # Create parent dir if it doesn't exist (e.g. nvim-profiles)
+        mkdir -p "$base_dir"
+        git clone --quiet --depth 1 "$repo_url" "$config_path" >/dev/null 2>&1
+    fi
+done
 
 # ........................[  3. Switcher Function  ]........................ #
 
 function nvim() {
-    # Check for Neovim >= 0.9.0 (Regex matches version string)
-    local nvim_version=$(nvim --version | grep -oP '(?<=^NVIM v)[0-9|.][0-9|.][0-9|.]')
+    local nvim_version=$(command nvim --version | head -n1 | cut -d ' ' -f2)
+    if [[ "$nvim_version" < "v0.9" ]]; then
+        command nvim "$@"
+        return
+    fi
 
-    if [[ "$nvim_version" == "0.9"* ]] || [[ "$nvim_version" > "0.9" ]]; then
+    # Helper to run Neovim with the correct environment
+    # If base_dir is custom, we must override XDG_CONFIG_HOME
+    function _run_nvim_distro() {
+        local app_name="$1"
+        shift
 
-        # Direct Launch via Arguments
-        if [ $# -gt 0 ] && [ ! -f "$1" ] && [ ! -d "$1" ]; then
-            case "$1" in
-                -a | --astro) NVIM_APPNAME=AstroNvim nvim "$2" ;;
-                -l | --lazy)  NVIM_APPNAME=LazyVim   nvim "$2" ;;
-                -c | --chad)  NVIM_APPNAME=NvChad    nvim "$2" ;;
-                -n | --nv)    NVIM_APPNAME=LazyNV    nvim "$2" ;;
-                *)            echo "No config found for the choice!" >&2 ;;
-            esac
-
-        # Interactive Menu via FZF
+        if [[ "$base_dir" == "${XDG_CONFIG_HOME:-$HOME/.config}" ]]; then
+            # Standard Path: Just use APPNAME
+            NVIM_APPNAME="$app_name" command nvim "$@"
         else
-            # We check for fzf here, only when it's actually needed
-            if ! is_installed fzf; then
-                echo "Error: fzf is required for the interactive menu."
-                echo "Use 'nvims -h' or install fzf."
-                return 1
-            fi
-
-            local items=("default" "LazyNV" "LazyVim" "NvChad" "AstroNvim")
-            local config=$(printf "%s\n" "${items[@]}" | fzf --prompt=" Neovim Config  " --height=~50% --layout=reverse --border --exit-0)
-
-            if [[ -z $config ]]; then
-                echo "Nothing selected"
-                return 0
-            elif [[ $config == "default" ]]; then
-                config=""
-            fi
-
-            NVIM_APPNAME=$config nvim "$@"
+            # Custom Path: Override Config Home + APPNAME
+            XDG_CONFIG_HOME="$base_dir" NVIM_APPNAME="$app_name" command nvim "$@"
         fi
+    }
+
+    # ---------------------------------------------------------
+    # MODE A: CLI Arguments
+    # ---------------------------------------------------------
+    if [[ $# -gt 0 && ! -f "$1" && ! -d "$1" ]]; then
+        local arg="$1"
+        for distro in "${(@k)NVIM_DISTROS}"; do
+            local data="${NVIM_DISTROS[$distro]}"
+            local flag="${data%%|*}"
+
+            if [[ "$arg" == "$flag" ]]; then
+                shift
+                _run_nvim_distro "$distro" "$@"
+                return
+            fi
+        done
+    fi
+
+    # ---------------------------------------------------------
+    # MODE B: Interactive Menu
+    # ---------------------------------------------------------
+    if ! (( $+commands[fzf] )); then
+        command nvim "$@"
+        return
+    fi
+
+    local choices=("default" "${(@k)NVIM_DISTROS}")
+    local config
+    config=$(printf "%s\n" "${choices[@]}" | fzf \
+        --prompt=" Neovim Config ($base_dir)  " \
+        --height=~40% --layout=reverse --border --exit-0)
+
+    if [[ -z "$config" ]]; then
+        return 0
+    elif [[ "$config" == "default" ]]; then
+        command nvim "$@"
     else
-        echo "Required NVIM >= 0.9 for multi-configuration setup!"
+        _run_nvim_distro "$config" "$@"
     fi
 }
-
-# Shortcut: Ctrl+a
-bindkey -s ^a "nvim\n"
-
