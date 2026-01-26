@@ -207,7 +207,7 @@ main() {
     local_image=$(download_image "$selected_path")
 
     if [[ -f "$local_image" && -s "$local_image" ]]; then
-        # apply_wallpaper "$local_image"
+        apply_wallpaper "$local_image"
         notify_user "RandomWall" "Applied #$selected_index: $(basename "$selected_path")"
     else
         notify_user "RandomWall" "Download failed."

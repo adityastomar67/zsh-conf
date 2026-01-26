@@ -244,6 +244,79 @@ END {
 '
 }
 
+fucntion _git_log () {
+
+    # Check if FZF is installed using the Zsh $+commands hash.
+    if is_installed fzf; then
+        command git log "$@"
+        return 0
+    fi
+
+    # ------------------------------------------------------------------------------
+    # 3. Clipboard Detection
+
+    # Automatically identifies the correct system command for clipboard operations.
+    local copy_cmd
+    if        is_installed pbcopy;   then copy_cmd="pbcopy"          # macOS
+    elif      is_installed wl-copy;  then copy_cmd="wl-copy"         # Wayland (Linux)
+    elif      is_installed xclip;    then copy_cmd="xclip -sel c"    # X11 (Linux)
+    elif (( $+commands[clip.exe] )); then copy_cmd="clip.exe"        # WSL (Windows)
+    else                                  copy_cmd="cat"             # Fallback
+    fi
+
+    # ------------------------------------------------------------------------------
+    # 4. Pro Formatting Strategy
+
+    # We define colors using Git's internal %C color syntax.
+    local color_hash="%C(bold blue)"
+    local color_date="%C(dim)"
+    local color_auth="%C(yellow)"
+    local color_pipe="%C(dim)"
+    local reset="%C(reset)"
+
+    # --- Complex Logic: Strict Table Layout ---
+    # We use Git's alignment operators:
+    # %<(N,trunc) : Ensures the field is exactly N characters, truncating if longer.
+    # This keeps the columns perfectly aligned regardless of author name lengths.
+    # Layout: Hash | Date (14ch) | Author (15ch) | Refs + Msg
+    local fmt="${color_hash}%h${reset} ${color_pipe}│${reset} ${color_date}%<(14,trunc)%ar${reset} ${color_pipe}│${reset} ${color_auth}%<(15,trunc)%an${reset} ${color_pipe}│${reset}%C(auto)%d${reset} %s"
+
+    # ------------------------------------------------------------------------------
+    # 5. Semantic Helpers
+
+    # Regex helper to safely extract the 7+ character hex hash from the FZF line.
+    local get_hash="grep -oE '[a-f0-9]{7,}' | head -1"
+
+    # ------------------------------------------------------------------------------
+    # 6. Execution & TUI Logic
+
+    # Define the Column Headings
+    #    Adjust the spaces inside this string to match your specific "$fmt" layout.
+    #    \033[1;4;31m = Bold, Underline, Red
+    HEADERS=$'\033[1;4;31mHash\033[0m       \033[1;4;31mAge\033[0m              \033[1;4;31mAuthor\033[0m            \033[1;4;31mMessage\033[0m\n'
+
+    # Define the Shortcuts Help
+    KEYS=$'\033[1;33m• Enter:\033[0m  View      \033[1;33m• Ctrl-Y:\033[0m Copy Hash \n\033[1;33m• Ctrl-X:\033[0m Copy Msg  \033[1;33m• Ctrl-O:\033[0m Checkout\n\n'
+
+    # Feed into FZF
+    git log --graph --color=always --format="$fmt" "$@" | \
+    fzf --ansi --no-sort --reverse --tiebreak=index \
+        --height=100% --border --layout=reverse --info=inline \
+        --border-label='  Git Log ' \
+        --header="${KEYS}${HEADERS}" \
+        --preview-window=right:60%:border-left \
+        --preview "echo {} | $get_hash | xargs -I % git show --color=always %" \
+        \
+        --bind "enter:execute(echo {} | $get_hash | xargs -I % sh -c 'git show --color=always % | less -R')" \
+        \
+        --bind "ctrl-y:execute-silent(echo {} | $get_hash | tr -d '\n' | $copy_cmd)+abort" \
+        \
+        --bind "ctrl-x:execute-silent(echo {} | $get_hash | xargs git log -1 --format=%s | tr -d '\n' | $copy_cmd)+abort" \
+        \
+        --bind "ctrl-o:execute(echo {} | $get_hash | xargs git checkout)"
+
+}
+
 
 # ── wrapper engine ───────────────────────────────────────────────────────────
 
@@ -267,6 +340,10 @@ case "$cmd" in
     pull|up)
         shift
         _git_pull "$@"
+        ;;
+    log)
+        shift
+        _git_log "$@"
         ;;
     *)
         command git "$@"
