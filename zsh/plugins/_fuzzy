@@ -31,12 +31,6 @@
 
 # ── initialization & dependencies ────────────────────────────────────────────
 
-# Guard: Ensure FZF is installed before proceeding
-if ! is_installed fzf; then
-    printf "\n\033[0;33m[WARN] USE_FUNCTION='Yes' but 'fzf' is not installed.\033[0m\n"
-    return
-fi
-
 # ------------------------------------------------------------------------------
 # Clipboard Detection
 # ------------------------------------------------------------------------------
@@ -286,7 +280,7 @@ unset _fzf_preview_file_cmd _fzf_preview_dir_cmd
 # ── os-specific shell loading ────────────────────────────────────────────────
 
 # Load standard FZF completion and key-bindings for macOS (Homebrew paths)
-[[ -f /opt/homebrew/opt/fzf/shell/completion.zsh ]] && source /opt/homebrew/opt/fzf/shell/completion.zsh
+[[ -f /opt/homebrew/opt/fzf/shell/completion.zsh ]]   && source /opt/homebrew/opt/fzf/shell/completion.zsh
 [[ -f /opt/homebrew/opt/fzf/shell/key-bindings.zsh ]] && source /opt/homebrew/opt/fzf/shell/key-bindings.zsh
 
 
@@ -351,7 +345,7 @@ zstyle ':fzf-tab:*' fzf-flags \
     --color 'preview-border:magenta,preview-label:magenta:bold' \
     --gutter ' ' \
     --color 'gutter:-1'
-    
+
 zstyle ':fzf-tab:*' fzf-bindings 'space:accept'
 zstyle ':fzf-tab:*' accept-line enter
 

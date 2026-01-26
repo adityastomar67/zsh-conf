@@ -27,6 +27,7 @@ Your responsibilities:
    - Use semantic/intent markers where applicable.
    - Ensure comments are clear for both junior and senior developers.
    - Follow the editorial/narrative section style for flow control paths.
+   - If the previous comments are present, take them in consideration also.
 
 ──────────────────────────────────────────────────────────────
 CORE PHILOSOPHY (MANDATORY)
