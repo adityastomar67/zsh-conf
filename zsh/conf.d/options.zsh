@@ -23,13 +23,11 @@
 # Usage Notes
 #   - Sourced during startup.
 #   - Requires `_eval_cache` function (from lib/_core.utils).
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
 # 1. Basic Permissions & Input
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 # umask 022: User has full access, group/others have read/execute only.
 umask 022
@@ -40,7 +38,7 @@ WORDCHARS='|-.'
 
 
 # 2. Navigation Options
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 setopt AUTO_CD              # Typing 'dir' becomes 'cd dir'
 setopt AUTO_LIST            # Automatically list choices on ambiguous completion
@@ -49,7 +47,7 @@ setopt LIST_PACKED          # Minimize space in completion lists
 
 
 # 3. Completion Behavior
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 setopt COMPLETE_IN_WORD     # Allow completion from within a word/cursor position
 setopt GLOB_COMPLETE        # Show autocompletion menu for globs
@@ -68,7 +66,7 @@ unsetopt CORRECT            # Disable "Did you mean..?" spelling correction
 
 
 # 4. History Configuration
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 setopt SHARE_HISTORY             # Share history between open terminals immediately
 setopt INC_APPEND_HISTORY_TIME   # Append to history file as soon as command finishes
@@ -86,7 +84,7 @@ export HISTORY_IGNORE="(zsh|clear|ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)
 
 
 # 5. Job Control & Feedback
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 setopt NOTIFY                  # Report status of background jobs immediately
 setopt NOHUP                   # Don't kill background jobs on exit
@@ -96,7 +94,7 @@ setopt NOBEEP                  # No beep on error
 
 
 # 6. Autosuggestions Config
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 # Async Mode: Prevents lagging while typing large commands
 ZSH_AUTOSUGGEST_USE_ASYNC=1
@@ -115,7 +113,7 @@ ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
 
 # 7. Completion Engine Initialization
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 ## Smart caching logic for `compinit`.
 # Allow completion to match dotfiles
@@ -145,7 +143,7 @@ fi
 
 
 # 8. Zstyle Configuration
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Visuals and behavior for the completion menu.
 
 # ── Matching Strategy ──
@@ -195,7 +193,7 @@ zstyle ':completion:*:*:*:*:warnings' format \
 
 
 # 9. Tool Initialization
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 # 1. Define your tools configuration
 #    Format: "Binary : Command : Mode"

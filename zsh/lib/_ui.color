@@ -22,13 +22,11 @@
 # Usage Notes
 #   print "${COLOR[RED]}Error found${COLOR[RESET]}"
 #   print "${COLOR[BOLD]}${COLOR[BLUE]}Info${COLOR[RESET]}"
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
 # Data Structure Definition
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## We use a global (-g) associative array (-A) to map readable names
 ## to their corresponding ANSI escape sequences.
 
@@ -99,7 +97,7 @@ COLOR[BG_B_WHITE]=$'\e[107m'
 
 
 # Debugging / Visualization
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 function preview_ansi_colors() {
     # Zsh Print: %B(Bold) %F{blue}(Color) ... %f(end color) %b(end bold)

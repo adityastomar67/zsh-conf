@@ -23,8 +23,6 @@
 # Usage Notes
 #   - Syntax: rm_pattern "*.tmp"
 #   - Keybinds: [y] to delete, [v] to view full list, [N] to abort.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 

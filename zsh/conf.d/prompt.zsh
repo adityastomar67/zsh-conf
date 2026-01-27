@@ -23,14 +23,12 @@
 #
 # Usage Notes
 #   Set `export PROMPT_THEME="gh0st"` in .zshenv to switch themes.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 #
 
 # 1. Shared Utilities
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Helper functions used across multiple themes to avoid code duplication.
 
 # Enable dynamic expansion within the prompt string.
@@ -118,7 +116,7 @@ function check_git_untracked_status() {
 
 
 # 2. Theme: 'Neon'
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## A high-contrast, cyberpunk-inspired theme.
 
 function theme_neon_setup() {
@@ -158,7 +156,7 @@ function theme_neon_setup() {
 
 
 # 3. Theme: 'Bubble'
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## A rounded, "pill" style theme using Zsh's 256-color support.
 
 function theme_bubble_setup() {
@@ -195,7 +193,7 @@ function theme_bubble_setup() {
 
 
 # 4. Theme: 'Orbit'
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## A two-line prompt with connecting lines, resembling a spaceship HUD.
 
 function theme_orbit_setup() {
@@ -232,7 +230,7 @@ function theme_orbit_setup() {
 
 
 # 5. Theme: 'Z'
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## A minimalist theme heavily reliant on Zsh's built-in `vcs_info` module.
 ## Focuses on speed and low visual noise.
 
@@ -319,7 +317,7 @@ function theme_z_setup() {
 
 
 # 6. Theme: '10k' (Custom Power User)
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## A complex, feature-rich theme designed to mimic Powerlevel10k features
 ## manually. Handles window titles, execution timers, and auto-ls.
 
@@ -549,7 +547,7 @@ function theme_10k_setup() {
 
 
 # 7. Theme: 'Gh0st'
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## A sleek, modern prompt using manual Git status checking (no vcs_info).
 ## Features custom icons and a clean path view.
 
@@ -647,7 +645,7 @@ function theme_gh0st_setup() {
 
 
 # 8. Initialization Logic
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Selects the theme based on the environment variable.
 
 case "$PROMPT_THEME" in

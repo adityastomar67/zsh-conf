@@ -22,8 +22,6 @@
 #
 # Usage Notes
 #   - Syntax: mkfile <path/to/file.ext> [another/file.ext]
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 

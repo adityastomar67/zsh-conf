@@ -21,8 +21,6 @@
 # Usage Notes
 #   - Run `zsettings` to open the dashboard.
 #   - Requires `user.conf` to follow a strict format (ZPLUGINS array, export VAR=Val).
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 

@@ -24,10 +24,10 @@
 # Usage Notes
 #   - Set `ENABLE_AUTO_TMUX="yes"` in your user config to enable this module.
 #
-# Project: Zsh-conf
+
 # ------------------------------------------------------------------------------
 
-# ── aliases ──────────────────────────────────────────────────────────────────
+# ── aliases ────────────────────────────────────────────────────────────────────────────
 
 # Standard shortcuts for common Tmux operations to speed up workflow.
 alias tn='tmux new -s'                 # New named session

@@ -24,8 +24,6 @@
 # Usage Notes
 #   - Syntax: dir_usage [directory_path]
 #   - Requires: AWK and a Nerd Font compatible terminal for icons.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 

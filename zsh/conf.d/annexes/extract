@@ -24,8 +24,6 @@
 # Usage Notes
 #   - Syntax: extract <filename>
 #   - Requires: Appropriate binaries for specific formats (unzip, unrar, etc.).
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 

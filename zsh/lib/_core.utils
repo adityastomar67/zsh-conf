@@ -25,12 +25,10 @@
 # Usage Notes
 #   - This file should be sourced very early in .zshrc.
 #   - Depends on `_ui.color` for colored output.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 # Initialization & Autoloads
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Load essential functions from the $fpath so they are available immediately.
 
 # Load the completion system (but don't init it yet, that happens in opts.zsh)
@@ -60,7 +58,7 @@ export PATH="$PATH:$ZSH_CONFIG_ROOT/bin"
 
 
 # Plugin Manager (Plug)
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## A lightweight function to clone and source Zsh plugins from GitHub.
 
 
@@ -165,7 +163,7 @@ function plug() {
 
 
 # Eval Cache (Startup Optimization)
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Caches the output of slow initialization commands (like 'starship init zsh').
 ## Saves ~100-300ms on startup.
 
@@ -235,7 +233,7 @@ _eval_cache() {
 
 
 # Path Construction
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## We construct the system $PATH and $FPATH here.
 
 # 1. Global Uniqueness
@@ -260,7 +258,7 @@ unset directory_entry
 
 
 # Command Caching
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Optimizes `command -v` checks by caching results in memory.
 
 typeset -gA COMMAND_AVAILABILITY_CACHE
@@ -305,7 +303,7 @@ function is_installed() {
 
 
 # File Helpers
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 # ------------------------------------------------------------------------------
 # Function: _safe_edit
@@ -341,7 +339,7 @@ function _safe_edit() {
 
 
 # Final Integrations
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 # Temporary Offline Config
 # Creates a placeholder file for non-git-tracked aliases if requested.

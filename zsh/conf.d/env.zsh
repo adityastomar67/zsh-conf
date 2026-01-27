@@ -23,13 +23,11 @@
 # Usage Notes
 #   - Sourced during startup.
 #   - Relies on 'is_installed' helper function defined in 'lib/_core.utils'.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
 # Localization & Terminal
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Ensure the shell handles UTF-8 characters correctly and identifies
 ## the terminal capabilities.
 
@@ -54,7 +52,7 @@ export LS_COLORS="di=38;5;111:ln=38;5;210:or=48;5;210;38;5;16:mi=48;5;210;38;5;1
 
 
 # XDG Base Directory Standards
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Defines standard locations for config, cache, and data files.
 ## This prevents dotfile clutter in the $HOME directory.
 
@@ -68,7 +66,7 @@ export HOMEBREW_NO_ENV_HINTS=1
 
 
 # Default Applications
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Sets the preferred programs for editing text and viewing system manuals.
 
 # ------------------------------------------------------------------------------
@@ -120,7 +118,7 @@ fi
 
 
 # Application Specific
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Shortcuts and environment variables for specific tools.
 
 # Link to the main dotfiles repo location
@@ -132,7 +130,7 @@ export XDG_NVIM="$HOME/.config/nvim"
 
 
 # SSH & Remote Settings
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Configuration applied only when connected via SSH.
 
 if [[ -n "$SSH_CONNECTION" ]]; then

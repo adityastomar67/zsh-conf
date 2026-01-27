@@ -17,13 +17,11 @@
 #
 # WARNING: Do not edit the managed config in ~/.config/zsh-conf/zshrc directly.
 #          Instead, add your custom settings and overrides in the section below.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
 # Interactive Session Guard
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## We immediately check if the shell is interactive. If it's a background process
 ## (like scp, sftp, or a script), we exit to prevent errors and speed up connections.
 
@@ -31,14 +29,14 @@
 
 
 # Load User Configuration Early
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## We source the user.conf file here to ensure critical environment variables
 ## are available even in non-login shells that might skip user.conf in zshenv.
 source "$ZDOTDIR/user.conf"
 
 
 # Benchmarking Initialization
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## If profiling is enabled in .zshenv, we start the timer here.
 ## We use Zsh's internal datetime module for nanosecond precision.
 
@@ -55,7 +53,7 @@ if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
 fi
 
 # Initializations
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## We immediately loads the necessary functions in the shell so we don't
 ## need to source them again and again in our config and make the code bloated.
 
@@ -64,7 +62,7 @@ autoload -Uz _core.utils && _core.utils
 
 
 # Core Configuration Loader
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Determines which configuration profile to load (Minimal vs Full)
 ## and sources the actual logic files.
 
@@ -87,7 +85,7 @@ fi
 
 
 # Terminal Decorations
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Adds visual flair to the terminal startup.
 ## Randomly selects between color scripts or motivational quotes if enabled.
 
@@ -114,7 +112,7 @@ fi
 
 
 # User Overrides
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## This section is reserved for `YOUR CUSTOM` settings.
 ## Anything defined here will override the managed configuration above.
 ## Loads work-specific or private settings that are custom to every different user and ignored by Git.
@@ -123,7 +121,7 @@ fi
 
 
 # Benchmarking Report
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Calculates the total execution time and displays the results.
 ## This block must be the very last thing in the file.
 

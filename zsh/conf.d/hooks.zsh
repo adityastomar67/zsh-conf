@@ -20,13 +20,11 @@
 #
 # Usage Notes
 #   - This file creates the widgets. You must bind keys to them in `keybinds.zsh`.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
 # Smart History Search Setup
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Prepares the "Up/Down" arrow logic to filter history based on current input
 ## rather than just cycling through every command.
 
@@ -39,7 +37,7 @@ zle -N down-line-or-beginning-search
 
 
 # Custom Editor Widgets
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 ## Advanced macros to speed up command line editing.
 
@@ -93,7 +91,7 @@ zle -N magic_dot_expansion
 
 
 # Interactive User Assistance
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Widgets that provide context-aware information when the line is empty.
 
 # ------------------------------------------------------------------------------
@@ -182,7 +180,7 @@ add-zsh-hook chpwd chpwd_auto_ls
 
 
 # Terminal State Synchronization
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Lifecycle hooks to manage Terminal Application Mode (smkx/rmkx).
 
 if [[ "$TERM" != "dumb" ]] && (( ${+terminfo[smkx]} && ${+terminfo[rmkx]} )); then
@@ -202,7 +200,7 @@ fi
 
 
 # Productivity & UI Enhancements
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 # ------------------------------------------------------------------------------
 # Widget: Fancy Ctrl-Z
@@ -298,7 +296,7 @@ add-zle-hook-widget line-finish _transient_finish
 
 
 # Integration Widgets (External Tools)
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 # ------------------------------------------------------------------------------
 # Widget: Git FZF Fixup

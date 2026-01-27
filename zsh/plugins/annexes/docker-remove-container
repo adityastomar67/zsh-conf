@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────────
 # File: docker_cleanup.zsh
 # Purpose: Provides an interactive interface to bulk-remove Docker containers.
 # Problem: Deleting multiple containers requires manual ID copying or complex
@@ -15,8 +15,8 @@
 #   1. Ensure global associative array 'COLOR' is defined (e.g., in .zshrc).
 #   2. Run 'interactive_container_remove'.
 #
-# Project: Zsh-conf
-# ─────────────────────────────────────────────────────────────────────────────
+
+# ───────────────────────────────────────────────────────────────────────────────────────
 
 # ── cli / interactive utilities ──────────────────────────────────────────────
 

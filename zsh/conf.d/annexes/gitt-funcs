@@ -24,7 +24,7 @@
 #   - Requires 'fzf' and 'git'.
 #   - Optionally uses 'delta' for side-by-side diffs and 'bat' for file previews.
 #
-# Project: Zsh-conf
+
 # ------------------------------------------------------------------------------
 
 

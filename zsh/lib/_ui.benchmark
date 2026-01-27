@@ -22,13 +22,11 @@
 # Usage Notes
 #   - Requires 'zprof' to be enabled in the entry point.
 #   - Expects '$total_duration_ms' to be calculated before sourcing.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
 # 0. Safety Checks & Dependencies
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Ensure we have the necessary data and color definitions before rendering.
 
 # Exit if the duration variable wasn't set by the parent script
@@ -36,7 +34,7 @@
 
 
 # 1. Performance Rating System
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Categorizes the startup time into human-readable levels.
 
 local LABEL="Unknown"
@@ -61,7 +59,7 @@ fi
 
 
 # 2. Header Rendering
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Draws the top box containing the total time and rating.
 
 clear
@@ -86,7 +84,7 @@ print -f "${COLOR[DIM]} ╰─────────────────�
 
 
 # 3. Profiling Data Table
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## parses the 'zprof' output to find the most expensive function calls.
 ## We use 'awk' to generate a visual bar chart inline.
 

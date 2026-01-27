@@ -23,13 +23,11 @@
 # Usage Notes
 #   - Requires a patched "Nerd Font" (https://www.nerdfonts.com/).
 #   - Usage: print ${ICON[LINUX_ICON]}
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
 # Initialization
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Preparation steps to ensure the environment can handle wide characters.
 
 # 1. UTF-8 Guard
@@ -47,7 +45,7 @@ typeset -gAH ICON
 
 
 # Icon Definitions
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Populating the map. We use $'\uXXXX' syntax for explicit unicode points.
 ## Grouped logically for easier maintenance.
 
@@ -135,7 +133,7 @@ ICON=(
 
 
 # Helper Functions
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Utilities for retrieving and debugging the icon set.
 
 # Function: get_nerd_icon

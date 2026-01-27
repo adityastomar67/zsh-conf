@@ -22,8 +22,6 @@
 # Usage Notes
 #   - This runs automatically.
 #   - To test manually: source _welcome.ui
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
@@ -32,7 +30,7 @@
 () {
 
     # Configuration & Styling
-    # ─────────────────────────────────────────────────────────────
+    # ───────────────────────────────────────────────────────────────────────
     ## Define local style constants for consistent UI theming.
     ## We use 'typeset -r' to make them read-only constants.
 
@@ -51,7 +49,7 @@
 
 
     # The Message UI
-    # ─────────────────────────────────────────────────────────────
+    # ───────────────────────────────────────────────────────────────────────
     ## Renders the actual text to the screen.
 
     clear
@@ -117,7 +115,7 @@
 
 
     # Self-Destruction Sequence
-    # ─────────────────────────────────────────────────────────────
+    # ───────────────────────────────────────────────────────────────────────
     ## This block removes the source line from .zshrc so this welcome
     ## screen never appears again.
 

@@ -25,12 +25,12 @@
 #   - This file assumes standard Zsh options are available.
 #   - Adjust 'HISTORY_IGNORE' to filter out sensitive or trivial commands.
 #
-# Project: Zsh-conf
+
 # ------------------------------------------------------------------------------
 
 
 # History Configuration
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Defines how the shell remembers previous commands.
 ## We prioritize a large history size with aggressive de-duplication to
 ## keep the history file useful and clean.
@@ -62,7 +62,7 @@ setopt HIST_REDUCE_BLANKS        # Trim extra whitespace before saving
 
 
 # Completion Engine Initialization
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Smart caching logic for `compinit`.
 ## Re-running `compinit` on every shell start is slow. We only run it fully once every 24 hours.
 
@@ -108,7 +108,7 @@ zstyle ':completion:*' menu select
 
 
 # Prompt Configuration
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Visual configuration for the command line prompt (PS1).
 ## Keeps it minimal: "User Host [Directory] StatusSymbol"
 
@@ -134,7 +134,7 @@ PS1="${prompt_user_host} ${prompt_current_dir}${prompt_status_symbol} "
 
 
 # Aliases
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Command shortcuts and modern replacements.
 ## Only loads if the feature flag is enabled.
 
@@ -185,7 +185,7 @@ fi
 
 
 # Vi Mode & Keybindings
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Enables Vim-style navigation on the command line.
 
 if [[ "${ENABLE_VI_MODE:l}" == "yes" ]]; then
@@ -194,7 +194,7 @@ if [[ "${ENABLE_VI_MODE:l}" == "yes" ]]; then
     # Reduce key delay (latency) for mode switching
     export KEYTIMEOUT=1
 
-    # ── fixes ──────────────────────────────────────────────────────────────
+    # ── fixes ────────────────────────────────────────────────────────────────────────
     # Re-bind standard keys that Vi-mode often breaks
 
     bindkey '^?' backward-delete-char                  # Backspace
@@ -204,7 +204,7 @@ fi
 
 
 # Tmux Auto-Start
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Automatically launches or attaches to a Tmux session on login.
 ## Checks:
 ## 1. Feature enabled?

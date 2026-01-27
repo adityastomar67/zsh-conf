@@ -23,8 +23,6 @@
 # Usage Notes
 #   - Syntax: mkrepo [remote_url]
 #   - If no URL is provided, it will offer to use GitHub CLI if installed.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 

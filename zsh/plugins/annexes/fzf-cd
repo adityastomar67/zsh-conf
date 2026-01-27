@@ -23,7 +23,7 @@
 #   - `fcd`       : Search from current directory.
 #   - `fcd /etc`  : Search starting from /etc.
 #
-# Project: Zsh-conf
+
 # ------------------------------------------------------------------------------
 
 

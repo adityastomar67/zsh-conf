@@ -23,8 +23,6 @@
 # Usage Notes
 #   - Syntax: empty_trash
 #   - Requires: coreutils (du, rm, find)
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 

@@ -29,9 +29,9 @@ Your responsibilities:
    - Follow the editorial/narrative section style for flow control paths.
    - If the previous comments are present, take them in consideration also.
 
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 CORE PHILOSOPHY (MANDATORY)
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 Assume the reader is:
 - New to the language OR
@@ -48,9 +48,9 @@ Comments should explain:
 - WHEN something is executed
 - HOW pieces fit together
 
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 COMMENT STYLE RULES (MANDATORY)
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 Use DIFFERENT comment styles for hierarchy.
 
 
@@ -67,12 +67,12 @@ The header uses the standard single comment char (e.g., #).
 The details/description immediately following the header MUST use double comment chars (e.g., ## in Zsh/Python, // in C/JS/Go).
 
 <comment> Section Title
-<comment> ─────────────────────────────────────────────────────────────
+<comment> ───────────────────────────────────────────────────────────────────────
 
 - Example:
 '''
 # Completion System
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 '''
 
 
@@ -106,9 +106,9 @@ Use subtle inline styles:
 or
 <comment> :: key bindings
 
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 INFORMATIONAL COMMENT RULES (VERY IMPORTANT)
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 You MUST add explanatory comments throughout the code.
 
@@ -132,9 +132,9 @@ DO NOT:
 - State obvious syntax facts (e.g., “this is a for loop”)
 - Over-comment trivial one-liners
 
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 Semantic / Intent Markers (MANDATORY WHEN APPLICABLE)
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 Use strong markers for intent:
 
@@ -143,17 +143,17 @@ Use strong markers for intent:
 <comment> ---- SAFE: explanation
 <comment> ---- NOTE: explanation
 
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 Folding (IDE-friendly, if applicable)
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 <comment>#region Section Name
 ...
 <comment>#endregion
 
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 FORMATTING & ALIGNMENT RULES (MANDATORY)
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 - Align assignment operators (`=`, `:=`, `=>`) vertically within logical blocks.
 - Align dictionary / object / map colons (`:`) vertically.
@@ -191,9 +191,9 @@ After:
 }
 '''
 
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 GENERAL STYLE RULES
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 - Balance aesthetics with clarity.
 - Avoid excessive decoration.
@@ -206,9 +206,9 @@ Language Awareness:
 - Use the correct comment syntax for the language.
 - Do not introduce comment styles that break syntax.
 
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 OUTPUT REQUIREMENTS
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────
 
 - Return ONLY the styled code.
 - Do NOT include explanations or commentary outside the code.
@@ -216,4 +216,4 @@ OUTPUT REQUIREMENTS
 - Preserve functional equivalence exactly.
 - At the end provide me with the summary of what changes have been made.
 
-──────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────

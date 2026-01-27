@@ -23,13 +23,11 @@
 # Usage Notes
 #   - MacOS Users: Ensure your terminal sends 'Esc+' for the Option key to use
 #     Alt/Meta bindings.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
 # System Initialization
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## We load the terminfo module to communicate with the terminal
 ## emulator correctly. This allows us to ask "what is the code for Key X?"
 ## instead of hardcoding raw ANSI escape sequences that might vary.
@@ -90,7 +88,7 @@ bindkey '^I' complete-word
 
 
 # Navigation & Cursor Movement
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Bindings for moving the cursor efficiently across the command line.
 
 # ------------------------------------------------------------------------------
@@ -115,7 +113,7 @@ bindkey '^I' complete-word
 
 
 # Deletion Logic
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 # Delete the character under the cursor (Forward Delete)
 [[ -n "${key_map[Delete]}" ]] && bindkey -- "${key_map[Delete]}" delete-char
@@ -125,7 +123,7 @@ bindkey '^[[3;5~' kill-word
 
 
 # Smart History Search
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Upgrades arrows to "history substring search".
 ## Example: Type "git", press Up -> filters for previous "git" commands.
 
@@ -141,7 +139,7 @@ bindkey '^[OB' down-line-or-beginning-search
 
 
 # Menu Selection System
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Configuration for the tab completion menu.
 
 # Shift + Tab: Cycle backwards through the completion menu.
@@ -175,7 +173,7 @@ fi
 
 
 # Custom Widgets & Macros
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Advanced functions mapped to specific keystrokes.
 
 # Edit Command Line: Opens current buffer in $EDITOR (Vim/Nano).

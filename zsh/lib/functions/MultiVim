@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────────
 # File: MultiVim
 # Purpose: Manages and switches between multiple Neovim configurations.
 # Problem: Neovim only supports one init.lua by default. Using NVIM_APPNAME
@@ -16,17 +16,15 @@
 #      Format: NVIM_DISTROS[name]="--flag|https://github.com/repo.git"
 #   2. Source this file.
 #   3. Run 'nvim' for menu, or 'nvim --flag' for direct access.
-#
-# Project: Zsh-conf
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────────
 
-# ── cleanup ──────────────────────────────────────────────────────────────────
+# ── cleanup ────────────────────────────────────────────────────────────────────────────
 
 # Remove existing aliases to ensure the function definition takes precedence.
 # We redirect error output to /dev/null in case the alias doesn't exist.
 unalias nvim 2>/dev/null
 
-# ── core logic ───────────────────────────────────────────────────────────────
+# ── core logic ─────────────────────────────────────────────────────────────────────────
 
 #region Main Wrapper
 

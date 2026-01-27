@@ -23,7 +23,7 @@
 
 
 # Safety Check & Environment Restoration
-# ───────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────────
 ## In some non-login shells (e.g., executing a script, some IDE terminals),
 ## user.conf might be skipped. We ensure critical variables are loaded here.
 
@@ -36,7 +36,7 @@ fi
 
 
 # Feature: Auto-Tmux Integration
-# ───────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────────
 ## conditionally launches Tmux. We use the ':l' modifier to lowercase the
 ## {:l} variable for case-insensitive comparison ("Yes" == "yes").
 
@@ -47,7 +47,7 @@ fi
 
 
 # Module Loading System
-# ───────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────────
 ## Iterates through distinct configuration files.
 ## We separate them into "Core" (Essential) and "Auxiliary" (Nice to have).
 
@@ -89,7 +89,7 @@ zsh-defer _load_aux_stuff
 zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 
 # Background Optimization (Zcompile)
-# ───────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────────
 ## Zsh can compile text scripts into bytecode (.zwc) for faster parsing.
 ## This block runs in a background subshell to avoid slowing down startup.
 
@@ -99,7 +99,7 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 (
 
     # Safety & Globbing Options
-    # ───────────────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────────────
     # LOCAL_OPTIONS: Changes don't leak (redundant in subshell but good practice).
     # NO_ALIASES:    Prevent alias expansion from breaking paths.
     # null_glob:     Arrays remain empty if no files match (don't error).
@@ -114,7 +114,7 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
     exec >/dev/null 2>&1
 
     # Atomic Locking
-    # ───────────────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────────────
     # We use `mkdir` because it is an atomic operation on POSIX systems.
     # Two processes cannot create the same directory at the exact same instant.
     # If it fails, another compiler instance is already running.
@@ -130,7 +130,7 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 
 
     # Compiler Logic
-    # ───────────────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────────────
 
     function try_compile() {
         local source_file="$1"
@@ -150,7 +150,7 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 
 
     # Target Definitions
-    # ───────────────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────────────
     # Build a list of all files that should be compiled.
 
     local -a files_to_compile
@@ -189,7 +189,7 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 
 
     # Execution Loop
-    # ───────────────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────────────
 
     for file in "${files_to_compile[@]}"; do
         try_compile "$file"
@@ -197,7 +197,7 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 
 
     # EXECUTION: DIRECTORY DIGEST (MULTI-FOLDER)
-    # ───────────────────────────────────────────────────────────────────────
+    # ─────────────────────────────────────────────────────────────────────────────────
     # Compiles specific directories into .zwc files for faster autoloading.
 
     # Define the directories you want to compile

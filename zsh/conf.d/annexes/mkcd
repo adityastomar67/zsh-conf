@@ -24,8 +24,6 @@
 # Usage Notes
 #   - Syntax: mkcd <path/to/directory>
 #   - Supports absolute paths, relative paths, and tilde (~) expansion.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 

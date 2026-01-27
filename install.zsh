@@ -21,14 +21,12 @@
 # Usage Notes
 #   Run directly via: zsh install.zsh
 #   Or curl-pipe: sh -c "$(curl -fsSL ...)"
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 #
 
 # 0. Setup & Safety Initialization
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Establish a predictable execution environment to prevent side effects.
 
 # Reset shell options to Zsh defaults (ignores user aliases/functions)
@@ -45,7 +43,7 @@ setopt NO_CLOBBER
 
 
 # 1. Class: Theme
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Defines the visual palette, colors, and unicode symbols used
 ## throughout the installation process.
 
@@ -79,7 +77,7 @@ Theme::init() {
 
 
 # 2. Class: Config
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Holds global state, file paths, and dependency lists.
 
 typeset -A CONFIG_PATHS
@@ -169,7 +167,7 @@ Config::calibrate_fonts() {
 
 
 # 3. Class: Logger
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Standardized output wrappers to ensure consistent formatting.
 
 Logger::info() {
@@ -194,7 +192,7 @@ Logger::package() {
 
 
 # 4. Class: UserInterface (UI)
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Handles widgets, animations, and user prompts.
 
 #
@@ -266,7 +264,7 @@ Interface::print_banner() {
 
 
 # 5. Class: System
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Abstraction layer for OS-specific commands (Package Managers).
 
 typeset -A SYSTEM_INFO
@@ -345,7 +343,7 @@ System::is_installed() {
 
 
 # 6. Class: FileSystem
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Helpers for File I/O, patching, and backups.
 
 FileSystem::sed_patch() {
@@ -388,7 +386,7 @@ FileSystem::create_symlink() {
 
 
 # 7. Class: Installer (Controller)
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Main business logic orchestration.
 
 Installer::check_dependencies() {
@@ -636,7 +634,7 @@ Installer::main() {
 
 
 # 8. Entry Point
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Only execute if this script is run directly (not sourced).
 
 if [[ "$0" == "${(%):-%x}" ]]; then

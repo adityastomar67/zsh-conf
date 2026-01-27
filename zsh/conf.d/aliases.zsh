@@ -23,13 +23,11 @@
 #
 # Usage Notes
 #   To disable this entire file, set `LOAD_CUSTOM_ALIASES="No"` in $ZDOTDIR/.zshenv.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
 # Initialization
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Preparation steps: Feature flags, clean slate, and OS detection.
 
 # 1. Feature Guard
@@ -49,7 +47,7 @@ detected_os=$(uname -s)
 
 
 # System & Privileges
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Wrappers for administrative commands and safety features.
 
 # ------------------------------------------------------------------------------
@@ -109,7 +107,7 @@ alias which='type -a' # 'type -a' is more robust in Zsh than 'which'
 
 
 # Navigation & Directories
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Shortcuts for moving around the file system.
 
 # ------------------------------------------------------------------------------
@@ -139,7 +137,7 @@ alias .5="cd -5"
 
 
 # Editors & Configurations
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Shortcuts for editing configuration files and selecting editors.
 
 # Pass the target file to the helper function
@@ -172,7 +170,7 @@ is_installed code  && alias code="code --extensions-dir=\"$HOME/.config/Code/Use
 
 
 # Utilities & Tools
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Replacing legacy unix tools with modern Rust/Go alternatives.
 
 # ------------------------------------------------------------------------------
@@ -262,7 +260,7 @@ alias killl='killall -q'
 
 
 # Package Management
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Shortcuts for Arch Linux (Pacman) and derivatives.
 
 if is_installed pacman; then
@@ -295,7 +293,7 @@ is_installed pip3 && alias pip-up="sudo pip3 list --outdated | grep -v '^\-e' | 
 
 
 # Git Configuration
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Extensive shortcuts for Git operations.
 
 if is_installed git; then
@@ -351,7 +349,7 @@ fi
 
 
 # Global Output Modifiers
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Global aliases (-g) are expanded anywhere in the command line,
 ## not just at the beginning. They act like pipes.
 
@@ -373,7 +371,7 @@ alias -g ':LL'="2>&1 | less"         # Pipe Output+Errors to Less
 
 
 # Suffix Aliases
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Executing files based on extension (e.g., typing 'main.py' runs python).
 
 # 1. Define the System Opener
@@ -432,7 +430,7 @@ unset _sys_open
 
 
 # Miscellaneous
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 alias cls="clear"
 alias clean="clear"

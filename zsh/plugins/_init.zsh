@@ -1,4 +1,4 @@
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────────
 # File: _init.zsh
 # Purpose: Orchestrates the loading of Zsh plugins and autoloadable functions.
 # Problem: Centralizes the logic for installing plugin dependencies and
@@ -12,8 +12,8 @@
 #   Source this file during the Zsh initialization sequence (usually in .zshrc).
 #   Ensure $ZSH_CONFIG_ROOT is defined.
 #
-# Project: Zsh-conf
-# ─────────────────────────────────────────────────────────────────────────────
+
+# ───────────────────────────────────────────────────────────────────────────────────────
 
 # ── core plugin installation ─────────────────────────────────────────────────
 

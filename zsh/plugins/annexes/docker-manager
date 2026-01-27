@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────────────────────
 # File: docker_fzf_manager.zsh
 # Purpose: Provides an interactive terminal dashboard for Docker containers.
 # Problem: Managing Docker containers via CLI often involves repetitive typing
@@ -15,8 +15,8 @@
 #   1. Source this file in your .zshrc.
 #   2. Press Alt+D (or mapped key) to invoke the widget.
 #
-# Project: Zsh-conf
-# ─────────────────────────────────────────────────────────────────────────────
+
+# ───────────────────────────────────────────────────────────────────────────────────────
 
 # ── cli / command-line interface ─────────────────────────────────────────────
 
@@ -129,7 +129,7 @@ zle reset-prompt
 
 #endregion
 
-# ── bindings ─────────────────────────────────────────────────────────────────
+# ── bindings ───────────────────────────────────────────────────────────────────────────
 
 # Register the function as a ZLE widget.
 zle -N docker_container_manager

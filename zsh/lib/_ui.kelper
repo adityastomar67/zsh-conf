@@ -28,9 +28,9 @@
     clear
 
     # 1. Header
-    print -f "${COLOR[DIM]}╭────────────────────────────────────────────────────────────────╮${COLOR[RESET]}\n"
+    print -f "${COLOR[DIM]}╭──────────────────────────────────────────────────────────────────────────╮${COLOR[RESET]}\n"
     print -f "${COLOR[DIM]}│${COLOR[RESET]}                 ${COLOR[CYAN]}⌨️  MASTER KEYBINDING REFERENCE${COLOR[RESET]}                 ${COLOR[DIM]}│${COLOR[RESET]}\n"
-    print -f "${COLOR[DIM]}╰────────────────────────────────────────────────────────────────╯${COLOR[RESET]}\n"
+    print -f "${COLOR[DIM]}╰──────────────────────────────────────────────────────────────────────────╯${COLOR[RESET]}\n"
 
     print "   System initialized. Here are the power tools available to you:\n"
 
@@ -76,7 +76,7 @@
     print ""
 
     # 7. Exit Interaction
-    print -f "   ${COLOR[DIM]}────────────────────────────────────────────────────────────────${COLOR[RESET]}\n"
+    print -f "   ${COLOR[DIM]}──────────────────────────────────────────────────────────────────────────${COLOR[RESET]}\n"
     print "   ${COLOR[CYAN]}NOTE:${COLOR[RESET]} This screen will appear only once."
     print -n "   ${COLOR[BOLD]}Press [ENTER] to begin...${COLOR[RESET]}\n"
     read -k1 -s

@@ -9,7 +9,7 @@
 #                        Use standard 'alias name=value' for that.
 
 # 1. Input Handling
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 # If arguments are passed (e.g., "name=value"), we warn the user that
 # this cannot work in a binary script.
 if [[ $# -gt 0 ]]; then
@@ -20,7 +20,7 @@ if [[ $# -gt 0 ]]; then
 fi
 
 # 2. Rendering Logic
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 # We read from Standard Input (Pipe) because an external script cannot
 # see the parent shell's aliases directly.
 

@@ -21,8 +21,6 @@
 #
 # Usage Notes
 #   - Set LOAD_CUSTOM_FUNCTIONS="No" in ~/user.conf to disable.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 

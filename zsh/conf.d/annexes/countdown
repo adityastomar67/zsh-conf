@@ -21,8 +21,6 @@
 # Usage Notes
 #   - Syntax: countdown 1h 30m 10s
 #   - Requires: zsh/datetime and zsh/mathfunc modules.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
