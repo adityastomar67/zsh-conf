@@ -116,8 +116,8 @@ Config::init() {
 }
 
 Config::calibrate_fonts() {
-    printf "\n  ${THEME_COLORS[CYAN]}:: FONT CAPABILITY CALIBRATION ::${THEME_COLORS[RESET]}\n"
-    printf "  ${THEME_COLORS[GREY]}Since scripts cannot see your screen, we need your eyes.${THEME_COLORS[RESET]}\n\n"
+    print -f "\n  ${THEME_COLORS[CYAN]}:: FONT CAPABILITY CALIBRATION ::${THEME_COLORS[RESET]}\n"
+    print -f "  ${THEME_COLORS[GREY]}Since scripts cannot see your screen, we need your eyes.${THEME_COLORS[RESET]}\n\n"
     sleep 1
 
     # --- Test 1: Nerd Fonts ---
@@ -144,24 +144,24 @@ Config::calibrate_fonts() {
 
     # Feedback Loop
     if [[ "$HAS_NERD" =~ ^[Yy]$ ]]; then
-        printf "${THEME_COLORS[CYAN]}  ✔ Nerd Fonts enabled.${THEME_COLORS[RESET]}\n"
+        print -f "${THEME_COLORS[CYAN]}  ✔ Nerd Fonts enabled.${THEME_COLORS[RESET]}\n"
     else
-        printf "${THEME_COLORS[GREY]}  ✘ Nerd Fonts disabled. Switching to ASCII mode (simulated).${THEME_COLORS[RESET]}\n"
+        print -f "${THEME_COLORS[GREY]}  ✘ Nerd Fonts disabled. Switching to ASCII mode (simulated).${THEME_COLORS[RESET]}\n"
     fi
 
     if [[ "$HAS_LIGATURES" =~ ^[Yy]$ ]]; then
-        printf "${THEME_COLORS[CYAN]}  ✔ Ligatures confirmed.${THEME_COLORS[RESET]}\n"
+        print -f "${THEME_COLORS[CYAN]}  ✔ Ligatures confirmed.${THEME_COLORS[RESET]}\n"
     else
-        printf "${THEME_COLORS[GREY]}  ✘ Ligatures not detected (Visual only).${THEME_COLORS[RESET]}\n"
+        print -f "${THEME_COLORS[GREY]}  ✘ Ligatures not detected (Visual only).${THEME_COLORS[RESET]}\n"
     fi
 
     # Confirmation if tests failed
     if [[ "$HAS_NERD" =~ ^[Nn]$ || "$HAS_LIGATURES" =~ ^[Nn]$ ]]; then
         sleep 2
-        printf "\n\n  ${THEME_COLORS[RED]}${THEME_COLORS[BOLD]}Do you want to continue with the above options? (Y/n)${THEME_COLORS[RESET]}"
+        print -f "\n\n  ${THEME_COLORS[RED]}${THEME_COLORS[BOLD]}Do you want to continue with the above options? (Y/n)${THEME_COLORS[RESET]}"
         read -k1 -r ANS
         if [[ "$ANS" =~ ^[Nn]$ ]]; then
-            printf "\n  ${THEME_COLORS[RED]}Setup aborted by user.${THEME_COLORS[RESET]}\n"
+            print -f "\n  ${THEME_COLORS[RED]}Setup aborted by user.${THEME_COLORS[RESET]}\n"
             exit 1
         fi
     fi
@@ -173,23 +173,23 @@ Config::calibrate_fonts() {
 ## Standardized output wrappers to ensure consistent formatting.
 
 Logger::info() {
-    printf "  %s  %s%s%s\n" "${THEME_ICONS[INFO]}" "${THEME_COLORS[BLUE]}" "$1" "${THEME_COLORS[RESET]}"
+    print -f "  %s  %s%s%s\n" "${THEME_ICONS[INFO]}" "${THEME_COLORS[BLUE]}" "$1" "${THEME_COLORS[RESET]}"
 }
 
 Logger::success() {
-    printf "  %s  %s%s%s\n" "${THEME_ICONS[OK]}" "${THEME_COLORS[GREEN]}" "$1" "${THEME_COLORS[RESET]}"
+    print -f "  %s  %s%s%s\n" "${THEME_ICONS[OK]}" "${THEME_COLORS[GREEN]}" "$1" "${THEME_COLORS[RESET]}"
 }
 
 Logger::warn() {
-    printf "  %s  %s%s%s\n" "${THEME_ICONS[WARN]}" "${THEME_COLORS[YELLOW]}" "$1" "${THEME_COLORS[RESET]}"
+    print -f "  %s  %s%s%s\n" "${THEME_ICONS[WARN]}" "${THEME_COLORS[YELLOW]}" "$1" "${THEME_COLORS[RESET]}"
 }
 
 Logger::error() {
-    printf "  %s  %s%s%s\n" "${THEME_ICONS[ERR]}" "${THEME_COLORS[RED]}" "$1" "${THEME_COLORS[RESET]}"
+    print -f "  %s  %s%s%s\n" "${THEME_ICONS[ERR]}" "${THEME_COLORS[RED]}" "$1" "${THEME_COLORS[RESET]}"
 }
 
 Logger::package() {
-    printf "  %s  %s%s%s\n" "${THEME_ICONS[PKG]}" "${THEME_COLORS[CYAN]}" "$1" "${THEME_COLORS[RESET]}"
+    print -f "  %s  %s%s%s\n" "${THEME_ICONS[PKG]}" "${THEME_COLORS[CYAN]}" "$1" "${THEME_COLORS[RESET]}"
 }
 
 
@@ -203,17 +203,17 @@ Interface::typewriter() {
     local text="$1"
     local delay=0.02
     for ((i = 0; i < ${#text}; i++)); do
-        printf "%s" "${text:$i:1}"
+        print -f "%s" "${text:$i:1}"
         sleep $delay
     done
-    echo ""
+    print ""
 }
 
 Interface::prompt_confirm() {
     local question="$1"
-    printf "  %s  %s ${THEME_COLORS[GREY]}[y/N]${THEME_COLORS[RESET]} " "${THEME_ICONS[QUEST]}" "$question"
+    print -f "  %s  %s ${THEME_COLORS[GREY]}[y/N]${THEME_COLORS[RESET]} " "${THEME_ICONS[QUEST]}" "$question"
     read -k 1 -r response
-    echo ""
+    print ""
     [[ "$response" =~ ^[yY]$ ]]
 }
 
@@ -233,7 +233,7 @@ Interface::spinner() {
         local temp=${spinstr:0:1}
 
         # Draw Spinner
-        printf "\r  ${THEME_COLORS[CYAN]}%s${THEME_COLORS[RESET]}  %s" "$temp" "$msg"
+        print -f "\r  ${THEME_COLORS[CYAN]}%s${THEME_COLORS[RESET]}  %s" "$temp" "$msg"
 
         # Rotate String
         spinstr=${spinstr:1}${spinstr:0:1}
@@ -241,7 +241,7 @@ Interface::spinner() {
     done
 
     # Cleanup
-    printf "\r\033[K"     # Clear line
+    print -f "\r\033[K"     # Clear line
     tput cnorm            # Show cursor
     trap - SIGINT SIGTERM # Remove trap
 }
@@ -249,19 +249,19 @@ Interface::spinner() {
 Interface::print_banner() {
     sleep 2
     clear
-    echo "${THEME_COLORS[PURPLE]}"
-    echo "  ▒███████▒  ██████  ██░ ██  ▄████▄   ▒█████   ███▄    █   █████▒"
-    echo "  ▒ ▒ ▒ ▄▀░▒██    ▒ ▓██░ ██▒▒██▀ ▀█  ▒██▒  ██▒ ██ ▀█   █ ▓██   ▒ "
-    echo "  ░ ▒ ▄▀▒░ ░ ▓██▄   ▒██▀▀██░▒▓█    ▄ ▒██░  ██▒▓██  ▀█ ██▒▒████ ░ "
-    echo "    ▄▀▒   ░  ▒   ██▒░▓█ ░██ ▒▓▓▄ ▄██▒▒██   ██ ▓██▒  ▐▌██▒ ▓█▒  ░ "
-    echo "  ▒███████▒▒██████▒▒░▓█▒░██▓▒ ▓███▀ ░░ ████▓▒ ▒██░   ▓██. ▒█░   "
-    echo "  ░▒▒ ▓░▒░▒▒ ▒▓▒ ▒ ░ ▒ ░░▒░▒░ ░▒ ▒  ░░ ▒░▒░▒░ ░ ▒░   ▒ ▒  ▒ ░    "
-    echo "   ░░▒ ▒ ░ ▒░ ░▒  ░ ░ ▒ ░▒░ ░  ░  ▒     ░ ▒ ▒░ ░ ░░   ░ ▒░ ░      "
-    echo "   ░ ░ ░ ░ ░░  ░  ░   ░  ░░ ░░        ░ ░ ░ ▒     ░   ░ ░  ░ ░     "
-    echo "     ░ ░          ░   ░  ░  ░░ ░          ░ ░           ░           "
-    echo "${THEME_COLORS[RESET]}"
-    echo "              ${THEME_COLORS[GREY]}>> ZSH CONFIGURATION INSTALLER <<${THEME_COLORS[RESET]}"
-    echo ""
+    print "${THEME_COLORS[PURPLE]}"
+    print "  ▒███████▒  ██████  ██░ ██  ▄████▄   ▒█████   ███▄    █   █████▒"
+    print "  ▒ ▒ ▒ ▄▀░▒██    ▒ ▓██░ ██▒▒██▀ ▀█  ▒██▒  ██▒ ██ ▀█   █ ▓██   ▒ "
+    print "  ░ ▒ ▄▀▒░ ░ ▓██▄   ▒██▀▀██░▒▓█    ▄ ▒██░  ██▒▓██  ▀█ ██▒▒████ ░ "
+    print "    ▄▀▒   ░  ▒   ██▒░▓█ ░██ ▒▓▓▄ ▄██▒▒██   ██ ▓██▒  ▐▌██▒ ▓█▒  ░ "
+    print "  ▒███████▒▒██████▒▒░▓█▒░██▓▒ ▓███▀ ░░ ████▓▒ ▒██░   ▓██. ▒█░   "
+    print "  ░▒▒ ▓░▒░▒▒ ▒▓▒ ▒ ░ ▒ ░░▒░▒░ ░▒ ▒  ░░ ▒░▒░▒░ ░ ▒░   ▒ ▒  ▒ ░    "
+    print "   ░░▒ ▒ ░ ▒░ ░▒  ░ ░ ▒ ░▒░ ░  ░  ▒     ░ ▒ ▒░ ░ ░░   ░ ▒░ ░      "
+    print "   ░ ░ ░ ░ ░░  ░  ░   ░  ░░ ░░        ░ ░ ░ ▒     ░   ░ ░  ░ ░     "
+    print "     ░ ░          ░   ░  ░  ░░ ░          ░ ░           ░           "
+    print "${THEME_COLORS[RESET]}"
+    print "              ${THEME_COLORS[GREY]}>> ZSH CONFIGURATION INSTALLER <<${THEME_COLORS[RESET]}"
+    print ""
 }
 
 
@@ -411,7 +411,7 @@ Installer::check_dependencies() {
         Interface::print_banner
         Logger::info "Analyzing Dependencies..."
         [[ ${#installed_pkgs[@]} -gt 0 ]] && Logger::info "Already installed: ${installed_pkgs[*]}"
-        echo
+        print
 
         if Interface::prompt_confirm "Install ${THEME_COLORS[BOLD]}$package${THEME_COLORS[RESET]}?"; then
             # Start install in background
@@ -480,14 +480,14 @@ Installer::configure_user_features() {
         for ((i = 1; i <= ${#feature_names[@]}; i++)); do
             Interface::print_banner
             Logger::info "Feature Configuration"
-            echo
+            print
 
             if Interface::prompt_confirm "Enable ${THEME_COLORS[BOLD]}${feature_names[$i]}${THEME_COLORS[RESET]}?"; then
                 # Enable: Change "No" to "Yes" in .zshenv
                 FileSystem::sed_patch "${config_keys[$i]}=\"No\"" "${config_keys[$i]}=\"Yes\"" "${CONFIG_PATHS[ENV]}"
-                printf "      %s Enabled %s\n" "${THEME_ICONS[GEAR]}" "${feature_names[$i]}"
+                print -f "      %s Enabled %s\n" "${THEME_ICONS[GEAR]}" "${feature_names[$i]}"
             else
-                printf "      ${THEME_COLORS[GREY]}· Disabled %s${THEME_COLORS[RESET]}\n" "${feature_names[$i]}"
+                print -f "      ${THEME_COLORS[GREY]}· Disabled %s${THEME_COLORS[RESET]}\n" "${feature_names[$i]}"
             fi
         done
     else
@@ -516,7 +516,7 @@ Installer::main() {
     sleep 1
     Interface::typewriter "  :: Initializing setup environment..."
     sleep 2
-    printf "\n"
+    print -f "\n"
 
     # 4. Prerequisites
     Installer::ensure_zsh_shell
@@ -561,7 +561,7 @@ Installer::main() {
     Interface::spinner $! "Cloning repository..."
     wait $!
 
-    printf "\r\033[K"
+    print -f "\r\033[K"
     Logger::success "Config downloaded to ${CONFIG_PATHS[REPO]}"
     sleep 2
 
@@ -569,7 +569,7 @@ Installer::main() {
     [[ -f "${CONFIG_PATHS[HIST]}" ]] && rm -f "${CONFIG_PATHS[HIST]}"
     mv "${CONFIG_PATHS[REPO]}/zhistory" "${CONFIG_PATHS[HIST]}"
 
-    echo 'export ZDOTDIR="$HOME/.config/zsh-conf"' > $HOME/.zshenv &>/dev/null
+    print 'export ZDOTDIR="$HOME/.config/zsh-conf"' > $HOME/.zshenv &>/dev/null
 
     # 8. Dependencies & Features
     Installer::check_dependencies
@@ -608,27 +608,27 @@ Installer::main() {
     sleep 2
 
     # 10. Cleanup
-    echo
+    print
     System::cleanup
 
     Logger::success "Cleanup complete."
-    echo
+    print
 
     Interface::print_banner
 
     # 11. Exit & Onboarding
-    printf "\n${THEME_COLORS[GREEN]}  Installation Finished Successfully! ${THEME_COLORS[RESET]}\n"
+    print -f "\n${THEME_COLORS[GREEN]}  Installation Finished Successfully! ${THEME_COLORS[RESET]}\n"
 
     # Inject Welcome Screen source if missing
     if ! grep -q "_ui.welcome" "${CONFIG_PATHS[REPO]}/.zshrc"; then
-        echo 'source "$ZSH_CONFIG_ROOT/lib/_ui.welcome"' >> "${CONFIG_PATHS[REPO]}/.zshrc"
+        print 'source "$ZSH_CONFIG_ROOT/lib/_ui.welcome"' >> "${CONFIG_PATHS[REPO]}/.zshrc"
     fi
     sleep 2
 
     if Interface::prompt_confirm "Launch new shell now?"; then
         exec zsh
     else
-        echo
+        print
         Logger::info "Please restart your terminal manually to see changes."
         exit 0
     fi

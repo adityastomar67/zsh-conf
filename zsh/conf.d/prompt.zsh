@@ -94,7 +94,7 @@ function get_random_prompt_symbol() {
     )
 
     # Select random index based on array length
-    echo "${symbols[1 + $RANDOM % ${#symbols[@]}]}"
+    print "${symbols[1 + $RANDOM % ${#symbols[@]}]}"
 }
 
 # Function: check_git_untracked_status
@@ -382,7 +382,7 @@ function theme_10k_setup() {
                 title_content="$(basename "$PWD")"
             else
                 local last_cmd=$(history | tail -1 | awk '{print $2}')
-                title_content="$([ -z "$TMUX" ] && echo "$(basename "$PWD") > ")$last_cmd"
+                title_content="$([ -z "$TMUX" ] && print "$(basename "$PWD") > ")$last_cmd"
             fi
         else
             # Pre-exec (Running)
@@ -391,7 +391,7 @@ function theme_10k_setup() {
 
             # Remove command arguments/ssh prefixes for cleaner title
             local trimmed_cmd="${2[(wr)^(*=*|mosh|ssh|sudo)]}"
-            title_content="$([ -z "$TMUX" ] && echo "$(basename "$PWD") > ")$trimmed_cmd"
+            title_content="$([ -z "$TMUX" ] && print "$(basename "$PWD") > ")$trimmed_cmd"
         fi
 
         _10k_set_window_title "$title_content"
@@ -525,7 +525,7 @@ function theme_10k_setup() {
         [[ $USER == "root" ]] && nesting_lvl="$(($nesting_lvl-1))"
 
         # Generate chevron suffix based on nesting level
-        local suffix='%(!.%F{yellow}%n%f.)%(!.%F{yellow}.%F{red})'$(printf '\u276f%.0s' {1..$nesting_lvl})'%f'
+        local suffix='%(!.%F{yellow}%n%f.)%(!.%F{yellow}.%F{red})'$(print -f '\u276f%.0s' {1..$nesting_lvl})'%f'
 
         # Construct PS1
         # 1. SSH info (if applicable)

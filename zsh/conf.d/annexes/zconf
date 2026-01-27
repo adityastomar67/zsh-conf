@@ -10,11 +10,11 @@
 #
 # Problems Solved
 #   - Prevents "Lockout": Automatically checks syntax before reloading to prevent
-#     broken configs from crashing the shell session.
+#       broken configs from crashing the shell session.
 #   - Backup Security: Creates a timestamped backup in /tmp before every edit.
 #   - Context Awareness: Detects modular Zsh-conf setups versus standard ~/.zshrc.
 #   - Tool Integration: Supports both terminal-based editors (Vim/Nano) and
-#     GUI-based workflows (VS Code).
+#       GUI-based workflows (VS Code).
 #
 # Features / Responsibilities
 #   - Location Discovery: Resolves paths via ZSH_CONFIG_ROOT or ZDOTDIR.
@@ -50,7 +50,7 @@ local config_dir
 
 if [[ -n "$ZSH_CONFIG_ROOT" && -d "$ZSH_CONFIG_ROOT" ]]; then
     # Modular Setup Path
-    config_file="$ZSH_CONFIG_ROOT/zsh/conf.d/00_init.zsh"
+    config_file="$ZSH_CONFIG_ROOT/zsh/zshrc"
     config_dir="$ZSH_CONFIG_ROOT"
 else
     # Standard Zsh Path (using ZDOTDIR fallback to HOME)
@@ -101,7 +101,7 @@ print -P "%F{blue}::%f Opening %B${config_file:t}%b with %B${editor:t}%b..."
 
 # Launch the editor and wait for the process to exit
 if "$editor" "$config_file"; then
-    echo
+    print
     print -P "%F{yellow}::%f Validating syntax..."
 
     # ------------------------------------------------------------------------------

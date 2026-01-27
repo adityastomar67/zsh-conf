@@ -75,7 +75,7 @@ local lines_before
 lines_before=$(wc -l < "$source_file" | tr -d ' ')
 
 # Clear the "Analyzing..." status using terminal escape codes (\r\e[K)
-printf "\r\e[K"
+print -f "\r\e[K"
 
 # ------------------------------------------------------------------------------
 # 4. Sorting Logic
@@ -100,7 +100,7 @@ fi
 
 local lines_after
 lines_after=$(wc -l < "$tmp_output" | tr -d ' ')
-printf "\r\e[K"
+print -f "\r\e[K"
 
 # ------------------------------------------------------------------------------
 # 5. Logic Check

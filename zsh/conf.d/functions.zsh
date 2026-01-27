@@ -68,14 +68,14 @@ function _zsh_debug_startup() {
     # 4. User Feedback
     clear
     print "${COLOR[YELLOW]}🚧 Starting Zsh Debugger...${COLOR[RESET]}"
-    echo "   • Debug Log:   ${COLOR[UNDERLINE]}$debug_log${COLOR[RESET]}"
+    print "   • Debug Log:   ${COLOR[UNDERLINE]}$debug_log${COLOR[RESET]}"
 
     if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
-        echo "   • Profile Log: ${COLOR[UNDERLINE]}$prof_log${COLOR[RESET]}"
+        print "   • Profile Log: ${COLOR[UNDERLINE]}$prof_log${COLOR[RESET]}"
     fi
 
-    echo "   • Shell:       Restarting with ${COLOR[BLUE]}xtrace (-x)${COLOR[RESET]} and ${COLOR[BLUE]}verbose (-v)${COLOR[RESET]}..."
-    echo "                  Press \`exit\` to stop tracing and end Debug Shell."
+    print "   • Shell:       Restarting with ${COLOR[BLUE]}xtrace (-x)${COLOR[RESET]} and ${COLOR[BLUE]}verbose (-v)${COLOR[RESET]}..."
+    print "                  Press \`exit\` to stop tracing and end Debug Shell."
 
     # 5. Launch Debug Shell
     #    -x: xtrace (print commands as they are executed)
@@ -117,7 +117,7 @@ fi
 # ------------------------------------------------------------------------------
 function lg() {
     if ! is_installed lazygit; then
-        echo "${COLOR[RED]}Error:${COLOR[RESET]} 'lazygit' is not installed." >&2
+        print "${COLOR[RED]}Error:${COLOR[RESET]} 'lazygit' is not installed." >&2
         return 1
     fi
 
@@ -144,7 +144,7 @@ function lg() {
 function weather() {
     # 1. Dependency Check
     if is_installed curl; then
-        echo "❌ Error: curl is required."
+        print "❌ Error: curl is required."
         return 1
     fi
 
@@ -207,11 +207,11 @@ function kubectl() {
 
             # read -q: read one character and compare it to 'y'
             if ! read -q; then
-                echo # Newline
+                print # Newline
                 print "${COLOR[RED]}Aborted.${COLOR[RESET]}"
                 return 1
             fi
-            echo # Newline
+            print # Newline
         fi
     fi
 

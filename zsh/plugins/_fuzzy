@@ -127,13 +127,13 @@ _fzf_comprun() {
             fzf "$@" --preview "printenv {}" --preview-window="bottom:3:wrap"
             ;;
         kill|pkill)
-            fzf "$@" --preview 'ps -fp {1} 2>/dev/null || echo "Process not found"' \
+            fzf "$@" --preview 'ps -fp {1} 2>/dev/null || print "Process not found"' \
                     --preview-window="bottom:20%:wrap"
             ;;
 
         # 4. Networking & SSH -> Show Config Fragments
         ssh|telnet)
-            fzf "$@" --preview 'cat ~/.ssh/config 2>/dev/null | grep -A 4 "Host {}" || echo "System Host: {}"' \
+            fzf "$@" --preview 'cat ~/.ssh/config 2>/dev/null | grep -A 4 "Host {}" || print "System Host: {}"' \
                     --preview-window="bottom:20%:wrap"
             ;;
 
@@ -149,20 +149,20 @@ _fzf_comprun() {
         unalias) _fzf_compgen_unalias "$@" ;;
 
         systemctl)
-             fzf "$@" --preview 'systemctl status {1} --no-pager 2>/dev/null || echo "Status unavailable"' \
+             fzf "$@" --preview 'systemctl status {1} --no-pager 2>/dev/null || print "Status unavailable"' \
                       --preview-window="right:60%:wrap"
              ;;
 
         # 7. Service Management (macOS)
         #    'launchctl list' shows PID, Last Exit Status, and Label
         launchctl)
-             fzf "$@" --preview 'launchctl list {1} 2>/dev/null || echo "No info available for {1}"' \
+             fzf "$@" --preview 'launchctl list {1} 2>/dev/null || print "No info available for {1}"' \
                       --preview-window="bottom:20%:wrap"
              ;;
 
         # 10. Multi-Tool Fallback logic for everything else
         *)
-            local preview_cmd="echo {}"
+            local preview_cmd="print {}"
             if is_installed bat; then
                 preview_cmd="if [ -f {} ]; then bat --style=numbers --color=always --line-range :500 {};"
             else
@@ -174,7 +174,7 @@ _fzf_comprun() {
             else
                  preview_cmd+=" elif [ -d {} ]; then ls -1 --color=always {};"
             fi
-            preview_cmd+=" else echo {}; fi"
+            preview_cmd+=" else print {}; fi"
 
             fzf "$@" --preview "$preview_cmd"
             ;;
@@ -208,14 +208,14 @@ export FZF_DEFAULT_OPTS="
     --layout='reverse'
     --margin='1'
     --padding='1,1,0,1'
-    --preview '[[ \$(file --mime {}) =~ binary ]] && echo {} is a binary file || (bat --style=numbers --color=always {} || cat {}) 2> /dev/null | head -500'
+    --preview '[[ \$(file --mime {}) =~ binary ]] && print {} is a binary file || (bat --style=numbers --color=always {} || cat {}) 2> /dev/null | head -500'
 
     # 3. KEYBINDINGS
     --bind 'ctrl-j:preview-down'
     --bind 'ctrl-k:preview-up'
     --bind 'ctrl-a:select-all'
-    --bind 'ctrl-y:execute-silent(echo {+} | $CLIP_CMD)'
-    --bind 'ctrl-e:execute(echo {+} | xargs -o nvim)'
+    --bind 'ctrl-y:execute-silent(print {+} | $CLIP_CMD)'
+    --bind 'ctrl-e:execute(print {+} | xargs -o nvim)'
     --bind 'ctrl-v:execute(code {+})'
     --bind 'tab:down,shift-tab:up'
     --bind 'space:toggle'

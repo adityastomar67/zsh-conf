@@ -73,7 +73,7 @@ fetch_manifest() {
         return 1
     fi
 
-    echo "$raw_list" > "$MANIFEST_FILE"
+    print "$raw_list" > "$MANIFEST_FILE"
     notify_user "RandomWall" "Manifest updated ($(wc -l < "$MANIFEST_FILE" | tr -d ' ') images found)."
 }
 
@@ -97,7 +97,7 @@ download_image() {
 
     if curl -s -L -o "$target" "$full_url"; then
         # ONLY ECHO THE PATH TO STDOUT
-        echo "$target"
+        print "$target"
         return 0
     else
         print -u2 ":: Error: Download failed."

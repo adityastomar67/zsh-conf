@@ -187,7 +187,7 @@ tput civis 2>/dev/null
 # ---- SAFE: Loop while the extraction PID is still active
 while kill -0 $pid 2>/dev/null; do
     i=$(( (i+1) % 10 ))
-    printf "\b${c_blue}${spin:$i:1}${c_reset}"
+    print -f "\b${c_blue}${spin:$i:1}${c_reset}"
     sleep 0.1
 done
 
@@ -201,12 +201,12 @@ local exit_code=$?
 # Math: Calculate total duration
 local end_time=$EPOCHREALTIME
 local duration=$(( end_time - start_time ))
-local duration_fmt=$(printf "%.2f" $duration)
+local duration_fmt=$(print -f "%.2f" $duration)
 
 # ------------------------------------------------------------------------------
 # 7. Final Reporting
 
-printf "\b" # Clean up the last spinner character
+print -f "\b" # Clean up the last spinner character
 
 if (( exit_code == 0 )); then
     print -P "${c_green}✔${c_reset} Done in ${duration_fmt}s"
@@ -214,7 +214,7 @@ if (( exit_code == 0 )); then
 else
     # In case of failure, we display the stored error log to the user.
     print -P "${c_red}✘${c_reset} Failed."
-    echo
+    print
     print -P "${c_yellow}--- Error Log ---${c_reset}"
     cat "$log_file"
     rm -f "$log_file"

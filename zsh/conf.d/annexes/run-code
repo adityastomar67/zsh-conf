@@ -190,9 +190,9 @@ fi
 
 local end_time=$EPOCHREALTIME
 local total_duration=$(( end_time - start_time ))
-local duration_fmt=$(printf "%.3f" $total_duration)
+local duration_fmt=$(print -f "%.3f" $total_duration)
 
-echo
+print
 if (( exit_status == 0 )); then
     print "${COLOR[GREEN]}✔${COLOR[RESET]} Finished in ${COLOR[GREEN]}${duration_fmt}s${COLOR[RESET]}"
 else

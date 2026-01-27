@@ -98,7 +98,7 @@ fzf \
     --preview="
             # Extract name {1} and section {2} for the preview command.
             # col -bx: Removes backspaces/overstrikes for a clean cat/bat view.
-            echo {1} | sed 's/,//g' | xargs -I % sh -c 'MANPAGER=cat man {2} % | col -bx' | $preview_pager
+            print {1} | sed 's/,//g' | xargs -I % sh -c 'MANPAGER=cat man {2} % | col -bx' | $preview_pager
     " | \
 awk '{print $2, $1}' | \
 sed 's/,//g' | \

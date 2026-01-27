@@ -72,7 +72,7 @@ if [[ -n "$selected_rows" ]]; then
 
     # Parse the output to get just the Image IDs (Column 1).
     # We use awk to print the first column and store it in an array.
-    image_ids=($(echo "$selected_rows" | awk '{print $1}'))
+    image_ids=($(print "$selected_rows" | awk '{print $1}'))
 
     # ---- UI: Confirmation Prompt
     print "\n${COLOR[YELLOW]}You are about to delete ${#image_ids[@]} image(s):${COLOR[RESET]}"
@@ -83,7 +83,7 @@ if [[ -n "$selected_rows" ]]; then
 
     # 'read -q' reads a single character (y/n).
     if read -q user_confirmed; then
-        echo # Print a newline to clean up terminal output
+        print # Print a newline to clean up terminal output
 
         # ---- NOTE: Force Removal
         # We use 'rmi -f' to ensure images are deleted even if they have
@@ -92,7 +92,7 @@ if [[ -n "$selected_rows" ]]; then
         docker rmi -f "${image_ids[@]}"
         print "\n${COLOR[GREEN]}✔ Images deleted.${COLOR[RESET]}"
     else
-        echo # Print a newline
+        print # Print a newline
         print "\n${COLOR[GREEN]}::${COLOR[RESET]} Cancelled."
     fi
 fi

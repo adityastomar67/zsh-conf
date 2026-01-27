@@ -55,7 +55,7 @@ local preview_script='
         if [[ $mime == text/* || $mime == "application/json" || $mime == "inode/x-empty" ]]; then
             bat --style=numbers --color=always "$file" 2>/dev/null || cat "$file"
         else
-            echo "Binary File ($mime)"
+            print "Binary File ($mime)"
         fi
     fi
 '
@@ -91,7 +91,7 @@ if [[ -n "$selected" ]]; then
 
     # Read 1 character (q)uickly
     if read -q choice; then
-        echo # Newline after keypress
+        print # Newline after keypress
 
         # !!! CRITICAL: The actual deletion
         command rm -rf "${files[@]}"
@@ -102,7 +102,7 @@ if [[ -n "$selected" ]]; then
                 print "\n${COLOR[RED]}✘ Error deleting files.${COLOR[RESET]}"
         fi
     else
-        echo
+        print
         print "\n${COLOR[GREEN]}::${COLOR[RESET]} Cancelled."
     fi
 else

@@ -115,7 +115,7 @@ if [[ -d "$input_target" ]]; then
     print -P -n "   [e]nter  [o]verwrite  [c]ancel > "
     local key_press
     read -k 1 key_press
-    echo
+    print
     case "$key_press" in
         [eE]) action_type="enter" ;;
         [oO])

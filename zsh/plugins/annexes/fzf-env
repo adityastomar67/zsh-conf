@@ -54,24 +54,24 @@ selection=$(env | fzf \
     \
     --preview '
         # Extract Value (cut fields 2 onwards)
-        val=$(echo {} | cut -d= -f2-)
+        val=$(print {} | cut -d= -f2-)
 
         # Formatting Strategy
         if command -v bat > /dev/null; then
             # Use Bat for wrapping and color
-            echo "$val" | bat -l bash --style=plain --color=always --wrap=character
+            print "$val" | bat -l bash --style=plain --color=always --wrap=character
         else
             # Fallback: Fold to terminal width
-            echo "$val" | fold -w $COLUMNS
+            print "$val" | fold -w $COLUMNS
         fi
     ' \
     --preview-window="right:60%:wrap" \
     \
-    --bind "ctrl-y:execute-silent(echo {} | cut -d= -f2- | $copy_cmd)+abort"
+    --bind "ctrl-y:execute-silent(print {} | cut -d= -f2- | $copy_cmd)+abort"
 )
 
 # 4. Output Logic (If user pressed Enter)
 if [[ -n "$selection" ]]; then
     # Print only the value to stdout
-    echo "$selection" | cut -d= -f2-
+    print "$selection" | cut -d= -f2-
 fi

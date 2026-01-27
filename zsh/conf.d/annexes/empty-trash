@@ -115,7 +115,7 @@ fi
 
 # Clear the "Analyzing..." status line using terminal escape codes
 # \r: return to start of line, \e[K: clear to end of line
-printf "\r\e[K"
+print -f "\r\e[K"
 
 # ------------------------------------------------------------------------------
 # 6. The Confirmation Dashboard
@@ -135,7 +135,7 @@ print -P -n "   Empty trash now? [y/N] "
 
 local confirm
 read -k 1 confirm
-echo # Insert newline after keystroke
+print # Insert newline after keystroke
 
 if [[ "$confirm" =~ ^[yY]$ ]]; then
     print -P "\n${c_blue}::${c_reset} Scrubbing files..."

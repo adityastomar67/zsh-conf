@@ -80,13 +80,13 @@ local selected_chars="$chars_ascii"
 # ------------------------------------------------------------------------------
 # 4. Execution Loop (The Clock)
 
-# We use a Zsh while loop as the "metronome". Every 'echo' sends a pulse to AWK.
+# We use a Zsh while loop as the "metronome". Every 'print' sends a pulse to AWK.
 while :; do
     # read -t 0.05: Controls the framerate (approx 20 FPS).
     # We read from /dev/tty to ensure 'q' works even if we are piping.
     read -s -k 1 -t 0.05 key < /dev/tty 2>/dev/null
     if [[ "$key" == "q" ]]; then break; fi
-    echo
+    print
 done | LC_ALL=en_US.UTF-8 $awk_cmd \
     -v lines="$(tput lines)" \
     -v cols="$(tput cols)" \
@@ -123,7 +123,7 @@ BEGIN {
             # We calculate the position of the very last character in the tail
             # and replace it with a space to "move" the stream down.
             if (y[c] - l[c] > 0 && y[c] - l[c] <= lines) {
-                printf "\033[%d;%dH ", y[c] - l[c], c;
+                print -f "\033[%d;%dH ", y[c] - l[c], c;
             }
 
             # 2. Body Rendering (Dim Green)
@@ -131,7 +131,7 @@ BEGIN {
             # in green (\033[32m).
             if (y[c] > 0 && y[c] <= lines) {
                 r_char = substr(chars, int(rand() * len_chars) + 1, 1);
-                printf "\033[%d;%dH\033[32m%s", y[c], c, r_char;
+                print -f "\033[%d;%dH\033[32m%s", y[c], c, r_char;
             }
 
             # 3. Head Rendering (Bright White)
@@ -139,7 +139,7 @@ BEGIN {
             # We print this one row ahead of the green body (\033[1;37m).
             if (y[c] + 1 > 0 && y[c] + 1 <= lines) {
                 r_char_head = substr(chars, int(rand() * len_chars) + 1, 1);
-                printf "\033[%d;%dH\033[1;37m%s", y[c] + 1, c, r_char_head;
+                print -f "\033[%d;%dH\033[1;37m%s", y[c] + 1, c, r_char_head;
             }
 
             y[c]++;

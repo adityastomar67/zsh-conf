@@ -57,9 +57,9 @@
     clear
 
     # 1. Header Box
-    printf "${COLOR[DIM]}   ╭──────────────────────────────────────────────────────────────╮${COLOR[RESET]}\n"
-    printf "${COLOR[DIM]}   │${COLOR[RESET]}                ${COLOR[CYAN]}👋 HELLO, WELCOME TO ZSH-CONF${COLOR[RESET]}                 ${COLOR[DIM]}│${COLOR[RESET]}\n"
-    printf "${COLOR[DIM]}   ╰──────────────────────────────────────────────────────────────╯${COLOR[RESET]}\n"
+    print -f "${COLOR[DIM]}   ╭──────────────────────────────────────────────────────────────╮${COLOR[RESET]}\n"
+    print -f "${COLOR[DIM]}   │${COLOR[RESET]}                ${COLOR[CYAN]}👋 HELLO, WELCOME TO ZSH-CONF${COLOR[RESET]}                 ${COLOR[DIM]}│${COLOR[RESET]}\n"
+    print -f "${COLOR[DIM]}   ╰──────────────────────────────────────────────────────────────╯${COLOR[RESET]}\n"
 
     # 2. Introduction
     print "   Maybe it's your first time using a custom Zsh setup or maybe not."
@@ -67,44 +67,44 @@
     print "   ${COLOR[DIM]}🔗 Repo:${COLOR[RESET]} https://github.com/adityastomar67/zsh-conf\n"
 
     # 3. Philosophy & Features
-    printf "   ${COLOR[MAGENTA]}:: PHILOSOPHY & FEATURES${COLOR[RESET]}\n"
+    print -f "   ${COLOR[MAGENTA]}:: PHILOSOPHY & FEATURES${COLOR[RESET]}\n"
     print "   I tried to make this shell environment ${COLOR[BOLD]}MINIMALIST${COLOR[RESET]} yet powerful."
     print "   It is designed to be fast, beautiful, and efficient.\n"
 
     # · Benchmarking
-    printf "   ${COLOR[DIM]}•${COLOR[RESET]} ${COLOR[BOLD]}Startup Benchmarking:\n${COLOR[RESET]}"
-    printf "     Automatically times your shell load. Set ${COLOR[YELLOW]}ZSH_BENCHMARK=\"Yes\"${COLOR[RESET]} in ${COLOR[UNDERLINE]}\$ZDOTDIR/user.conf${COLOR[RESET]} to see the report.\n\n"
+    print -f "   ${COLOR[DIM]}•${COLOR[RESET]} ${COLOR[BOLD]}Startup Benchmarking:\n${COLOR[RESET]}"
+    print -f "     Automatically times your shell load. Set ${COLOR[YELLOW]}ZSH_BENCHMARK=\"Yes\"${COLOR[RESET]} in ${COLOR[UNDERLINE]}\$ZDOTDIR/user.conf${COLOR[RESET]} to see the report.\n\n"
 
     # · Minimalist Mode
-    printf "   ${COLOR[DIM]}•${COLOR[RESET]} ${COLOR[BOLD]}Minimalist Mode:\n${COLOR[RESET]}"
-    printf "     Need raw speed? Toggle the lightweight version by setting ${COLOR[YELLOW]}MINIMALIST=\"Yes\"${COLOR[RESET]} in ${COLOR[UNDERLINE]}\$ZDOTDIR/user.conf${COLOR[RESET]}.\n\n"
+    print -f "   ${COLOR[DIM]}•${COLOR[RESET]} ${COLOR[BOLD]}Minimalist Mode:\n${COLOR[RESET]}"
+    print -f "     Need raw speed? Toggle the lightweight version by setting ${COLOR[YELLOW]}MINIMALIST=\"Yes\"${COLOR[RESET]} in ${COLOR[UNDERLINE]}\$ZDOTDIR/user.conf${COLOR[RESET]}.\n\n"
 
     # · Visuals
-    printf "   ${COLOR[DIM]}•${COLOR[RESET]} ${COLOR[BOLD]}Visuals:\n${COLOR[RESET]}"
-    printf "     Enjoy random pixel art or quotes on start. Set ${COLOR[YELLOW]}FANCY_TERM=\"Yes\"${COLOR[RESET]} in ${COLOR[UNDERLINE]}\$ZDOTDIR/user.conf${COLOR[RESET]}.\n"
+    print -f "   ${COLOR[DIM]}•${COLOR[RESET]} ${COLOR[BOLD]}Visuals:\n${COLOR[RESET]}"
+    print -f "     Enjoy random pixel art or quotes on start. Set ${COLOR[YELLOW]}FANCY_TERM=\"Yes\"${COLOR[RESET]} in ${COLOR[UNDERLINE]}\$ZDOTDIR/user.conf${COLOR[RESET]}.\n"
     print  "     ${COLOR[CYAN]}[NOTE]${COLOR[RESET]} (Requires '${COLOR[BLUE]}motivate${COLOR[RESET]}' installed for Quotes).\n"
 
     # 4. Configuration Guide
-    printf "   ${COLOR[MAGENTA]}:: CONFIGURATION${COLOR[RESET]}\n"
+    print -f "   ${COLOR[MAGENTA]}:: CONFIGURATION${COLOR[RESET]}\n"
     print "   This configuration is managed, meaning the core files may update."
     print "   To keep your settings safe, please follow this rule:\n"
 
     # · Warning / Do Not Edit
-    printf "   ${COLOR[RED]}⚠  DO NOT EDIT:${COLOR[RESET]} Any file at ${COLOR[DIM]}${COLOR[UNDERLINE]}\$ZDOTDIR/zsh/${COLOR[RESET]} directly.\n"
+    print -f "   ${COLOR[RED]}⚠  DO NOT EDIT:${COLOR[RESET]} Any file at ${COLOR[DIM]}${COLOR[UNDERLINE]}\$ZDOTDIR/zsh/${COLOR[RESET]} directly.\n"
 
     # · Do Edit
-    printf "   ${COLOR[CYAN]}✓  DO EDIT:${COLOR[RESET]}     The ${COLOR[BOLD]}'USER OVERRIDES'${COLOR[RESET]} can go in your ${COLOR[DIM]}${COLOR[UNDERLINE]}~/User-Overrides.zsh${COLOR[RESET]} file.\n                   All pre-set options are in ${COLOR[DIM]}${COLOR[UNDERLINE]}\$ZDOTDIR/user.conf${COLOR[RESET]}. Access the options using ${COLOR[BLUE]}${COLOR[BOLD]}zsettings${COLOR[RESET]} command.\n\n"
+    print -f "   ${COLOR[CYAN]}✓  DO EDIT:${COLOR[RESET]}     The ${COLOR[BOLD]}'USER OVERRIDES'${COLOR[RESET]} can go in your ${COLOR[DIM]}${COLOR[UNDERLINE]}~/User-Overrides.zsh${COLOR[RESET]} file.\n                   All pre-set options are in ${COLOR[DIM]}${COLOR[UNDERLINE]}\$ZDOTDIR/user.conf${COLOR[RESET]}. Access the options using ${COLOR[BLUE]}${COLOR[BOLD]}zsettings${COLOR[RESET]} command.\n\n"
 
     # · Alias Tip
     print "   ${COLOR[DIM]}${COLOR[UNDERLINE]}~/User-Overrides.zsh${COLOR[RESET]} is where you should place your custom aliases, exports, and functions\n   (e.g. ${COLOR[YELLOW]}alias myip='curl ifconfig.me'${COLOR[RESET]}).\n"
 
     # · Updates
-    printf "   ${COLOR[DIM]}•${COLOR[RESET]} ${COLOR[BOLD]}Updates:\n${COLOR[RESET]}"
-    printf "     Keep this config fresh easily. Just run ${COLOR[YELLOW]}dotup -z${COLOR[RESET]} in the terminal. It handles git pulls and resets automatically.\n"
-    printf "     Also, the suggested font in the terminal is: ${COLOR[DIM]}${COLOR[MAGENTA]}JetBrains Mono Nerd Font${COLOR[RESET]}.\n\n"
+    print -f "   ${COLOR[DIM]}•${COLOR[RESET]} ${COLOR[BOLD]}Updates:\n${COLOR[RESET]}"
+    print -f "     Keep this config fresh easily. Just run ${COLOR[YELLOW]}dotup -z${COLOR[RESET]} in the terminal. It handles git pulls and resets automatically.\n"
+    print -f "     Also, the suggested font in the terminal is: ${COLOR[DIM]}${COLOR[MAGENTA]}JetBrains Mono Nerd Font${COLOR[RESET]}.\n\n"
 
     # 5. Footer & Help
-    printf "   ${COLOR[DIM]}──────────────────────────────────────────────────────────────────────────────────────────────────────────────────${COLOR[RESET]}\n"
+    print -f "   ${COLOR[DIM]}──────────────────────────────────────────────────────────────────────────────────────────────────────────────────${COLOR[RESET]}\n"
     print "   ${COLOR[BOLD]} NEED HELP?${COLOR[RESET]}"
     print "   If you find a bug or have a suggestion, open an issue at the repo.\n"
 

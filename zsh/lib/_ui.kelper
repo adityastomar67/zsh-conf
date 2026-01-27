@@ -17,20 +17,20 @@
 () {
     # ── Helpers ────────────────────────────────────────────────────────────
     function print_row() {
-        printf "   ${COLOR[YELLOW]}%-26s${COLOR[RESET]}  ${COLOR[DIM]}::${COLOR[RESET]}  %s\n" "$1" "$2"
+        print -f "   ${COLOR[YELLOW]}%-26s${COLOR[RESET]}  ${COLOR[DIM]}::${COLOR[RESET]}  %s\n" "$1" "$2"
     }
 
     function print_section() {
-        printf "\n   ${COLOR[MAGENTA]}${COLOR[BOLD]}%s${COLOR[RESET]}\n" "$1"
+        print -f "\n   ${COLOR[MAGENTA]}${COLOR[BOLD]}%s${COLOR[RESET]}\n" "$1"
     }
 
     # ── UI Rendering ───────────────────────────────────────────────────────
     clear
 
     # 1. Header
-    printf "${COLOR[DIM]}╭────────────────────────────────────────────────────────────────╮${COLOR[RESET]}\n"
-    printf "${COLOR[DIM]}│${COLOR[RESET]}                 ${COLOR[CYAN]}⌨️  MASTER KEYBINDING REFERENCE${COLOR[RESET]}                 ${COLOR[DIM]}│${COLOR[RESET]}\n"
-    printf "${COLOR[DIM]}╰────────────────────────────────────────────────────────────────╯${COLOR[RESET]}\n"
+    print -f "${COLOR[DIM]}╭────────────────────────────────────────────────────────────────╮${COLOR[RESET]}\n"
+    print -f "${COLOR[DIM]}│${COLOR[RESET]}                 ${COLOR[CYAN]}⌨️  MASTER KEYBINDING REFERENCE${COLOR[RESET]}                 ${COLOR[DIM]}│${COLOR[RESET]}\n"
+    print -f "${COLOR[DIM]}╰────────────────────────────────────────────────────────────────╯${COLOR[RESET]}\n"
 
     print "   System initialized. Here are the power tools available to you:\n"
 
@@ -73,10 +73,10 @@
         print_row "h / j / k / l" "Navigate menu (Vim mode)"
     fi
 
-    echo ""
+    print ""
 
     # 7. Exit Interaction
-    printf "   ${COLOR[DIM]}────────────────────────────────────────────────────────────────${COLOR[RESET]}\n"
+    print -f "   ${COLOR[DIM]}────────────────────────────────────────────────────────────────${COLOR[RESET]}\n"
     print "   ${COLOR[CYAN]}NOTE:${COLOR[RESET]} This screen will appear only once."
     print -n "   ${COLOR[BOLD]}Press [ENTER] to begin...${COLOR[RESET]}\n"
     read -k1 -s

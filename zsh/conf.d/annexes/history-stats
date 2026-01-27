@@ -93,10 +93,10 @@ END {
 # 4. Result Parsing
 
 # Extract calculated metrics from the AWK output stream
-local total_cmds=$(echo "$output" | grep "TOTAL_CMDS" | cut -d' ' -f2)
-local data=$(echo "$output" | grep -v "TOTAL_CMDS")
-local top_15=$(echo "$data" | head -n 15)
-local unique_count=$(echo "$data" | wc -l | tr -d ' ')
+local total_cmds=$(print "$output" | grep "TOTAL_CMDS" | cut -d' ' -f2)
+local data=$(print "$output" | grep -v "TOTAL_CMDS")
+local top_15=$(print "$data" | head -n 15)
+local unique_count=$(print "$data" | wc -l | tr -d ' ')
 
 # ------------------------------------------------------------------------------
 # 5. Dashboard Rendering
@@ -108,9 +108,9 @@ print -P "${c_blue}│             📊  COMMAND HISTORY STATS            │${c
 print -P "${c_blue}├──────────────────────────────────────────────────┤${c_reset}"
 
 # !!! CRITICAL: Formatting
-# We use printf with %s to pass Zsh color variables into the AWK-style formatting
+# We use print -f with %s to pass Zsh color variables into the AWK-style formatting
 # to avoid rendering glitches or misinterpreted percent signs.
-printf "%s│%s  Analyzed: %s%-10s%s Unique: %s%-11s%s  %s│%s\n" \
+print -f "%s│%s  Analyzed: %s%-10s%s Unique: %s%-11s%s  %s│%s\n" \
     "$c_blue" "$c_reset" \
     "$c_white" "$total_cmds" "$c_reset" \
     "$c_white" "$unique_count" "$c_reset" \
@@ -127,7 +127,7 @@ print -P "${c_blue}╰───────────────────�
 # 2. pct > 10% -> Orange
 # 3. pct > 5%  -> Yellow
 # 4. else      -> Green
-echo "$top_15" | awk -v total="$total_cmds" '
+print "$top_15" | awk -v total="$total_cmds" '
 function get_color(pct) {
     if (pct > 20) return "\033[38;5;196m"
     if (pct > 10) return "\033[38;5;214m"
@@ -154,10 +154,10 @@ function get_color(pct) {
     white = "\033[1;37m"
 
     # Final Dashboard Print
-    printf "  %s%4d%s  %s%5.1f%%%s  %s%-12s%s  %s%s%s\n",
+    print -f "  %s%4d%s  %s%5.1f%%%s  %s%-12s%s  %s%s%s\n",
         white, count, reset,
         grey, percent, reset,
         white, cmd, reset,
         color, bar, reset
 }'
-echo
+print

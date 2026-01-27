@@ -1,7 +1,3 @@
-#    ░▀▀█░█▀▀░█░█░█▀▄░█▀▀
-#    ░▄▀░░▀▀█░█▀█░█▀▄░█░░
-#    ░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀
-
 # ------------------------------------------------------------------------------
 # File Purpose
 #   This script acts as the "Engine Room" of the Zsh configuration.
@@ -23,13 +19,11 @@
 # Usage Notes
 #   - Modules in 'conf.d' are loaded in the order defined in the arrays.
 #   - Background compilation happens silently; you won't see output.
-#
-# Project: Zsh-conf
 # ------------------------------------------------------------------------------
 
 
 # Safety Check & Environment Restoration
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## In some non-login shells (e.g., executing a script, some IDE terminals),
 ## user.conf might be skipped. We ensure critical variables are loaded here.
 
@@ -42,7 +36,7 @@ fi
 
 
 # Feature: Auto-Tmux Integration
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## conditionally launches Tmux. We use the ':l' modifier to lowercase the
 ## {:l} variable for case-insensitive comparison ("Yes" == "yes").
 
@@ -53,7 +47,7 @@ fi
 
 
 # Module Loading System
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Iterates through distinct configuration files.
 ## We separate them into "Core" (Essential) and "Auxiliary" (Nice to have).
 
@@ -95,7 +89,7 @@ zsh-defer _load_aux_stuff
 zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 
 # Background Optimization (Zcompile)
-# ─────────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 ## Zsh can compile text scripts into bytecode (.zwc) for faster parsing.
 ## This block runs in a background subshell to avoid slowing down startup.
 
@@ -105,7 +99,7 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 (
 
     # Safety & Globbing Options
-    # ─────────────────────────────────────────────────────────────
+    # ───────────────────────────────────────────────────────────────────────
     # LOCAL_OPTIONS: Changes don't leak (redundant in subshell but good practice).
     # NO_ALIASES:    Prevent alias expansion from breaking paths.
     # null_glob:     Arrays remain empty if no files match (don't error).
@@ -116,11 +110,11 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
     unsetopt xtrace verbose
 
     # Redirect ALL output (stdout & stderr) to the void.
-    #    This swallows echo, print, errors, AND shell tracing.
+    #    This swallows print, print, errors, AND shell tracing.
     exec >/dev/null 2>&1
 
     # Atomic Locking
-    # ─────────────────────────────────────────────────────────────
+    # ───────────────────────────────────────────────────────────────────────
     # We use `mkdir` because it is an atomic operation on POSIX systems.
     # Two processes cannot create the same directory at the exact same instant.
     # If it fails, another compiler instance is already running.
@@ -136,32 +130,32 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 
 
     # Compiler Logic
-    # ─────────────────────────────────────────────────────────────
+    # ───────────────────────────────────────────────────────────────────────
 
     function try_compile() {
         local source_file="$1"
         local compiled_file="${source_file}.zwc"
 
         # Logic:
-        # 1. Source file must exist (-f).
-        # 2. AND ( Compiled file doesn't exist OR Source is newer than Compiled ).
+        #   - Source file must exist (-f).
+        #   - AND ( Compiled file doesn't exist OR Source is newer than Compiled ).
         if [[ -f "$source_file" && ( ! -f "$compiled_file" || "$source_file" -nt "$compiled_file" ) ]]; then
 
             # zcompile flags:
-            # -U: Don't expand aliases in the sourced file (safety).
-            # >/dev/null: Silence output (we are in background).
+            #   -U: Don't expand aliases in the sourced file (safety).
+            #   >/dev/null: Silence output (we are in background).
             zcompile -U "$source_file" >/dev/null 2>&1
         fi
     }
 
 
     # Target Definitions
-    # ─────────────────────────────────────────────────────────────
+    # ───────────────────────────────────────────────────────────────────────
     # Build a list of all files that should be compiled.
 
     local -a files_to_compile
 
-    # ── A. Core Dotfiles ─────────────────────────────────────────────────
+    # ── Core Dotfiles ─────────────────────────────────────────────────
 
     files_to_compile+=(
         "$HOME/.zshrc"
@@ -173,7 +167,7 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
         "$ZSH_COMPLETION_DUMP"
     )
 
-    # ── B. Framework Core (Flat structure) ────────────────────────────────
+    # ── Framework Core (Flat structure) ────────────────────────────────
 
     # Match all files recursively, BUT exclude (*.zwc)
     # (N.) means: Nullglob (no error if empty) AND Plain files only (no directories)
@@ -183,7 +177,7 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
         "$ZSH_CONFIG_ROOT"/lib/functions/*~*.zwc(N.)
     )
 
-    # ── C. Plugins (Recursive structure) ──────────────────────────────────
+    # ── Plugins (Recursive structure) ──────────────────────────────────
 
     # We need to find .zsh files deep inside plugin directories.
     # We also explicitly look for .plugin.zsh to be safe.
@@ -195,7 +189,7 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 
 
     # Execution Loop
-    # ─────────────────────────────────────────────────────────────
+    # ───────────────────────────────────────────────────────────────────────
 
     for file in "${files_to_compile[@]}"; do
         try_compile "$file"
@@ -203,17 +197,17 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
 
 
     # EXECUTION: DIRECTORY DIGEST (MULTI-FOLDER)
-    # ─────────────────────────────────────────────────────────────
+    # ───────────────────────────────────────────────────────────────────────
     # Compiles specific directories into .zwc files for faster autoloading.
 
-    # 1. Define the directories you want to compile
+    # Define the directories you want to compile
     #    (Paths relative to ZSH_CONFIG_ROOT or absolute paths)
     local compile_dirs=(
         "${ZSH_CONFIG_ROOT}/conf.d/annexes"
         "${ZSH_CONFIG_ROOT}/plugins/annexes"
     )
 
-    # 2. Loop through them
+    # Loop through them
     for func_dir in $compile_dirs; do
         # Skip if directory doesn't exist
         [[ -d "$func_dir" ]] || continue
@@ -226,7 +220,7 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
         local newest_src
         newest_src=( "$func_dir"/*(.om[1]) )
 
-        # 3. Check Condition:
+        # Check Condition:
         #    - If digest doesn't exist OR
         #    - If the newest source file is newer (-nt) than the digest
         if [[ -n "$newest_src" && ( ! -f "$digest_file" || "$newest_src" -nt "$digest_file" ) ]]; then
@@ -236,9 +230,6 @@ zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
             # -z: Mark as autoloadable functions (Crucial for fpath)
             # -M: Map the file into memory (optional, often safer to omit in auto-scripts)
             zcompile -U -z "$digest_file" "$func_dir"/*(.N) >/dev/null 2>&1
-
-            # Optional: Print status (useful for debugging startup time)
-            # echo "Compiled digest: $digest_file"
         fi
     done
 

@@ -139,7 +139,7 @@ zsettings() {
 
         # A. Add the "Create New" button at the very top
         # We use ANSI codes directly here for the yellow color
-        printf "0\tACTION\t%-${max_key_len}s\t%s%-${max_val_len}s\033[0m%s\n" \
+        print -f "0\tACTION\t%-${max_key_len}s\t%s%-${max_val_len}s\033[0m%s\n" \
             "+ Add New Plugin" \
             $'\033[1;33m' "Click to Add" \
             $'\033[2m(Insert new repo)\033[0m' >> "$tmp_list"
@@ -163,7 +163,7 @@ zsettings() {
             fi
 
             # Format: ID \t Type \t PaddedKey \t ColoredPaddedValue \t Extra
-            printf "%d\t%s\t%-${max_key_len}s\t%s%-${max_val_len}s\033[0m%s\n" \
+            print -f "%d\t%s\t%-${max_key_len}s\t%s%-${max_val_len}s\033[0m%s\n" \
                 "$line_num" "$type" "$key" \
                 "$val_color" "$value" \
                 "$extra_display" >> "$tmp_list"
@@ -203,20 +203,20 @@ zsettings() {
 
 
         # Extract data from the tab-delimited selection string
-        local target_line=$(echo "$selected" | awk -F'\t' '{print $1}')
-        local target_type=$(echo "$selected" | awk -F'\t' '{print $2}')
-        local raw_key=$(echo "$selected" | awk -F'\t' '{print $3}')
+        local target_line=$(print "$selected" | awk -F'\t' '{print $1}')
+        local target_type=$(print "$selected" | awk -F'\t' '{print $2}')
+        local raw_key=$(print "$selected" | awk -F'\t' '{print $3}')
 
         # Cleanup Key (remove padding and icons)
         local target_key="${raw_key%% *}"
         target_key="${target_key#📦 }"
 
         # Cleanup Value (remove ANSI color codes and padding)
-        local target_val=$(echo "$selected" | awk -F'\t' '{print $4}' | perl -pe 's/\e\[?.*?[\@-~]//g' | sed 's/[[:space:]]*$//')
+        local target_val=$(print "$selected" | awk -F'\t' '{print $4}' | perl -pe 's/\e\[?.*?[\@-~]//g' | sed 's/[[:space:]]*$//')
 
         # --- BRANCH: Add New Plugin ---
         if [[ "$target_type" == "ACTION" ]]; then
-            echo
+            print
             print -P "%F{cyan}Enter plugin repo (e.g. %Uuser/repo%u):%f"
             local new_repo
             vared -p "➜ " -c new_repo
@@ -262,7 +262,7 @@ zsettings() {
             new_val="Yes"
         else
             # Manual text entry for other values
-            echo
+            print
             print -P "%F{cyan}Edit value for: %B$target_key%b%f"
             vared -p "➜ " -c target_val
             new_val="$target_val"

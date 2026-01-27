@@ -73,25 +73,25 @@ if [[ -n "$selected_rows" ]]; then
 
     # Parse the output to get just the Container IDs (Column 1).
     # We use awk to print the first column and store it in an array.
-    container_ids=($(echo "$selected_rows" | awk '{print $1}'))
+    container_ids=($(print "$selected_rows" | awk '{print $1}'))
 
     # ---- UI: Confirmation Prompt
     print "\n${COLOR[YELLOW]}You are about to delete ${#container_ids[@]} container(s):${COLOR[RESET]}"
     print "${COLOR[RED]}${container_ids[*]}${COLOR[RESET]}"
 
     # Print the prompt without a newline (-n) so the cursor stays on the same line.
-    # %b handles echo escape sequences if necessary.
+    # %b handles print escape sequences if necessary.
     print -n "\n${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]}%b "
 
     # 'read -q' reads a single character. Returns 0 (true) if 'y' or 'Y'.
     if read -q user_confirmed; then
-        echo # Print a newline to clean up the terminal output
+        print # Print a newline to clean up the terminal output
 
         # Force remove (-f) the selected containers.
         docker rm -f "${container_ids[@]}"
         print "\n${COLOR[GREEN]}✔ Containers deleted.${COLOR[RESET]}"
     else
-        echo # Print a newline
+        print # Print a newline
         print "\n${COLOR[GREEN]}::${COLOR[RESET]} Cancelled."
     fi
 fi

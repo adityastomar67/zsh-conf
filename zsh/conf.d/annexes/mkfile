@@ -116,7 +116,7 @@ for file in "$@"; do
             template="# $(basename "$file" .md | tr '[:lower:]' '[:upper:]')\n\nCreated: $(date '+%Y-%m-%d')"
             ;;
         c)
-            template="#include <stdio.h>\n\nint main() {\n    printf(\"Hello World\\\\n\");\n    return 0;\n}"
+            template="#include <stdio.h>\n\nint main() {\n    print -f(\"Hello World\\\\n\");\n    return 0;\n}"
             ;;
         cpp)
             template="#include <iostream>\n\nint main() {\n    std::cout << \"Hello World\" << std::endl;\n    return 0;\n}"
@@ -133,10 +133,10 @@ for file in "$@"; do
     # 4. Finalization (Write & Permissions)
 
     # !!! CRITICAL: Output Handling
-    # We use 'printf %b' to ensure that newlines (\n) within the template
+    # We use 'print -f %b' to ensure that newlines (\n) within the template
     # strings are correctly interpreted as actual line breaks in the file.
     if [[ -n "$template" ]]; then
-        printf "%b\n" "$template" > "$file"
+        print -f "%b\n" "$template" > "$file"
         print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Created '${COLOR[BOLD]}$file${COLOR[RESET]}' ${COLOR[GREY]}(with $ext template)${COLOR[RESET]}"
     else
         touch "$file"

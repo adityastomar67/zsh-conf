@@ -25,12 +25,12 @@
     # Guard: Install if missing (Requires curl)
     if ! is_installed theme.sh; then
         if is_installed curl; then
-            echo "Installing theme.sh..."
+            print "Installing theme.sh..."
             mkdir -p "$bin_dir"
             curl -fsSL 'https://raw.githubusercontent.com/adityastomar67/theme.sh/master/bin/theme.sh' -o "$theme_bin"
             chmod +x "$theme_bin"
         else
-            echo "Error: 'curl' is required to install theme.sh" >&2
+            print "Error: 'curl' is required to install theme.sh" >&2
             return 1
         fi
     fi

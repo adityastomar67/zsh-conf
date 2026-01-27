@@ -59,13 +59,13 @@ zmodload zsh/mathfunc
 
 # Hide cursor and disable keyboard echoing to prevent "ghost" characters
 # from appearing on the screen when the user presses control keys.
-printf "\e[?25l"
-stty -echo
+print -f "\e[?25l"
+stty -print
 tput civis 2>/dev/null
 
 # ---- SAFE: Restore terminal state on exit
-# Ensures the cursor and keyboard echo return even if the user kills the process.
-trap 'stty echo; printf "\e[?25h"; tput cnorm 2>/dev/null; return' INT TERM EXIT
+# Ensures the cursor and keyboard print return even if the user kills the process.
+trap 'stty print; print -f "\e[?25h"; tput cnorm 2>/dev/null; return' INT TERM EXIT
 
 
 # ── variable initialization ────────────────────────────────────────────────
@@ -107,7 +107,7 @@ while true; do
 
     # \e[H: Repositions cursor to (1,1) without clearing.
     # This is the secret to a flicker-free terminal UI.
-    printf "\e[H"
+    print -f "\e[H"
 
     # 1. Border & Status
     print "${COLOR[BLUE]}╭───────────────────────────────╮${COLOR[RESET]}"
@@ -118,7 +118,7 @@ while true; do
     fi
 
     # 2. Digital Readout
-    printf "${COLOR[BLUE]}│      ${COLOR[B_WHITE]}%02d:%02d:%02d${COLOR[DIM]}.%02d             ${COLOR[BLUE]}│${COLOR[RESET]}\n" $h $m $s $ms
+    print -f "${COLOR[BLUE]}│      ${COLOR[B_WHITE]}%02d:%02d:%02d${COLOR[DIM]}.%02d             ${COLOR[BLUE]}│${COLOR[RESET]}\n" $h $m $s $ms
 
     # 3. Controls Legend
     print "${COLOR[BLUE]}│                               │${COLOR[RESET]}"
@@ -132,13 +132,13 @@ while true; do
         print "\n%U${COLOR[CYAN]}🚩 Lap History:${COLOR[RESET]}%u\e[J"
         local i count=0
         for (( i=${#laps}; i>=1; i-- )); do
-            echo "${laps[i]}"
+            print "${laps[i]}"
             ((count++))
             (( count >= 5 )) && break
         done
     else
         # \e[J: Clears any leftover lap text when history is empty.
-        printf "\e[J"
+        print -f "\e[J"
     fi
 
 
@@ -156,7 +156,7 @@ while true; do
             # Complex Logic: Lap Recording
             # Laps are only recorded when active to prevent duplicate pauses.
             if (( ! is_paused )); then
-                local lap_time=$(printf "%02d:%02d:%02d.%02d" $h $m $s $ms)
+                local lap_time=$(print -f "%02d:%02d:%02d.%02d" $h $m $s $ms)
                 local lap_num=$(( ${#laps} + 1 ))
                 laps+=("   ${COLOR[DIM]}Lap ${lap_num}:${COLOR[RESET]} $lap_time")
             fi

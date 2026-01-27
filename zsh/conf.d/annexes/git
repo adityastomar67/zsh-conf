@@ -42,10 +42,10 @@ function _git_clone() {
     fi
 
     # 2. Render Header
-    printf "\n${COLOR[BLUE]}%s  CLONING REPOSITORY${COLOR[RESET]}\n" "$i_down"
-    printf "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}\n"
-    printf "Source:  ${COLOR[MAGENTA]}%s${COLOR[RESET]}\n" "$repo_url"
-    printf "Dest:    ${COLOR[DIM]}%s %s${COLOR[RESET]}\n\n" "$i_folder" "$target_dir"
+    print -f "\n${COLOR[BLUE]}%s  CLONING REPOSITORY${COLOR[RESET]}\n" "$i_down"
+    print -f "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}\n"
+    print -f "Source:  ${COLOR[MAGENTA]}%s${COLOR[RESET]}\n" "$repo_url"
+    print -f "Dest:    ${COLOR[DIM]}%s %s${COLOR[RESET]}\n\n" "$i_folder" "$target_dir"
 
     # 3. Execution & Stream Coloring
     # We pipe 2>&1 to capture output, and use sed to inject the raw escape bytes
@@ -61,10 +61,10 @@ function _git_clone() {
 
     # 4. Render Footer
     if [[ $exit_code -eq 0 ]]; then
-        printf "\n${COLOR[GREEN]}  SUCCESS${COLOR[RESET]} Repository ready.\n"
-        printf "${COLOR[DIM]}   Run:${COLOR[RESET]} \033[1mcd $PWD/%s${COLOR[RESET]}\n\n" "$target_dir"
+        print -f "\n${COLOR[GREEN]}  SUCCESS${COLOR[RESET]} Repository ready.\n"
+        print -f "${COLOR[DIM]}   Run:${COLOR[RESET]} \033[1mcd $PWD/%s${COLOR[RESET]}\n\n" "$target_dir"
     else
-        printf "\n${COLOR[RED]}  FAILED${COLOR[RESET]} Clone encountered errors.\n\n"
+        print -f "\n${COLOR[RED]}  FAILED${COLOR[RESET]} Clone encountered errors.\n\n"
     fi
 
     return $exit_code
@@ -74,6 +74,11 @@ function _git_clone() {
 
 function _git_pull() {
 
+    if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        exit 1
+    fi
+
     local i_down=' '
     local i_branch=' '
     local i_remote=' '
@@ -82,10 +87,10 @@ function _git_pull() {
     local remote_name=$(command git remote 2>/dev/null | head -n1)
     [[ -z "$remote_name" ]] && remote_name="origin"
 
-    printf "\n${COLOR[BLUE]}%s  SYNCING CHANGES${COLOR[RESET]}\n" "$i_down"
-    printf "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}\n"
-    printf "Local:   ${COLOR[MAGENTA]}%s %s${COLOR[RESET]}\n" "$i_branch" "$current_branch"
-    printf "Remote:  ${COLOR[DIM]}%s %s${COLOR[RESET]}\n\n" "$i_remote" "$remote_name"
+    print -f "\n${COLOR[BLUE]}%s  SYNCING CHANGES${COLOR[RESET]}\n" "$i_down"
+    print -f "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}\n"
+    print -f "Local:   ${COLOR[MAGENTA]}%s %s${COLOR[RESET]}\n" "$i_branch" "$current_branch"
+    print -f "Remote:  ${COLOR[DIM]}%s %s${COLOR[RESET]}\n\n" "$i_remote" "$remote_name"
 
     command git pull --progress "$@" 2>&1 | sed \
         -e "s/\(Updating\)/${COLOR[BLUE]}\1${COLOR[RESET]}/g" \
@@ -101,10 +106,10 @@ function _git_pull() {
     local exit_code=${pipestatus[1]}
 
     if [[ $exit_code -eq 0 ]]; then
-        printf "\n${COLOR[GREEN]}  UPDATE COMPLETE${COLOR[RESET]}\n\n"
+        print -f "\n${COLOR[GREEN]}  UPDATE COMPLETE${COLOR[RESET]}\n\n"
     else
-        printf "\n${COLOR[RED]}  MERGE CONFLICT / ERROR${COLOR[RESET]}\n"
-        printf "${COLOR[DIM]}Check the output above for details.${COLOR[RESET]}\n\n"
+        print -f "\n${COLOR[RED]}  MERGE CONFLICT / ERROR${COLOR[RESET]}\n"
+        print -f "${COLOR[DIM]}Check the output above for details.${COLOR[RESET]}\n\n"
     fi
 
     return $exit_code
@@ -185,17 +190,17 @@ BEGIN {
     gsub(/[[:space:]]+$/, "", local_br)
 
     # --- Render Header ---
-    printf "\n  " C_MAGENTA C_BOLD "%s %s" C_RESET, I_BRANCH, local_br
+    print -f "\n  " C_MAGENTA C_BOLD "%s %s" C_RESET, I_BRANCH, local_br
 
     if (remote_br != "") {
-        printf " " C_DIM "%s" C_RESET " " C_BLUE "%s" C_RESET, I_ARROW, remote_br
+        print -f " " C_DIM "%s" C_RESET " " C_BLUE "%s" C_RESET, I_ARROW, remote_br
     }
 
     if (bracket_info != "") {
-        printf " %s", bracket_info
+        print -f " %s", bracket_info
     }
 
-    printf "\n  " C_DIM "────────────────────────────────────────────" C_RESET "\n"
+    print -f "\n  " C_DIM "────────────────────────────────────────────" C_RESET "\n"
     next
 }
 
@@ -228,23 +233,28 @@ BEGIN {
         icon = ""; color = C_RED # Unmerged / Conflict
     }
 
-    printf "    %s%s%s  %s\n", color, icon, C_RESET, filename
+    print -f "    %s%s%s  %s\n", color, icon, C_RESET, filename
     total_files++
 }
 
 # ─── SUMMARY FOOTER ─────────────────────────────────────────────
 END {
     if (total_files == 0) {
-        printf "    " C_GREEN "%s" C_RESET "  " C_DIM "No changes. Working tree clean." C_RESET "\n", I_CLEAN
+        print -f "    " C_GREEN "%s" C_RESET "  " C_DIM "No changes. Working tree clean." C_RESET "\n", I_CLEAN
     } else {
-        printf "\n    " C_DIM "(%d files changed)" C_RESET "\n", total_files
+        print -f "\n    " C_DIM "(%d files changed)" C_RESET "\n", total_files
     }
-    printf "\n"
+    print -f "\n"
 }
 '
 }
 
 fucntion _git_log () {
+
+    if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        exit 1
+    fi
 
     # Check if FZF is installed using the Zsh $+commands hash.
     if is_installed fzf; then
@@ -305,15 +315,15 @@ fucntion _git_log () {
         --border-label='  Git Log ' \
         --header="${KEYS}${HEADERS}" \
         --preview-window=right:60%:border-left \
-        --preview "echo {} | $get_hash | xargs -I % git show --color=always %" \
+        --preview "print {} | $get_hash | xargs -I % git show --color=always %" \
         \
-        --bind "enter:execute(echo {} | $get_hash | xargs -I % sh -c 'git show --color=always % | less -R')" \
+        --bind "enter:execute(print {} | $get_hash | xargs -I % sh -c 'git show --color=always % | less -R')" \
         \
-        --bind "ctrl-y:execute-silent(echo {} | $get_hash | tr -d '\n' | $copy_cmd)+abort" \
+        --bind "ctrl-y:execute-silent(print {} | $get_hash | tr -d '\n' | $copy_cmd)+abort" \
         \
-        --bind "ctrl-x:execute-silent(echo {} | $get_hash | xargs git log -1 --format=%s | tr -d '\n' | $copy_cmd)+abort" \
+        --bind "ctrl-x:execute-silent(print {} | $get_hash | xargs git log -1 --format=%s | tr -d '\n' | $copy_cmd)+abort" \
         \
-        --bind "ctrl-o:execute(echo {} | $get_hash | xargs git checkout)"
+        --bind "ctrl-o:execute(print {} | $get_hash | xargs git checkout)"
 
 }
 

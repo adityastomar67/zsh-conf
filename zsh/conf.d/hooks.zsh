@@ -108,20 +108,20 @@ magic_enter() {
 
     # Tell ZLE we are outputting text to prevent prompt overlap
     zle -I
-    echo ""
+    print ""
 
     # ::: Background Jobs Detector :::
     if [[ $(jobs | wc -l) -gt 0 ]]; then
         print "${COLOR[CYAN]}::: Background Jobs :::${COLOR[RESET]}"
         jobs
-        echo ""
+        print ""
     fi
 
     # ::: Python VirtualEnv Detector :::
     if [[ -f "requirements.txt" || -f "pyproject.toml" ]]; then
         if [[ -z "$VIRTUAL_ENV" ]]; then
              print "${COLOR[RED]}::: ⚠️  PYTHON PROJECT DETECTED (No VirtualEnv Active) ⚠️  :::${COLOR[RESET]}"
-             echo ""
+             print ""
         fi
     fi
 
@@ -134,7 +134,7 @@ magic_enter() {
             print "${COLOR[GREEN]}::: Git Status (Clean) :::${COLOR[RESET]}"
             git log -n 3 --oneline --color=always
         fi
-        echo ""
+        print ""
     fi
 
     # ::: Directory Listing :::
@@ -174,7 +174,7 @@ function chpwd_auto_ls() {
     [[ "$PWD" == "$HOME" ]] && return
 
     # Execute the pre-calculated command
-    echo
+    print
     "${_chpwd_ls_cmd[@]}"
 }
 
@@ -251,7 +251,7 @@ copy_buffer_to_clipboard() {
         return 1
     fi
 
-    # Optimization: Use 'print -rn --' instead of 'echo -n'.
+    # Optimization: Use 'print -rn --' instead of 'print -n'.
     # It prevents Zsh from interpreting flags like '-e' inside your buffer.
     print -rn -- "$BUFFER" | "${_copy_cmd_list[@]}"
 

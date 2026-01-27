@@ -58,7 +58,7 @@ local preview_script="
             cat \"\$readme\"
         fi
     else
-        echo \"\033[33mNo README found. Showing structure:\033[0m\"
+        print \"\033[33mNo README found. Showing structure:\033[0m\"
         if command -v eza >/dev/null; then
             eza --tree --level=2 --color=always --icons --group-directories-first --git-ignore \"\$target\"
         else

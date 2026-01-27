@@ -95,11 +95,11 @@ if [[ -n "$selected" ]]; then
     done
 
     # The "Are you sure?" Prompt
-    echo
+    print
     print -n "${COLOR[BOLD]}${COLOR[RED]}Are you sure? [y/N]${COLOR[RESET]} "
 
     if read -q choice; then
-        echo # Newline
+        print # Newline
         print "\n${COLOR[RED]}::${COLOR[RESET]} Nuking selected packages..."
 
         # Execute safely using the array expansion
@@ -112,7 +112,7 @@ if [[ -n "$selected" ]]; then
             print "\n${COLOR[RED]}✘ Errors occurred during uninstall.${COLOR[RESET]}"
         fi
     else
-        echo
+        print
         print "\n${COLOR[GREEN]}::${COLOR[RESET]} Aborted safely."
     fi
 else

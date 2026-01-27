@@ -22,11 +22,10 @@
 # ------------------------------------------------------------------------------
 
 
-# 0. Interactive Session Guard
+# Interactive Session Guard
 # ─────────────────────────────────────────────────────────────
-## We immediately check if the shell is interactive. If it's a background
-## process (like scp, sftp, or a script), we exit to prevent errors and
-## speed up connections.
+## We immediately check if the shell is interactive. If it's a background process
+## (like scp, sftp, or a script), we exit to prevent errors and speed up connections.
 
 [[ $- != *i* ]] && return
 
@@ -80,9 +79,9 @@ if [[ -r "$RC" ]]; then
     source "$RC"
 else
     # !!! CRITICAL: Configuration file missing
-    echo \
+    print \
         "${COLOR[BOLD]}${COLOR[RED]}[ERROR]${COLOR[RESET]}${COLOR[RED]} Critical: ${COLOR[DIM]}Config not found at ${COLOR[UNDERLINE]}${RC}${COLOR[RESET]}"
-    echo "Please try re-installing the configuration.\n"
+    print "Please try re-installing the configuration.\n"
     return
 fi
 
@@ -109,14 +108,14 @@ if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
         ${=available_visual_commands[$random_idx]}
 
         # Add visual spacing
-        echo
+        print
     fi
 fi
 
 
 # User Overrides
 # ─────────────────────────────────────────────────────────────
-## This section is reserved for YOUR custom settings.
+## This section is reserved for `YOUR CUSTOM` settings.
 ## Anything defined here will override the managed configuration above.
 ## Loads work-specific or private settings that are custom to every different user and ignored by Git.
 
@@ -129,14 +128,14 @@ fi
 ## This block must be the very last thing in the file.
 
 if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
-    # 1. STOP THE CLOCK
+    # STOP THE CLOCK
     #    We capture time immediately to exclude the UI rendering logic from the score.
     local _startup_timer_end=$EPOCHREALTIME
 
-    # Calculate duration in milliseconds
+    ## Calculate duration in milliseconds
     local total_duration_ms=$(( (_startup_timer_end - _startup_timer_start) * 1000 ))
 
-    # 2. Load the Benchmark UI
+    # Load the Benchmark UI
     local BENCH_UI="$ZSH_CONFIG_ROOT/lib/_ui.benchmark"
 
     if [[ -r "$BENCH_UI" ]]; then
@@ -144,8 +143,8 @@ if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
     else
         # ---- SAFE: Fallback if UI file is missing
         clear
-        printf "${COLOR[BOLD]}${COLOR[RED]}Benchmark UI file not found at: ${COLOR[DIM]}$BENCH_UI${COLOR[RESET]}\n"
-        printf "${COLOR[YELLOW]}Total startup time: ${COLOR[CYAN]}%6.2f ${COLOR[YELLOW]}ms${COLOR[RESET]}\n\n" \
+        print "${COLOR[BOLD]}${COLOR[RED]}Benchmark UI file not found at: ${COLOR[DIM]}$BENCH_UI${COLOR[RESET]}"
+        print -f "${COLOR[YELLOW]}Total startup time: ${COLOR[CYAN]}%6.2f ${COLOR[YELLOW]}ms${COLOR[RESET]}\n\n" \
             ${total_duration_ms}
     fi
 fi

@@ -66,31 +66,6 @@ _fzf_git() {
 #   1. Lists modified/untracked files via 'git status -s'.
 #   2. Previews 'git diff' for modified files or 'bat/cat' for new files.
 #   3. Opens selected files in the system $EDITOR.
-# ------------------------------------------------------------------------------
-function git_status() {
-    is_in_git_repo || return
-
-    local selected
-    # Extract filename safely using awk and sed to handle leading status characters
-    selected=$(git -c color.status=always status --short |
-        _fzf_git \
-        --prompt="Git Status > " \
-        --header="[Enter] Edit File" \
-        --preview="
-            stat=\$(echo {} | awk '{print \$1}');
-            file=\$(echo {} | awk '{\$1=\"\"; print \$0}' | sed 's/^[ \t]*//');
-            if [[ \"\$stat\" == \"??\" ]]; then
-                bat --color=always --style=numbers \$file 2>/dev/null || cat \$file
-            else
-                git diff --color=always -- \$file | $_git_pager
-            fi" \
-        --nth 2.. | awk '{print $NF}')
-
-    if [[ -n "$selected" ]]; then
-        # ${(f)selected} is a Zsh-ism that splits a string into an array by lines.
-        $EDITOR ${(f)selected}
-    fi
-}
 
 
 # ── branch management ─────────────────────────────────────────────────────────
@@ -114,16 +89,16 @@ function git_checkout() {
     local branches branch
     branches=$(git branch --all --color=always --sort=-committerdate --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(contents:subject) (%(color:green)%(committerdate:relative)%(color:reset))')
 
-    branch=$(echo "$branches" |
+    branch=$(print "$branches" |
         _fzf_git +m \
         --prompt="Checkout > " \
         --header="[Enter] Switch  [Alt-D] Delete Branch" \
         --preview="git log --oneline --graph --date=short --color=always --pretty='%C(auto)%h%d %s %C(black)%C(bold)%cr' {2} | head -200" \
-        --bind "alt-d:execute(git branch -D {2} 2>/dev/null && echo 'Deleted {2}')+reload(git branch --all --color=always --sort=-committerdate --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(contents:subject) (%(color:green)%(committerdate:relative)%(color:reset))')" \
+        --bind "alt-d:execute(git branch -D {2} 2>/dev/null && print 'Deleted {2}')+reload(git branch --all --color=always --sort=-committerdate --format='%(HEAD) %(color:yellow)%(refname:short)%(color:reset) - %(contents:subject) (%(color:green)%(committerdate:relative)%(color:reset))')" \
     )
 
     # Sanitize branch name: Remove 'remotes/origin/' style prefixes for clean checkout
-    local target=$(echo "$branch" | awk '{print $2}' | sed "s#remotes/[^/]*/##")
+    local target=$(print "$branch" | awk '{print $2}' | sed "s#remotes/[^/]*/##")
 
     [[ -n "$target" ]] && git checkout "$target"
 }
@@ -149,7 +124,7 @@ function git_add() {
         --prompt="Git Add > " \
         --header="[TAB] Toggle Selection  [Enter] Stage Files" \
         --preview="
-            file=\$(echo {} | awk '{\$1=\"\"; print \$0}' | sed 's/^[ \t]*//');
+            file=\$(print {} | awk '{\$1=\"\"; print \$0}' | sed 's/^[ \t]*//');
             git diff --color=always -- \$file | $_git_pager
         " | \
         awk '{$1=""; print $0}' | sed 's/^[ \t]*//'
@@ -157,12 +132,12 @@ function git_add() {
 
     if [[ -n "$files" ]]; then
         # Iterate through selection and stage each item
-        echo "$files" | while read -r item; do
+        print "$files" | while read -r item; do
             git add "$item"
         done
         print -P "%F{green}✓ Staged selected files.%f"
     else
-        echo "Nothing added."
+        print "Nothing added."
     fi
 }
 
@@ -179,23 +154,6 @@ function git_add() {
 #   3. [Ctrl-Y]: Copies the commit hash to the system clipboard.
 #   4. [Ctrl-O]: Checks out the selected commit (Detached HEAD).
 # ------------------------------------------------------------------------------
-function git_log() {
-    is_in_git_repo || return
-
-    local git_fmt='%C(auto)%h%d %s %C(black)%C(bold)%cr% C(auto)%an'
-    local _view="echo {} | grep -o '[a-f0-9]\{7,\}' | head -1 | xargs -I % git show --color=always % | $_git_pager"
-
-    git log --color=always --format="$git_fmt" | \
-        _fzf_git \
-        --no-sort --reverse --tiebreak=index \
-        --prompt="Git Log > " \
-        --header="[Enter] View Details  [Ctrl-Y] Copy Hash  [Ctrl-O] Checkout" \
-        --preview="$_view" \
-        \
-        --bind "enter:execute:$_view | less -R" \
-        --bind "ctrl-y:execute-silent(echo {} | grep -o '[a-f0-9]\{7,\}' | head -1 | pbcopy)+abort" \
-        --bind "ctrl-o:execute(echo {} | grep -o '[a-f0-9]\{7,\}' | head -1 | xargs git checkout)"
-}
 
 
 # ── advanced branch checkout ──────────────────────────────────────────────────
@@ -220,7 +178,7 @@ function fgit_branch() {
         --format='%(refname:short)' | grep -v '/HEAD$')
 
     local branch
-    branch=$(echo "$branches" | fzf \
+    branch=$(print "$branches" | fzf \
         --no-multi \
         --prompt=" Checkout > " \
         --height=50% \

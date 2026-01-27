@@ -22,7 +22,7 @@
 #
 # Usage Notes
 #   - Requires a patched "Nerd Font" (https://www.nerdfonts.com/).
-#   - Usage: echo ${ICON[LINUX_ICON]}
+#   - Usage: print ${ICON[LINUX_ICON]}
 #
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
@@ -150,7 +150,7 @@ function get_nerd_icon() {
     local fallback="$2"
 
     # Use standard array expansion with default value syntax :-
-    echo -n "${ICON[$key]:-$fallback}"
+    print -n "${ICON[$key]:-$fallback}"
 }
 
 # Function: preview_nerd_icons
@@ -166,7 +166,7 @@ function preview_nerd_icons() {
 
     for key in $sorted_keys; do
         # Format: Key (padded to 35 chars) : Icon
-        printf "  %F{242}%-35s%f : %s\n" "$key" "${ICON[$key]}"
+        print -f "  %F{242}%-35s%f : %s\n" "$key" "${ICON[$key]}"
     done
-    echo
+    print
 }

@@ -114,7 +114,7 @@ _dir_usage_visualizer() {
             if (n ~ /\.(py|js|rs|go|c|cpp|rb|zsh)$/)  icon = ""
 
             # Render the dashboard row
-            printf "  %s%-7s%s %s%s%s%s %s%s%s %s\n",
+            print -f "  %s%-7s%s %s%s%s%s %s%s%s %s\n",
                 color, sizes[i], c_reset,
                 color, bar, c_dim, empty, c_reset,
                 c_blue, icon, c_reset,

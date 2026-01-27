@@ -13,9 +13,9 @@
 # If arguments are passed (e.g., "name=value"), we warn the user that
 # this cannot work in a binary script.
 if [[ $# -gt 0 ]]; then
-   echo "${COLOR[RED]}[ERROR]${COLOR[DIM]} Cannot set aliases via an external script (subprocess isolation).${COLOR[RESET]}"
-    echo "       Use the builtin ${CLOR[YELLOW]}${COLOR[BOLD]}alias${COLOR[RESET]} command to set new aliases."
-    echo "       Usage: alias | pretty-alias"
+   print "${COLOR[RED]}[ERROR]${COLOR[DIM]} Cannot set aliases via an external script (subprocess isolation).${COLOR[RESET]}"
+    print "       Use the builtin ${CLOR[YELLOW]}${COLOR[BOLD]}alias${COLOR[RESET]} command to set new aliases."
+    print "       Usage: alias | pretty-alias"
     exit 1
 fi
 
@@ -26,8 +26,8 @@ fi
 
 # Check if input is coming from a pipe
 if [[ -t 0 ]]; then
-    echo "${COLOR[YELLOW]}[INFO]${COLOR[RESET]} No input detected."
-    echo "       Usage: ${COLOR[GREEN]}alias | pretty-alias${COLOR[RESET]}"
+    print "${COLOR[YELLOW]}[INFO]${COLOR[RESET]} No input detected."
+    print "       Usage: ${COLOR[GREEN]}alias | pretty-alias${COLOR[RESET]}"
     exit 0
 fi
 
@@ -54,7 +54,7 @@ sort | awk -v C_NAME="${COLOR[BOLD]}${COLOR[BLUE]}" \
     available_width = TERM_WIDTH - prefix_total - 2
 
     # Print the first line (Name + start of Value)
-    printf "  %s%-20s%s %s::%s %s", C_NAME, name, C_RST, C_EQ, C_RST, C_VAL
+    print -f "  %s%-20s%s %s::%s %s", C_NAME, name, C_RST, C_EQ, C_RST, C_VAL
 
     # Logic to wrap the value
     if (length(val) <= available_width) {
@@ -69,7 +69,7 @@ sort | awk -v C_NAME="${COLOR[BOLD]}${COLOR[BLUE]}" \
         # Loop to print wrapped lines with indentation
         while (length(remaining) > 0) {
             # Create the indentation string (matches name_width + spacers)
-            printf "  %20s    %s%s%s\n", "", C_VAL, substr(remaining, 1, available_width), C_RST
+            print -f "  %20s    %s%s%s\n", "", C_VAL, substr(remaining, 1, available_width), C_RST
             remaining = substr(remaining, available_width + 1)
         }
     }

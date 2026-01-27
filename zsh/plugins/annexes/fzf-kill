@@ -41,7 +41,7 @@ if is_installed pstree; then
     # {2}: The PID column from ps -ef
     preview_cmd="pstree -p -a -C age {2} | head -20"
 else
-    preview_cmd="echo {}"
+    preview_cmd="print {}"
 fi
 
 # 4. Interactive Selection
@@ -64,12 +64,12 @@ selected=$(ps -ef | fzf \
 if [[ -n "$selected" ]]; then
     # Extract PIDs (Column 2) using awk
     local pids
-    pids=$(echo "$selected" | awk '{print $2}')
+    pids=$(print "$selected" | awk '{print $2}')
 
     print "\n${COLOR[RED]}::${COLOR[RESET]} Sending signal ${COLOR[BOLD]}$signal${COLOR[RESET]} to processes..."
 
     # Iterate and Kill
-    echo "$pids" | while read -r pid; do
+    print "$pids" | while read -r pid; do
         # Skip invalid/empty lines
         [[ -z "$pid" ]] && continue
 

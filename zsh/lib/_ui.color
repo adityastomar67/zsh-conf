@@ -20,8 +20,8 @@
 #   - Debugging utility to visually preview all defined styles.
 #
 # Usage Notes
-#   echo "${COLOR[RED]}Error found${COLOR[RESET]}"
-#   echo "${COLOR[BOLD]}${COLOR[BLUE]}Info${COLOR[RESET]}"
+#   print "${COLOR[RED]}Error found${COLOR[RESET]}"
+#   print "${COLOR[BOLD]}${COLOR[BLUE]}Info${COLOR[RESET]}"
 #
 # Project: Zsh-conf
 # ------------------------------------------------------------------------------
@@ -123,26 +123,26 @@ function preview_ansi_colors() {
         local reset_code="${COLOR[RESET]}"
 
         # Format: "KeyName (padded) : [Effect] Sample Text [Reset]"
-        printf "  %-12s : %s%s%s\n" "$key_name" "$color_code" "The quick brown fox" "$reset_code"
+        print -f "  %-12s : %s%s%s\n" "$key_name" "$color_code" "The quick brown fox" "$reset_code"
     }
 
     # --------------------------------------------------------------------------
     # Render Groups
 
-    echo "\n${COLOR[BOLD]}--- Modifiers ---${COLOR[RESET]}"
+    print "\n${COLOR[BOLD]}--- Modifiers ---${COLOR[RESET]}"
     for key in $modifier_keys; do _render_sample_row $key; done
 
-    echo "\n${COLOR[BOLD]}--- Standard Foreground ---${COLOR[RESET]}"
+    print "\n${COLOR[BOLD]}--- Standard Foreground ---${COLOR[RESET]}"
     for key in $standard_keys; do _render_sample_row $key; done
 
-    echo "\n${COLOR[BOLD]}--- Bright/Neon Foreground ---${COLOR[RESET]}"
+    print "\n${COLOR[BOLD]}--- Bright/Neon Foreground ---${COLOR[RESET]}"
     for key in $bright_keys; do _render_sample_row $key; done
 
-    echo "\n${COLOR[BOLD]}--- Backgrounds ---${COLOR[RESET]}"
+    print "\n${COLOR[BOLD]}--- Backgrounds ---${COLOR[RESET]}"
     # Backgrounds need different contrast logic (Black text on colored BG)
     # (o) = sort the keys alphabetically
     for key in ${(o)background_keys}; do
-        printf "  %-12s : %s%s%s%s\n" \
+        print -f "  %-12s : %s%s%s%s\n" \
             "$key" \
             "${COLOR[$key]}" \
             "${COLOR[BLACK]}" \

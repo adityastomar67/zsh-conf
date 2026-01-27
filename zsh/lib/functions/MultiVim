@@ -97,14 +97,14 @@ function nvim() {
     # ── mode b: interactive menu ─────────────────────────────────────────────
 
     # Condition: No arguments provided AND 'fzf' is installed.
-    if [[ $# -eq 0 ]] && (( $+commands[fzf] )); then
+    if [[ $# -eq 0 ]] && is_installed fzf; then
 
         # Prepare menu options (Default + Distro Keys).
         local menu_options=("default" "${(@k)NVIM_DISTROS}")
         local selected_profile
 
         # Launch FZF selector.
-        selected_profile=$(printf "%s\n" "${menu_options[@]}" | fzf \
+        selected_profile=$(print -f "%s\n" "${menu_options[@]}" | fzf \
             --prompt=" Neovim Config ($config_base_dir)  " \
             --height=~40% \
             --layout=reverse \
@@ -142,7 +142,7 @@ function nvim() {
 # '&!' is Zsh specific: disowns the process immediately (same as 'disown').
 (
     # Only proceed if distros are defined and git is available.
-    if (( ${#NVIM_DISTROS} > 0 )) && (( $+commands[git] )); then
+    if (( ${#NVIM_DISTROS} > 0 )) && is_installed git; then
 
         local config_base_dir="${NVIM_CONFIG_BASE:-${XDG_CONFIG_HOME:-$HOME/.config}}"
         local distro_name
@@ -151,11 +151,11 @@ function nvim() {
         local repo_url
 
         for distro_name in "${(@k)NVIM_DISTROS}"; do
-            config_path = "$config_base_dir/$distro_name"
-            distro_data = "${NVIM_DISTROS[$distro_name]}"
+            config_path="$config_base_dir/$distro_name"
+            distro_data="${NVIM_DISTROS[$distro_name]}"
 
             # Parsing: "flag|url" -> Take everything after the first pipe.
-            repo_url    = "${distro_data#*|}"
+            repo_url="${distro_data#*|}"
 
             # If the config directory doesn't exist, clone it.
             if [[ ! -d "$config_path" ]]; then

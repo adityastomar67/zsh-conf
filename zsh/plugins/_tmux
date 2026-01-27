@@ -65,7 +65,7 @@ if ! tmux has-session 2>/dev/null; then
 
     local choice
     read -k 1 choice
-    echo "" # Insert newline after keypress
+    print "" # Insert newline after keypress
 
     if [[ "$choice" == "n" || "$choice" == "N" ]]; then
         return
@@ -124,7 +124,7 @@ local sessions=$(tmux list-sessions -F "#{session_attached} #{session_name} #{se
 # We calculate the maximum length of session names first, then reprint the list
 # with padding so the "Window Count" column aligns perfectly.
 # Colors: Green dot for attached, White dot for detached.
-local pretty_list=$(echo "$sessions" | awk '{
+local pretty_list=$(print "$sessions" | awk '{
     # Save data to array so we can print it later
     attached[NR] = $1
     names[NR]    = $2
@@ -138,28 +138,28 @@ local pretty_list=$(echo "$sessions" | awk '{
     for (i=1; i<=NR; i++) {
         if (attached[i] == "1") {
             # Green Dot + Name (Padded to max width) + Window Count
-            printf "\033[32m● %-" max "s\033[0m   \033[90m(%s windows)\033[0m\n", names[i], wins[i]
+            print -f "\033[32m● %-" max "s\033[0m   \033[90m(%s windows)\033[0m\n", names[i], wins[i]
         } else {
             # White Dot + Name (Padded to max width) + Window Count
-            printf "\033[37m○ %-" max "s\033[0m   \033[90m(%s windows)\033[0m\n", names[i], wins[i]
+            print -f "\033[37m○ %-" max "s\033[0m   \033[90m(%s windows)\033[0m\n", names[i], wins[i]
         }
     }
 }')
 
 # 3. Launch Selection Menu
-local result=$(echo "$pretty_list" | fzf "${fzf_opts[@]}")
+local result=$(print "$pretty_list" | fzf "${fzf_opts[@]}")
 
 # 4. Parse Results
 # FZF with --print-query returns two lines:
 # Line 1: The query string typed by the user.
 # Line 2: The actual selection from the list (if any).
-local query=$(echo "$result" | head -n1)
-local match=$(echo "$result" | tail -n1)
+local query=$(print "$result" | head -n1)
+local match=$(print "$result" | tail -n1)
 
 # --- Complex Logic: Robust Extraction ---
 # We must strip the ANSI color codes we added in step 2 before extracting the name.
 # Perl regex removes \e[...] sequences. Awk gets the 2nd column (the Name).
-local target_session=$(echo "$match" | perl -pe 's/\e\[?.*?[\@-~]//g' | awk '{print $2}')
+local target_session=$(print "$match" | perl -pe 's/\e\[?.*?[\@-~]//g' | awk '{print $2}')
 
 if [[ -n "$target_session" ]]; then
     # Case: User selected an existing session

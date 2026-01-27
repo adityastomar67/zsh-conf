@@ -65,7 +65,7 @@ selected_line=$(docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{
 
 # Extract the Container ID (first column) from the selected line.
 # If the user pressed ESC, this variable will be empty.
-container_id=$(echo "$selected_line" | awk '{print $1}')
+container_id=$(print "$selected_line" | awk '{print $1}')
 
 # Only proceed if a container was actually selected.
 if [[ -n "$container_id" ]]; then
@@ -88,7 +88,7 @@ if [[ -n "$container_id" ]]; then
     # Pipe options to fzf.
     # We use awk -F ':' to split by colon and take the second part (the command).
     # We use xargs to trim leading/trailing whitespace from the command.
-    selected_action_raw=$(printf "%s\n" "${menu_options[@]}" | fzf \
+    selected_action_raw=$(print -f "%s\n" "${menu_options[@]}" | fzf \
         --prompt="⚡ Action for $container_id > " \
         --height=40% \
         --layout=reverse \

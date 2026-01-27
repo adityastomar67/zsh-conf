@@ -83,14 +83,14 @@ fi
 # ── terminal setup ─────────────────────────────────────────────────────────
 
 # !!! CRITICAL: UI state management
-# Hide cursor and stop the terminal from printing user keystrokes (echo).
+# Hide cursor and stop the terminal from printing user keystrokes (print).
 # We use tput civis for broader terminal compatibility.
-printf "\e[?25l"
-stty -echo
+print -f "\e[?25l"
+stty -print
 tput civis 2>/dev/null
 
 # ---- SAFE: Restore terminal state on any exit condition
-trap 'stty echo; printf "\e[?25h"; tput cnorm 2>/dev/null; return' INT TERM EXIT
+trap 'stty print; print -f "\e[?25h"; tput cnorm 2>/dev/null; return' INT TERM EXIT
 
 # Initialize timing variables using $EPOCHREALTIME (float) for accuracy.
 local start_time=$EPOCHREALTIME
@@ -156,7 +156,7 @@ while true; do
 
     # \e[H moves the cursor to the top-left (Home).
     # By overwriting the same lines instead of clearing, we eliminate flicker.
-    printf "\e[H"
+    print -f "\e[H"
 
     local status_color=" COLOR[GREEN]"
     local status_text="RUNNING"
@@ -174,7 +174,7 @@ while true; do
     print "${COLOR[BLUE]}│         ${status_color}⏳  $status_text                 ${COLOR[BLUE]}│${COLOR[RESET]}"
 
     # Format the time numbers into fixed-width slots for stability.
-    printf "${COLOR[BLUE]}│         ${COLOR[B_WHITE]}%02d:%02d:%02d${COLOR[GREY]}.%02d               ${COLOR[BLUE]}│${COLOR[RESET]}\n" $h $m $s $ms
+    print -f "${COLOR[BLUE]}│         ${COLOR[B_WHITE]}%02d:%02d:%02d${COLOR[GREY]}.%02d               ${COLOR[BLUE]}│${COLOR[RESET]}\n" $h $m $s $ms
 
     print "${COLOR[BLUE]}│   ${status_color}${bar_fill}${COLOR[GREY]}${bar_empty}${COLOR[RESET]}   ${COLOR[BLUE]}│${COLOR[RESET]}"
     print "${COLOR[BLUE]}├──────────────────────────────────────┤${COLOR[RESET]}"
@@ -185,7 +185,7 @@ while true; do
     # ── interaction / feedback ───────────────────────────────────────────
 
     if (( remaining <= 0 )); then
-        printf "\a" # System bell
+        print -f "\a" # System bell
         break
     fi
 
@@ -218,9 +218,9 @@ done
 
 clear
 print "$ COLOR[GREEN]}"
-echo "  ╭──────────────────────╮"
-echo "  │      TIME IS UP!     │"
-echo "  ╰──────────────────────╯"
+print "  ╭──────────────────────╮"
+print "  │      TIME IS UP!     │"
+print "  ╰──────────────────────╯"
 print "${COLOR[RESET]}"
 
 # macOS specific notification logic via AppleScript.

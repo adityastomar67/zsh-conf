@@ -71,18 +71,18 @@ if [[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]]; then
 fi
 
 # Top Border
-printf "${COLOR[DIM]} ╭───────────────────────────────────────────────────╮${COLOR[RESET]}\n"
+print -f "${COLOR[DIM]} ╭───────────────────────────────────────────────────╮${COLOR[RESET]}\n"
 
 # Single Printf (Standardized Spacing)
 #    We use literal spaces instead of %s padding to handle the color codes correctly.
-printf \
+print -f \
     "${COLOR[DIM]} │${COLOR[RESET]}  ZSH %s        ${COL}%-16s${COLOR[RESET]} ${COL}%6.2f ms${COLOR[RESET]}  ${COLOR[DIM]}│${COLOR[RESET]}\n" \
     "$DISP" \
     "$LABEL" \
     "$total_duration_ms"
 
 # Bottom Border
-printf "${COLOR[DIM]} ╰───────────────────────────────────────────────────╯${COLOR[RESET]}\n"
+print -f "${COLOR[DIM]} ╰───────────────────────────────────────────────────╯${COLOR[RESET]}\n"
 
 
 # 3. Profiling Data Table
@@ -91,7 +91,7 @@ printf "${COLOR[DIM]} ╰──────────────────�
 ## We use 'awk' to generate a visual bar chart inline.
 
 # Table Headers
-printf "   ${COLOR[BOLD]}${COLOR[DIM]}%-25s %-10s %-8s %s${COLOR[RESET]}\n" "FUNCTION" "TIME" "CALLS" "LOAD"
+print -f "   ${COLOR[BOLD]}${COLOR[DIM]}%-25s %-10s %-8s %s${COLOR[RESET]}\n" "FUNCTION" "TIME" "CALLS" "LOAD"
 
 # Process Zprof Data
 zprof | awk \
@@ -136,7 +136,7 @@ zprof | awk \
         if (bar_visual == "" && percent > 0) bar_visual = "·"
 
         # 8. Print
-        printf "   %s%-25s%s %s%-10s%s %s%-8s%s %s%s%s\n",
+        print -f "   %s%-25s%s %s%-10s%s %s%-8s%s %s%s%s\n",
             color_func, fn_name, color_reset,
             time_color, time_ms, color_reset,
             color_dim,  calls,   color_reset,
@@ -144,5 +144,5 @@ zprof | awk \
     }'
 
 # Final spacing
-printf \
+print -f \
     "\n${COLOR[DIM]}  For detailed analysis:${COLOR[RESET]} ${COLOR[BOLD]}${COLOR[BLUE]}\`_zsh_debug_startup\`${COLOR[RESET]}\n\n"

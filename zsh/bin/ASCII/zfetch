@@ -25,7 +25,7 @@ get_os() {
         sw_vers -productName
     else
         # Source the file to get variables without spawning awk
-        [[ -f /etc/os-release ]] && source /etc/os-release && echo "${PRETTY_NAME}" || echo "Linux"
+        [[ -f /etc/os-release ]] && source /etc/os-release && print "${PRETTY_NAME}" || print "Linux"
     fi
 }
 
@@ -46,11 +46,11 @@ get_pkgs() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # Check Brew or MacPorts
         if command -v brew >/dev/null; then
-            echo "$(brew list --formula | wc -l) (brew)"
+            print "$(brew list --formula | wc -l) (brew)"
         elif command -v port >/dev/null; then
-             echo "$(port installed | wc -l) (port)"
+             print "$(port installed | wc -l) (port)"
         else
-             echo "0"
+             print "0"
         fi
         return
     fi
@@ -72,15 +72,15 @@ get_pkgs() {
             # Run query, count lines. Subtract 1 for apt header if needed.
             local count=$(eval "$query" 2>/dev/null | wc -l)
             [[ "$cmd" == "apt" ]] && ((count--))
-            echo "$count"
+            print "$count"
             return
         fi
     done
-    echo "0"
+    print "0"
 }
 
 get_shell() {
-    echo "${SHELL##*/}"
+    print "${SHELL##*/}"
 }
 
 get_mem() {
@@ -88,7 +88,7 @@ get_mem() {
         # macOS Memory
         local total=$(sysctl -n hw.memsize)
         # Convert bytes to MB
-        echo "$(( total / 1024 / 1024 )) MB"
+        print "$(( total / 1024 / 1024 )) MB"
     else
         # Linux Memory
         free --mega | awk 'NR == 2 { print $3" MB" }'
@@ -102,7 +102,7 @@ get_disk() {
 
 get_wm() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "Aqua"
+        print "Aqua"
         return
     fi
 
@@ -120,20 +120,20 @@ get_wm() {
             fi
         done
     fi
-    echo "${wm:-Unknown}"
+    print "${wm:-Unknown}"
 }
 
 get_init() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "launchd"
+        print "launchd"
     elif pidof -q systemd; then
-        echo "systemd"
+        print "systemd"
     elif [[ -f '/sbin/openrc' ]]; then
-        echo "openrc"
+        print "openrc"
     elif [[ -f '/sbin/dinit' ]]; then
-        echo "dinit"
+        print "dinit"
     else
-        echo "init"
+        print "init"
     fi
 }
 

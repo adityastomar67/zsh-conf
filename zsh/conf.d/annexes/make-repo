@@ -71,7 +71,7 @@ print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Git initialized (${COLOR[GREY]}branc
 # A. README Generation
 # Uses the current directory name as the primary H1 title.
 if [[ ! -f "README.md" ]]; then
-    echo "# $(basename "$PWD")" > README.md
+    print "# $(basename "$PWD")" > README.md
     print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Created README.md"
 else
     print "   ${COLOR[YELLOW]}⚠${COLOR[RESET]} README.md exists (skipped)"
@@ -136,13 +136,13 @@ if [[ -n "$remote_url" ]]; then
 # Scenario B: Interactive GitHub Integration
 # If GitHub CLI ('gh') is found in the path, we offer a seamless cloud setup.
 elif (( $+commands[gh] )); then
-    echo
+    print
     print "${COLOR[BLUE]}::${COLOR[RESET]} No remote URL provided."
     print "${COLOR[BLUE]}::${COLOR[RESET]} GitHub CLI detected. Create remote repo now? [y/N]"
 
     local ans
     read -k 1 ans
-    echo # Newline
+    print # Newline
 
     if [[ "$ans" == "y" || "$ans" == "Y" ]]; then
         # 'gh repo create' handles API calls, remote assignment, and the first push.
@@ -157,4 +157,4 @@ else
     print "\n   ${COLOR[GREEN]}✔${COLOR[RESET]} Local repository ready."
     print "   ${COLOR[GREY]}(Run 'git remote add origin <url>' later)${COLOR[RESET]}"
 fi
-echo
+print

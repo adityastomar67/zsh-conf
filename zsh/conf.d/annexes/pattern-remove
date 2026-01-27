@@ -75,7 +75,7 @@ while true; do
 
     # Clear the "Scanning..." line using terminal escape codes
     # \r (return to start) and \e[K (clear to end of line)
-    printf "\r\e[K"
+    print -f "\r\e[K"
 
     # Exit if no targets are found
     if [[ "$match_count" -eq 0 ]]; then
@@ -112,7 +112,7 @@ while true; do
 
     local user_key
     read -k 1 user_key
-    echo # Newline after keypress
+    print # Newline after keypress
 
     case "$user_key" in
         [yY])

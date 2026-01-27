@@ -43,12 +43,12 @@ emulate -L zsh
 
 # Check for critical dependencies before starting
 if ! command -v fzf &>/dev/null; then
-    echo "${COLOR[RED]}[ERROR]${COLOR[RESET]} 'fzf' is required for this command."
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} 'fzf' is required for this command."
     return 1
 fi
 
 if ! command -v curl &>/dev/null; then
-    echo "${COLOR[RED]}[ERROR]${COLOR[RESET]} 'curl' is required."
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} 'curl' is required."
     return 1
 fi
 
@@ -99,7 +99,7 @@ while true; do
         # Launch FZF
         # -k2 : Sort by the 2nd column (the text name, not the icon)
         local selection
-        selection=$(echo -e "$list_content" | sort -k2 | fzf \
+        selection=$(print -e "$list_content" | sort -k2 | fzf \
             --ansi \
             --info=hidden \
             --height=45% --layout=reverse --border --margin=1 --padding=1 \
@@ -110,12 +110,12 @@ while true; do
 
         # Handle User Exit (Esc or Ctrl+C in FZF)
         if [[ -z "$selection" ]]; then
-            echo -e "${COLOR[GREY]}Goodbye!${COLOR[RESET]}"
+            print -e "${COLOR[GREY]}Goodbye!${COLOR[RESET]}"
             return 0
         fi
 
         # Extract the raw name (Column 2) stripping the icon
-        clean_selected=$(echo "$selection" | awk '{print $2}')
+        clean_selected=$(print "$selection" | awk '{print $2}')
 
         # API Logic: Determine URL separator
         # Cheat.sh has a quirk:
@@ -137,15 +137,15 @@ while true; do
     # === STATE: QUERY INPUT ===
     # Accepts the search term for the selected language
     if [[ "$state" == "QUERY" ]]; then
-        echo ""
+        print ""
         local icon="${icons[$clean_selected]:-$default_icon}"
 
         # UI Header: Shows current context (e.g., Python)
-        echo -e "${COLOR[GREY]}╭─ ${COLOR[BLUE]}${icon}  ${clean_selected:u} ${COLOR[GREY]}──────────────────────────────────${COLOR[RESET]}"
+        print -e "${COLOR[GREY]}╭─ ${COLOR[BLUE]}${icon}  ${clean_selected:u} ${COLOR[GREY]}──────────────────────────────────${COLOR[RESET]}"
 
         # Read Input
         # Using 'read' with a custom manually constructed prompt for better styling
-        echo -ne "${COLOR[GREY]}╰─${COLOR[GREEN]}${COLOR[RESET]} Query ${COLOR[GREY]}([b]ack/[q]uit):${COLOR[RESET]} "
+        print -ne "${COLOR[GREY]}╰─${COLOR[GREEN]}${COLOR[RESET]} Query ${COLOR[GREY]}([b]ack/[q]uit):${COLOR[RESET]} "
         read query
 
         # Handle Navigation Commands
@@ -155,7 +155,7 @@ while true; do
                 continue
                 ;;
             q|quit|exit|"")
-                echo -e "${COLOR[GREY]}Goodbye!${COLOR[RESET]}"
+                print -e "${COLOR[GREY]}Goodbye!${COLOR[RESET]}"
                 return 0
                 ;;
         esac
@@ -163,10 +163,10 @@ while true; do
         # URL Construction
         # 1. Convert spaces to '+' (e.g., "reverse list" -> "reverse+list")
         # 2. Build full URL: cht.sh/lang/query
-        local safe_query=$(echo "$query" | tr ' ' '+')
+        local safe_query=$(print "$query" | tr ' ' '+')
         local url="cht.sh/${clean_selected}${url_sep}${safe_query}"
 
-        echo -e "   ${COLOR[GREY]}  Fetching...${COLOR[RESET]}"
+        print -e "   ${COLOR[GREY]}  Fetching...${COLOR[RESET]}"
 
         # Output Handling & Paging
         if command -v bat &>/dev/null; then
