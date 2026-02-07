@@ -49,11 +49,11 @@ elif (( total_duration_ms < 100 )); then
     COL=${COLOR[CYAN]}
 
 elif (( total_duration_ms < 200 )); then
-    LABEL=" Acceptable"
+    LABEL="  Acceptable"
     COL=${COLOR[YELLOW]}
 
 else
-    LABEL=" Sluggish"
+    LABEL="  Sluggish"
     COL=${COLOR[RED]}
 fi
 
@@ -134,7 +134,7 @@ zprof | awk \
         if (bar_visual == "" && percent > 0) bar_visual = "·"
 
         # 8. Print
-        print -f "   %s%-25s%s %s%-10s%s %s%-8s%s %s%s%s\n",
+        printf "   %s%-25s%s %s%-10s%s %s%-8s%s %s%s%s\n",
             color_func, fn_name, color_reset,
             time_color, time_ms, color_reset,
             color_dim,  calls,   color_reset,

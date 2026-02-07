@@ -190,17 +190,17 @@ BEGIN {
     gsub(/[[:space:]]+$/, "", local_br)
 
     # --- Render Header ---
-    print -f "\n  " C_MAGENTA C_BOLD "%s %s" C_RESET, I_BRANCH, local_br
+    printf "\n  " C_MAGENTA C_BOLD "%s %s" C_RESET, I_BRANCH, local_br
 
     if (remote_br != "") {
-        print -f " " C_DIM "%s" C_RESET " " C_BLUE "%s" C_RESET, I_ARROW, remote_br
+        printf " " C_DIM "%s" C_RESET " " C_BLUE "%s" C_RESET, I_ARROW, remote_br
     }
 
     if (bracket_info != "") {
-        print -f " %s", bracket_info
+        printf " %s", bracket_info
     }
 
-    print -f "\n  " C_DIM "────────────────────────────────────────────" C_RESET "\n"
+    printf "\n  " C_DIM "────────────────────────────────────────────" C_RESET "\n"
     next
 }
 
@@ -233,18 +233,18 @@ BEGIN {
         icon = ""; color = C_RED # Unmerged / Conflict
     }
 
-    print -f "    %s%s%s  %s\n", color, icon, C_RESET, filename
+    printf "    %s%s%s  %s\n", color, icon, C_RESET, filename
     total_files++
 }
 
 # ─── SUMMARY FOOTER ─────────────────────────────────────────────
 END {
     if (total_files == 0) {
-        print -f "    " C_GREEN "%s" C_RESET "  " C_DIM "No changes. Working tree clean." C_RESET "\n", I_CLEAN
+        printf "    " C_GREEN "%s" C_RESET "  " C_DIM "No changes. Working tree clean." C_RESET "\n", I_CLEAN
     } else {
-        print -f "\n    " C_DIM "(%d files changed)" C_RESET "\n", total_files
+        printf "\n    " C_DIM "(%d files changed)" C_RESET "\n", total_files
     }
-    print -f "\n"
+    printf "\n"
 }
 '
 }
