@@ -78,8 +78,7 @@ if [[ -r "$RC" ]]; then
 else
     # !!! CRITICAL: Configuration file missing
     print \
-        "${COLOR[BOLD]}${COLOR[RED]}[ERROR]${COLOR[RESET]}${COLOR[RED]} Critical: ${COLOR[DIM]}Config not found at ${COLOR[UNDERLINE]}${RC}${COLOR[RESET]}"
-    print "Please try re-installing the configuration.\n"
+        "${COLOR[BOLD]}${COLOR[RED]}[ERROR]${COLOR[RESET]}${COLOR[RED]} Critical: ${COLOR[DIM]}Config not found at ${COLOR[UNDERLINE]}${RC}${COLOR[RESET]}\nPlease try re-installing the configuration.\n"
     return
 fi
 
