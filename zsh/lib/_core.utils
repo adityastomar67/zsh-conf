@@ -236,12 +236,8 @@ _eval_cache() {
 # ───────────────────────────────────────────────────────────────────────
 ## We construct the system $PATH and $FPATH here.
 
-# 1. Global Uniqueness
-# typeset -U : Automatically removes duplicates from these arrays
-typeset -gU path fpath
-
-# 2. Dynamic Path Injection
-# Iterate through USER_PATH_ENTRIES defined in env.zsh
+#  Dynamic Path Injection
+#  Iterate through USER_PATH_ENTRIES defined in env.zsh
 for directory_entry in "${USER_PATH_ENTRIES[@]}"; do
 
     # Resolve relative paths (start without /) to Home
@@ -341,31 +337,56 @@ function _safe_edit() {
 # Final Integrations
 # ───────────────────────────────────────────────────────────────────────
 
-# Temporary Offline Config
-# Creates a placeholder file for non-git-tracked aliases if requested.
+# User Overrides / Offline Config
+# ───────────────────────────────────────────────────────────────────────
+## Creates a placeholder file for local, non-git-tracked overrides.
+## We run this synchronously to ensure the file exists before sourcing.
+
 (
-    local temp_file="$HOME/User-Overrides.zsh"
-    if [[ ! -f "$temp_file" ]]; then
-        cat > "$temp_file" <<'EOF'
-## Put temporary/offline config here. Not tracked by Git.
-## NOTE: This file is auto-created if missing. and will be auto-loaded.
+    # Define the location (Use ZDOTDIR if available, else HOME)
+    local override_file="$HOME/User-Overrides.zsh"
 
+    # Only create if it doesn't exist (Check is instant)
+    if [[ ! -f "$override_file" ]]; then
 
-# ── Custom Aliases ──────────────────────────────────────────────────
-# alias myip="curl http://ipecho.net/plain; print"
+        # Use 'cat' with a quoted Heredoc (<<'EOF') to prevents variable expansion
+        cat > "$override_file" <<'EOF'
+# ------------------------------------------------------------------------------
+# USER OVERRIDES & SECRETS
+# ------------------------------------------------------------------------------
+# This file is for local configuration that should NOT be tracked by Git.
+# [NOTE] This file is auto-created if missing. and will be auto-loaded.
+#
+# USAGE:
+#   1. Add this filename to your .gitignore (if syncing dotfiles).
+#   2. Define API keys, work-specific aliases, or hardware-specific overrides here.
+#   3. Or just remove comment from any example below and modify it.
+#
+# vim: ft=zsh
+# ------------------------------------------------------------------------------
 
-# ── Environment Vaiables ─────────────────────────────────────────────
-# export PATH="$PATH:$HOME/my-custom-bin"
+# ── 1. Environment Variables ──────────────────────────────────────────
+# export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
+# export OPENAI_API_KEY="sk-xxxxxxxxxxxx"
 
-# ── Function Overrides ───────────────────────────────────────────────
-# eval "$(/opt/homebrew/bin/brew shellenv)"
-# Create a function that wraps the native alias command
+# ── 2. Local Aliases ──────────────────────────────────────────────────
+# alias ssh-work="ssh user@192.168.1.xx"
+# alias myip="curl -s http://ipecho.net/plain; print"
 
-# --------------------------------------------------------------------------
+# ── 3. Path Additions ─────────────────────────────────────────────────
+# path+=("$HOME/my-custom-bin")
+
+# ── 4. Function Overrides ─────────────────────────────────────────────
+# function work_vpn() {
+#     sudo tailscale up --exit-node=work-pc
+# }
 
 EOF
+
+        # Optional: Print a subtle notification on first creation
+        print "${COLOR[GREEN]}[INFO] Created local override file at: ${COLOR[YELLOW]}${override_file}${COLOR[RESET]}"
     fi
-) &!
+)
 
 # Wallpaper Sync
 # Lazy load the wallpaper randomizer if the binary exists.

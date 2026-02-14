@@ -166,7 +166,7 @@ is_installed emacs && alias em="/usr/bin/emacs -nw" \
                    && alias emacs="emacsclient -c -a 'emacs'"
 
 # VS Code Wrapper (forces specific extension usage)
-is_installed code  && alias code="code --extensions-dir=\"$HOME/.config/Code/User/extensions\""
+# is_installed code  && alias code="code --extensions-dir '$HOME/.config/Code/User/extensions'"
 
 
 # Utilities & Tools
@@ -193,13 +193,18 @@ is_installed ripgrep && alias grep="ripgrep"
 # Logic: Try 'eza' (best), then 'lsd' (good), then native 'ls' (fallback).
 
 if is_installed eza; then
-    # Eza: Modern, colorful, supports git status and icons
-    alias 'l.'="eza -a | egrep '^\.'"                                         # Dotfiles only
-    alias la="eza -a --color=always --icons --group-directories-first"        # List All
-    alias ll="eza -l --color=always --icons --group-directories-first"        # Long List
-    alias lt="eza -aT --level=2 --color=always --group-directories-first"     # Tree View
-    alias l="eza -l --color=always --icons --git --group-directories-first"   # Git View
-    alias ls="eza -al --color=always --icons --git --group-directories-first" # Default
+    # General Options used in all aliases
+    #   --group-directories-first : Folders on top
+    #   --icons : Requires Nerd Font
+    #   --color=always : formatting
+    local _eza_opts="--group-directories-first --icons --color=always"
+
+    alias l.="eza -d .* $_eza_opts"                   # Dotfiles only (relies on shell globbing)
+    alias la="eza -a $_eza_opts"                      # List All (Inc Hidden)
+    alias ll="eza -l $_eza_opts"                      # Long List
+    alias lt="eza -aT --level=2 $_eza_opts"           # Tree View (Level 2)
+    alias l="eza -l --git $_eza_opts"                 # Long + Git Status
+    alias ls="eza -al --git $_eza_opts"               # Default 'ls' override
 
 elif is_installed lsd; then
     # Lsd: Good alternative if eza is missing

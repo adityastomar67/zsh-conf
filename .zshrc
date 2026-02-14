@@ -46,7 +46,7 @@ if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
     zmodload zsh/datetime
 
     # Capture the wall-clock start time
-    _startup_timer_start=$EPOCHREALTIME
+    _startup_timer=$EPOCHREALTIME
 
     # Load the zprof module for later profiling report
     zmodload zsh/zprof 2>/dev/null
@@ -76,9 +76,9 @@ autoload -Uz _core.utils && _core.utils
 if [[ -r "$RC" ]]; then
     source "$RC"
 else
-    # !!! CRITICAL: Configuration file missing
+    # ---- CRITICAL: Configuration file missing
     print \
-        "${COLOR[BOLD]}${COLOR[RED]}[ERROR]${COLOR[RESET]}${COLOR[RED]} Critical: ${COLOR[DIM]}Config not found at ${COLOR[UNDERLINE]}${RC}${COLOR[RESET]}\nPlease try re-installing the configuration.\n"
+        "${COLOR[BOLD]}${COLOR[RED]}[ERROR]${COLOR[RESET]}${COLOR[RED]} Critical: ${COLOR[DIM]}Config not found at ${COLOR[UNDERLINE]}${RC}${COLOR[RESET]}\n        Please try re-installing the configuration.\n"
     return
 fi
 
@@ -98,7 +98,7 @@ if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
 
     # Select and execute a random visual if any are found
     if (( ${#available_visual_commands} > 0 )); then
-        # Pick random index (1-based)
+        # Pick random index (1-based indexing)
         local random_idx=$(( RANDOM % ${#available_visual_commands} + 1 ))
 
         # Execute the command
@@ -126,11 +126,9 @@ fi
 
 if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
     # STOP THE CLOCK
-    #    We capture time immediately to exclude the UI rendering logic from the score.
-    local _startup_timer_end=$EPOCHREALTIME
-
+    ## We capture time immediately to exclude the UI rendering logic from the score.
     ## Calculate duration in milliseconds
-    local total_duration_ms=$(( (_startup_timer_end - _startup_timer_start) * 1000 ))
+    local total_duration_ms=$(( ($EPOCHREALTIME - $_startup_timer) * 1000 ))
 
     # Load the Benchmark UI
     local BENCH_UI="$ZSH_CONFIG_ROOT/lib/_ui.benchmark"
