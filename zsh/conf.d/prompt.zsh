@@ -117,38 +117,59 @@ function check_git_untracked_status() {
 # ───────────────────────────────────────────────────────────────────────
 ## A high-contrast, cyberpunk-inspired theme.
 
-function theme_neon_setup() {
-    # ── vcs_info setup ─────────────────────────────────────────────────────
-    zstyle ':vcs_info:*' enable git
-    zstyle ':vcs_info:*' check-for-changes true
-    # %b: Branch, %u: Unstaged, %c: Staged
-    zstyle ':vcs_info:git:*' formats " %F{201} %b%f %F{red}%u%c%f"
-    zstyle ':vcs_info:git:*' actionformats " %F{201} %b|%a%f %F{red}%u%c%f"
+function theme_neon() {
+    setopt PROMPT_SUBST
 
-    # Hook to auto-update git info
-    add-zsh-hook precmd vcs_info
+    # 1. Generate Symbol ONCE (Per session)
+    #    This prevents it from changing every time you hit Enter.
+    local session_symbol
+    session_symbol=$(get_random_prompt_symbol)
 
-    # ── construction ───────────────────────────────────────────────────────
+    # 2. Fast Git Status Function
+    function _neon_git_update() {
+        NEON_GIT_INFO=""
 
-    # 1. Directory: Cyan text on Black background
-    #    %1~ shows only the current folder name, %~ shows full path.
+        # Fast Guard: Check for .git directory (0ms)
+        if [[ -d .git ]] || git rev-parse --is-inside-work-tree &>/dev/null; then
+
+            # Get Branch (Fast)
+            local ref
+            ref=$(command git symbolic-ref --short HEAD 2>/dev/null) || \
+            ref=$(command git rev-parse --short HEAD 2>/dev/null) || return
+
+            # Truncate long branch names
+            [[ ${#ref} -gt 20 ]] && ref="${ref[1,20]}..."
+
+            # Check Status (Plumbing = Fast)
+            local status_color=""
+            local status_indicator=""
+
+            if ! command git diff-index --quiet HEAD -- 2>/dev/null; then
+                status_color="%F{red}"
+                status_indicator="●"  # Modified
+            elif [[ -n $(command git ls-files --others --exclude-standard 2>/dev/null | head -n 1) ]]; then
+                status_color="%F{red}"
+                status_indicator="○"  # Untracked
+            fi
+
+            # Build the info string
+            NEON_GIT_INFO=" %F{201} ${ref}%f ${status_color}${status_indicator}%f"
+        fi
+    }
+
+    # 3. Register Hook (Only updates Git, NOT the symbol)
+    add-zsh-hook precmd _neon_git_update
+
+    # 4. Assembly
     local p_dir="%K{black}%F{51}  %1~ %f%k"
-
-    # 2. Arrow separator
     local p_arrow="%F{51}%f"
-
-    # 3. User info: Pink
     local p_user="%F{213}%n%f"
 
-    # 4. Prompt Symbol: Neon Green lightning
-    local p_symbol="%B%F{154}⚡%f%b"
+    # Use the static variable we defined at the top
+    local p_symbol="%B%F{154}${session_symbol}%f%b"
 
-    # ── assembly ───────────────────────────────────────────────────────────
-
-    # Left: [ DIR > ] User [Git] Symbol
-    PS1="${p_dir}${p_arrow} ${p_user}\${vcs_info_msg_0_} ${p_symbol} "
-
-    # Right: Time in dim purple
+    # Assemble
+    PS1="${p_dir}${p_arrow} ${p_user}\${NEON_GIT_INFO} ${p_symbol} "
     RPROMPT="%F{240} %*%f"
 }
 
@@ -157,7 +178,7 @@ function theme_neon_setup() {
 # ───────────────────────────────────────────────────────────────────────
 ## A rounded, "pill" style theme using Zsh's 256-color support.
 
-function theme_bubble_setup() {
+function theme_bubble() {
     # ── vcs_info setup ─────────────────────────────────────────────────────
     zstyle ':vcs_info:*' enable git
     zstyle ':vcs_info:*' check-for-changes true
@@ -194,7 +215,7 @@ function theme_bubble_setup() {
 # ───────────────────────────────────────────────────────────────────────
 ## A two-line prompt with connecting lines, resembling a spaceship HUD.
 
-function theme_orbit_setup() {
+function theme_orbit() {
     # ── vcs_info setup ─────────────────────────────────────────────────────
     zstyle ':vcs_info:*' enable git
     zstyle ':vcs_info:*' check-for-changes true
@@ -232,7 +253,7 @@ function theme_orbit_setup() {
 ## A minimalist theme heavily reliant on Zsh's built-in `vcs_info` module.
 ## Focuses on speed and low visual noise.
 
-function theme_z_setup() {
+function theme_z() {
 
     # ── 1. Fast Git Status Function ────────────────────────────────────────
     # Replaces vcs_info. Runs ONE git call to get Branch + Status + Untracked.
@@ -319,7 +340,7 @@ function theme_z_setup() {
 ## A complex, feature-rich theme designed to mimic Powerlevel10k features
 ## manually. Handles window titles, execution timers, and auto-ls.
 
-function theme_10k_setup() {
+function theme_10k() {
 
     # ── p10k integration toggles ───────────────────────────────────────────
     # If the actual Powerlevel10k plugin is installed, these helpers toggle segments.
@@ -549,7 +570,7 @@ function theme_10k_setup() {
 ## A sleek, modern prompt using manual Git status checking (no vcs_info).
 ## Features custom icons and a clean path view.
 
-function theme_gh0st_setup() {
+function theme_gh0st() {
     # ── Git Status (Cached & Optimized) ───────────────────────────────────
     function _gh0st_git_status() {
 
@@ -647,11 +668,11 @@ function theme_gh0st_setup() {
 ## Selects the theme based on the environment variable.
 
 case "$PROMPT_THEME" in
-    "gh0st")  theme_gh0st_setup  ;;
-    "z")      theme_z_setup      ;;
-    "10k")    theme_10k_setup    ;;
-    "neon")   theme_neon_setup   ;;
-    "bubble") theme_bubble_setup ;;
-    "orbit")  theme_orbit_setup  ;;
+    "gh0st")  theme_gh0st  ;;
+    "z")      theme_z      ;;
+    "10k")    theme_10k    ;;
+    "neon")   theme_neon   ;;
+    "bubble") theme_bubble ;;
+    "orbit")  theme_orbit  ;;
     *)        return             ;;
 esac
