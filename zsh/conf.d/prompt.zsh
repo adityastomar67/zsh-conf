@@ -78,10 +78,6 @@ function get_random_prompt_symbol() {
         "»"   # Right angle quotes
 
         # --- Nerd Fonts / Powerline (Requires patched font) ---
-        ""   # Powerline hard right
-        ""   # Powerline soft right
-        "❯"   # Heavy angle quote (Classic Pure/Spaceship theme)
-        "❱"   # Heavy double angle quote
         ""   # FontAwesome chevron
         ""  # Double chevron
         ""   # Octicons arrow right

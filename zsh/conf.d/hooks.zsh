@@ -148,15 +148,24 @@ magic_enter() {
     fi
 
     # ::: Smart Git Status :::
-    if git rev-parse --is-inside-work-tree &>/dev/null; then
-        if [[ -n $(git status --porcelain) ]]; then
+    # We combine the fast Zsh check with the robust Git check
+    if [[ -d .git ]] || git rev-parse --is-inside-work-tree &>/dev/null; then
+
+        # OPTIMIZATION:
+        # Check modified (diff-index) OR untracked (ls-files)
+        # Exits instantly on the first hit.
+        if ! git diff-index --quiet HEAD -- 2>/dev/null || \
+        [[ -n $(git ls-files --others --exclude-standard 2>/dev/null | head -n 1) ]]; then
+
+            # Dirty State
             print "${COLOR[YELLOW]}::: Git Status (Dirty) :::${COLOR[RESET]}"
-            git status  # Zsh-conf's git wrapper
+            git status
         else
+            # Clean State
             print "${COLOR[GREEN]}::: Git Status (Clean) :::${COLOR[RESET]}"
             git log -n 3 --oneline --color=always
         fi
-        print ""
+        print "\n"
     fi
 
     # ::: Directory Listing :::
