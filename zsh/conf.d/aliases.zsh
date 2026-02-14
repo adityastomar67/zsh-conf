@@ -139,13 +139,13 @@ local -A _dir_abbreviations=(
 )
 
 # Dynamic Alias Creation
-#    Loop through keys (abbr) and values (path), check existence, and create alias.
-for abbr path in "${(@kv)_dir_abbreviations}"; do
-    if [[ -d "$path" ]]; then
-        alias "$abbr"="cd $path"
+#    Loop through keys (abbr) and values (dir), check existence, and create alias.
+for abbr dir in "${(@kv)_dir_abbreviations}"; do
+    if [[ -d "$dir" ]]; then
+        alias "$abbr"="cd $dir"
 
         # Optional: Register as a Named Directory (allows cd ~pj and prompt shortening)
-        # hash -d "$abbr"="$path"
+        # hash -d "$abbr"="$dir"
     fi
 done
 
