@@ -92,7 +92,8 @@ function get_random_prompt_symbol() {
     )
 
     # Select random index based on array length
-    print "${symbols[1 + $RANDOM % ${#symbols[@]}]}"
+    # Use 'print --' to prevent symbols like '-->' being parsed as flags
+    print -- "${symbols[1 + $RANDOM % ${#symbols[@]}]}"
 }
 
 # Function: check_git_untracked_status
