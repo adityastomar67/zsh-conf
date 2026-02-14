@@ -101,18 +101,19 @@ function get_random_prompt_symbol() {
 #   Checks if the current Git repository has untracked files (??).
 #   Returns 0 (true) if untracked files exist, 1 (false) otherwise.
 function check_git_untracked_status() {
-    # Guard: Git must be installed
-    if (( ! $+commands[git] )); then
-        return 1
-    fi
+    # 1. Fast Zsh Internal Check (0ms)
+    # Replaces 'is_installed' with a hash table lookup.
+    (( $+commands[git] )) || return 1
 
-    # Check if inside work tree to avoid errors
-    if [[ $(git rev-parse --is-inside-work-tree 2>/dev/null) == 'true' ]]; then
-        # Grep for '??' in porcelain output (fastest check)
-        git status --porcelain | grep '??' &>/dev/null
-    else
-        return 1
-    fi
+    # 2. The Speed Optimization
+    # 'git ls-files' is much faster than 'git status' because it
+    # doesn't calculate diffs for modified files.
+    #
+    # --others : Show untracked files
+    # --exclude-standard : Respect .gitignore
+    # head -n 1 : Stop processing immediately after finding the first file
+
+    [[ -n $(command git ls-files --others --exclude-standard 2>/dev/null | head -n 1) ]]
 }
 
 
