@@ -58,7 +58,7 @@ fi
 _fzf_compgen_dir() {
     local base_dir="$1"
 
-    if is_installed fd; then
+    if (( $+commands[fd] )); then
         # Use 'fd' for performance and automatic .gitignore respect
         fd --type d --hidden --follow --color=always \
            --exclude ".git" \
@@ -84,7 +84,7 @@ _fzf_compgen_unalias() {
     alias > "$tmp"
 
     local preview_cmd="grep -F --color=always \"{}=\" '$tmp'"
-    if is_installed bat; then
+    if (( $+commands[bat] )); then
         preview_cmd="$preview_cmd | bat -l zsh --style=plain --color=always"
     fi
 
@@ -103,9 +103,9 @@ _fzf_comprun() {
     case "$command" in
         # 1. Navigation (cd/pushd) -> Show Directory Trees
         cd|pushd|rmdir)
-            if is_installed eza; then
+            if (( $+commands[eza] )); then
                 fzf "$@" --preview 'eza --tree --level=2 --color=always --icons=always --group-directories-first {} | head -200'
-            elif is_installed tree; then
+            elif (( $+commands[tree] )); then
                 fzf "$@" --preview 'tree -C {} | head -200'
             else
                 fzf "$@" --preview 'ls -1 --color=always {} | head -200'
@@ -114,7 +114,7 @@ _fzf_comprun() {
 
         # 2. Files (vim/cat/bat) -> Show Syntax Highlighted Code
         vim|nvim|vi|nano|code|cat|bat|less|more)
-            if is_installed bat; then
+            if (( $+commands[bat] )); then
                 fzf "$@" --preview 'bat --style=numbers --color=always --line-range :500 {}' \
                         --preview-window 'right:60%:border-left'
             else
@@ -139,7 +139,7 @@ _fzf_comprun() {
 
         # 5. Git -> Show Colorful Diffs
         git)
-            if is_installed delta; then
+            if (( $+commands[delta] )); then
                 fzf "$@" --preview 'git diff --color=always {} | delta' --preview-window 'right:60%'
             else
                 fzf "$@" --preview 'git diff --color=always {}' --preview-window 'right:60%'
@@ -163,13 +163,13 @@ _fzf_comprun() {
         # 10. Multi-Tool Fallback logic for everything else
         *)
             local preview_cmd="print {}"
-            if is_installed bat; then
+            if (( $+commands[bat] )); then
                 preview_cmd="if [ -f {} ]; then bat --style=numbers --color=always --line-range :500 {};"
             else
                 preview_cmd="if [ -f {} ]; then cat {};"
             fi
 
-            if is_installed eza; then
+            if (( $+commands[eza] )); then
                  preview_cmd+=" elif [ -d {} ]; then eza --tree --level=2 --color=always --icons=always {} | head -200;"
             else
                  preview_cmd+=" elif [ -d {} ]; then ls -1 --color=always {};"
@@ -230,11 +230,11 @@ local _fzf_ignore_list=(
     .git .mypy_cache .tox .cache .venv venv node_modules __pycache__ site-packages
 )
 
-if is_installed rg; then
+if (( $+commands[rg] )); then
     # RIPGREP: Native .gitignore support + ultra-fast filtering
     export FZF_DEFAULT_COMMAND="rg --files --hidden --follow ${(@)_fzf_ignore_list/#/--glob \!}"
     export FZF_ALT_C_COMMAND='find . -type d'
-elif is_installed fd; then
+elif (( $+commands[fd] )); then
     # FD: Purpose-built for file discovery
     local fd_excludes="${(@)_fzf_ignore_list/#/--exclude }"
     export FZF_DEFAULT_COMMAND="fd --type f --hidden --follow --strip-cwd-prefix $fd_excludes"
@@ -253,7 +253,7 @@ export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 
 # Select File Previewer (Prioritize bat)
 local _fzf_preview_file_cmd
-if is_installed bat; then
+if (( $+commands[bat] )); then
     _fzf_preview_file_cmd='bat --color=always --style=numbers --line-range=:500 {}'
 else
     _fzf_preview_file_cmd='cat {}'
@@ -261,9 +261,9 @@ fi
 
 # Select Directory Previewer (Prioritize eza)
 local _fzf_preview_dir_cmd
-if is_installed eza; then
+if (( $+commands[eza] )); then
     _fzf_preview_dir_cmd='eza --tree --color=always {} | head -200'
-elif is_installed tree; then
+elif (( $+commands[tree] )); then
     _fzf_preview_dir_cmd='tree -C {} | head -200'
 else
     _fzf_preview_dir_cmd='ls -1 {}'

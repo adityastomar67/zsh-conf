@@ -31,7 +31,7 @@ local selected_file
 local preview_cmd
 
 # 2. Preview Strategy (Bat > Cat)
-if is_installed bat; then
+if (( $+commands[bat] )); then
     # Bat: Syntax highlighting, line numbers
     preview_cmd="bat --style=numbers --color=always --line-range :500 {} 2>/dev/null"
 else
@@ -44,7 +44,7 @@ fi
 # which allows you to pivot and edit the file instead of jumping to the folder.
 
 # CASE A: Fast Search (fd)
-if is_installed fd; then
+if (( $+commands[fd] )); then
     selected_file=$(fd --type f --hidden --follow --exclude .git . "$start_dir" | \
         fzf \
         --no-multi \

@@ -39,14 +39,14 @@ if [[ "$OSTYPE" == "darwin"* ]] && (( $+commands[brew] )); then
     preview_cmd="brew info {}"
     header_text="🍺 Homebrew (Leaves)"
 
-elif is_installed pacman; then
+elif (( $+commands[pacman] )); then
     # Arch Linux
     list_cmd="pacman -Qqe"
     uninstall_cmd=(sudo pacman -Rns)
     preview_cmd="pacman -Qi {}"
     header_text="📦 Pacman (Explicit)"
 
-elif is_installed apt; then
+elif (( $+commands[apt] )); then
     # Debian / Ubuntu
     # apt-mark showmanual: Only list user-installed packages, not auto-deps
     list_cmd="apt-mark showmanual"
@@ -54,7 +54,7 @@ elif is_installed apt; then
     preview_cmd="apt-cache show {}"
     header_text="🍥 Apt (Manual)"
 
-elif is_installed dnf; then
+elif (( $+commands[dnf] )); then
     # Fedora / RHEL
     list_cmd="dnf repoquery --userinstalled --qf '%{name}'"
     uninstall_cmd=(sudo dnf remove -y)

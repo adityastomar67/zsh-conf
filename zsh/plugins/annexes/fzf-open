@@ -32,16 +32,16 @@ local search_cmd
 local preview_cmd
 
 # 2. Backend Selection (Priority: fd > rg > find)
-if is_installed fd; then
+if (( $+commands[fd] )); then
     search_cmd="fd --type f --hidden --follow --exclude .git . \"$start_dir\""
-elif is_installed rg; then
+elif (( $+commands[rg] )); then
     search_cmd="rg --files --hidden --follow --glob '!.git' \"$start_dir\""
 else
     search_cmd="find \"$start_dir\" -type f -not -path '*/.git/*'"
 fi
 
 # 3. Preview Selection (Priority: bat > cat)
-if is_installed bat; then
+if (( $+commands[bat] )); then
     preview_cmd="bat --style=numbers --color=always --line-range :500 {} 2>/dev/null"
 else
     preview_cmd="cat {} 2>/dev/null"

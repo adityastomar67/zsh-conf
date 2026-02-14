@@ -272,11 +272,11 @@ typeset -A SYSTEM_INFO
 System::detect_os() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
         SYSTEM_INFO[PKG_MANAGER]="brew"
-    elif System::is_installed pacman; then
+    elif System::(( $+commands[pacman] )); then
         SYSTEM_INFO[PKG_MANAGER]="pacman"
-    elif System::is_installed apt-get; then
+    elif System::(( $+commands[apt-get] )); then
         SYSTEM_INFO[PKG_MANAGER]="apt"
-    elif System::is_installed dnf; then
+    elif System::(( $+commands[dnf] )); then
         SYSTEM_INFO[PKG_MANAGER]="dnf"
     else
         Logger::error "Unsupported OS/Distro."
@@ -432,7 +432,7 @@ Installer::check_dependencies() {
 
 Installer::ensure_zsh_shell() {
     # 1. Install Zsh if missing
-    if ! System::is_installed zsh; then
+    if ! System::(( $+commands[zsh] )); then
         if Interface::prompt_confirm "Zsh is not installed. Install it?"; then
             System::install_package "zsh"
             wait $!

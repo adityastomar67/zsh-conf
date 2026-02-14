@@ -38,7 +38,7 @@ fi
 # 3. List Generation
 #    Prioritize 'fd' (fast, respects .gitignore) > 'ls' (fallback)
 local list_cmd
-if is_installed fd; then
+if (( $+commands[fd] )); then
     list_cmd="fd --max-depth 1 --hidden --exclude .git --strip-cwd-prefix"
 else
     list_cmd="command ls -A1"

@@ -78,7 +78,7 @@ export SUDO_PROMPT="${COLOR[RED]}[NOTE]${COLOR[RESET]} Deploying root access for
 # Manpager (Manual Page Viewer)
 # Priority: Neovim (Syntax Highlight + Nav) > Bat (Colors) > Vim > Less
 
-if is_installed nvim; then
+if (( $+commands[nvim] )); then
     export EDITOR="nvim"
     export VISUAL="nvim"
 
@@ -94,7 +94,7 @@ if is_installed nvim; then
         -c 'set nocul noshowcmd noruler noshowmode' \
         +Man!"
 
-elif is_installed bat; then
+elif (( $+commands[bat] )); then
     # Use Bat (cat clone with wings):
     # Renders man pages with syntax highlighting
     export MANPAGER="sh -c 'col -bx | bat \
@@ -103,7 +103,7 @@ elif is_installed bat; then
         --theme=TwoDark \
         --paging=always'"
 
-elif is_installed vim; then
+elif (( $+commands[vim] )); then
     # Use Standard Vim:
     # Configures buffer to be scratch (nofile) and maps 'q' to quit.
     export MANPAGER='/bin/bash -c "vim -MRn -c \"set buftype=nofile showtabline=0 ft=man ts=8 nomod nolist norelativenumber nonu noma\" -c \"normal L\" -c \"nmap q :qa<CR>\"</dev/tty <(col -b)"'
@@ -139,8 +139,8 @@ if [[ -n "$SSH_CONNECTION" ]]; then
 
     # Display System Info
     # If neofetch exists, run it. If lolcat exists, colorize it.
-    if is_installed neofetch; then
-        if is_installed lolcat; then
+    if (( $+commands[neofetch] )); then
+        if (( $+commands[lolcat] )); then
             # -S 10: Spread rainbow, -F 0.05: Frequency
             neofetch | lolcat -S 10 -F 0.05
         else

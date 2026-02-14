@@ -95,7 +95,7 @@ if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
         if [[ $# -gt 0 ]]; then
             builtin alias "$@"
         else
-            if is_installed PrettyAlias; then
+            if (( $+commands[PrettyAlias] )); then
                 builtin alias | PrettyAlias
             else
                 builtin alias
@@ -114,7 +114,7 @@ fi
 #   Emulates the behavior of yazi/ranger file managers.
 # ------------------------------------------------------------------------------
 function lg() {
-    if ! is_installed lazygit; then
+    if ! (( $+commands[lazygit] )); then
         print "${COLOR[RED]}Error:${COLOR[RESET]} 'lazygit' is not installed." >&2
         return 1
     fi
@@ -141,7 +141,7 @@ function lg() {
 # ------------------------------------------------------------------------------
 function weather() {
     # 1. Dependency Check
-    if is_installed curl; then
+    if (( $+commands[curl] )); then
         print "❌ Error: curl is required."
         return 1
     fi

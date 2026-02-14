@@ -95,7 +95,7 @@ function nvim() {
     # ── mode b: interactive menu ─────────────────────────────────────────────
 
     # Condition: No arguments provided AND 'fzf' is installed.
-    if [[ $# -eq 0 ]] && is_installed fzf; then
+    if [[ $# -eq 0 ]] && (( $+commands[fzf] )); then
 
         # Prepare menu options (Default + Distro Keys).
         local menu_options=("default" "${(@k)NVIM_DISTROS}")
@@ -140,7 +140,7 @@ function nvim() {
 # '&!' is Zsh specific: disowns the process immediately (same as 'disown').
 (
     # Only proceed if distros are defined and git is available.
-    if (( ${#NVIM_DISTROS} > 0 )) && is_installed git; then
+    if (( ${#NVIM_DISTROS} > 0 )) && (( $+commands[git] )); then
 
         local config_base_dir="${NVIM_CONFIG_BASE:-${XDG_CONFIG_HOME:-$HOME/.config}}"
         local distro_name

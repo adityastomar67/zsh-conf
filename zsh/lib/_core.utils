@@ -253,51 +253,6 @@ done
 unset directory_entry
 
 
-# Command Caching
-# ───────────────────────────────────────────────────────────────────────
-## Optimizes `command -v` checks by caching results in memory.
-
-typeset -gA COMMAND_AVAILABILITY_CACHE
-
-# ------------------------------------------------------------------------------
-# Function: is_installed
-# Description:
-#   Checks if a command exists in the $PATH. It caches the result in a global
-#   associative array (`COMMAND_AVAILABILITY_CACHE`) to prevent redundant
-#   filesystem lookups during shell startup.
-#
-# Arguments:
-#   $1 (command_name) : The name of the binary to check (e.g., "nvim").
-#
-# Returns:
-#   0 if installed, 1 if missing.
-#
-# Usage:
-#   if is_installed "nvim"; then ... fi
-# ------------------------------------------------------------------------------
-
-## TODO: Need to try this
-# if (( $+commands[nvim] )); then
-#     print "Neovim is ready"
-# fi
-function is_installed() {
-    local command_name="$1"
-
-    # 1. Check Cache
-    if [[ -n "${COMMAND_AVAILABILITY_CACHE[$command_name]}" ]]; then
-        return "${COMMAND_AVAILABILITY_CACHE[$command_name]}"
-    fi
-
-    # 2. System Check
-    command -v "$command_name" &>/dev/null
-    local exit_code=$?
-
-    # 3. Update Cache & Return
-    COMMAND_AVAILABILITY_CACHE[$command_name]=$exit_code
-    return $exit_code
-}
-
-
 # File Helpers
 # ───────────────────────────────────────────────────────────────────────
 
@@ -390,7 +345,7 @@ EOF
 
 # Wallpaper Sync
 # Lazy load the wallpaper randomizer if the binary exists.
-if [[ "${ENABLE_WALLPAPER_SYNC:l}" == "yes" ]] && is_installed RandomWall; then
+if [[ "${ENABLE_WALLPAPER_SYNC:l}" == "yes" ]] && (( $+commands[RandomWall] )); then
     RandomWall &!
 fi
 

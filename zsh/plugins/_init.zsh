@@ -29,7 +29,7 @@ plug
 # Logic:
 #   1. Check if the 'fzf' binary is available in $PATH (via is_installed).
 #   2. Check if the configuration file '_fuzzy' exists in our plugins directory.
-if is_installed fzf; then
+if (( $+commands[fzf] )); then
     source "$ZSH_CONFIG_ROOT/plugins/_fuzzy"
 fi
 

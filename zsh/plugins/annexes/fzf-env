@@ -31,11 +31,11 @@ local copy_cmd="cat" # Fallback
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     copy_cmd="pbcopy"
-elif [[ -n "$WAYLAND_DISPLAY" ]] && is_installed wl-copy; then
+elif [[ -n "$WAYLAND_DISPLAY" ]] && (( $+commands[wl-copy] )); then
     copy_cmd="wl-copy"
-elif is_installed xclip; then
+elif (( $+commands[xclip] )); then
     copy_cmd="xclip -selection clipboard"
-elif is_installed xsel; then
+elif (( $+commands[xsel] )); then
     copy_cmd="xsel --clipboard --input"
 elif (( $+commands[clip.exe] )); then
     copy_cmd="clip.exe" # WSL

@@ -34,9 +34,9 @@ local preview_cmd
 # 2. Preview Strategy (Calculate once)
 # We build the command string here so the FZF subshell doesn't have to check
 # for existence on every single keystroke.
-if is_installed eza; then
+if (( $+commands[eza] )); then
     preview_cmd="eza --tree --level=2 --color=always {} 2>/dev/null"
-elif is_installed tree; then
+elif (( $+commands[tree] )); then
     preview_cmd="tree -C {} 2>/dev/null"
 else
     preview_cmd="ls -1 --color=always {}"
@@ -46,7 +46,7 @@ fi
 # We intentionally avoid 'eval' for security and handle the pipe directly.
 
 # CASE A: Fast Search (fd)
-if is_installed fd; then
+if (( $+commands[fd] )); then
     selected_dir=$(fd --type d --hidden --follow --exclude .git . "$start_dir" | \
         fzf \
         --no-multi \
@@ -77,7 +77,7 @@ if [[ -n "$selected_dir" ]]; then
         print "\n${COLOR[BLUE]}➜ Entered:${COLOR[RESET]} ${COLOR[BOLD]}$selected_dir${COLOR[RESET]}"
 
         # Auto-List content on arrival
-        if is_installed eza; then
+        if (( $+commands[eza] )); then
             eza -G --color=always --icons --group-directories-first
         else
             ls -F --color=auto

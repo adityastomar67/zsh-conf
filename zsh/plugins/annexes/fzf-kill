@@ -36,7 +36,7 @@ local signal="${1:-15}"
 #    If 'pstree' exists, we show the hierarchy of the selected PID.
 #    Otherwise, we show the full process entry.
 local preview_cmd=""
-if is_installed pstree; then
+if (( $+commands[pstree] )); then
     # -p: show PIDs, -a: show arguments, -C: color
     # {2}: The PID column from ps -ef
     preview_cmd="pstree -p -a -C age {2} | head -20"

@@ -255,7 +255,7 @@ function _git_log () {
     fi
 
     # Check if FZF is installed using the Zsh $+commands hash.
-    if is_installed fzf; then
+    if (( $+commands[fzf] )); then
         command git log "$@"
         return 0
     fi
@@ -265,9 +265,9 @@ function _git_log () {
 
     # Automatically identifies the correct system command for clipboard operations.
     local copy_cmd
-    if        is_installed pbcopy;   then copy_cmd="pbcopy"          # macOS
-    elif      is_installed wl-copy;  then copy_cmd="wl-copy"         # Wayland (Linux)
-    elif      is_installed xclip;    then copy_cmd="xclip -sel c"    # X11 (Linux)
+    if        (( $+commands[pbcopy] ));   then copy_cmd="pbcopy"          # macOS
+    elif      (( $+commands[wl-copy] ));  then copy_cmd="wl-copy"         # Wayland (Linux)
+    elif      (( $+commands[xclip] ));    then copy_cmd="xclip -sel c"    # X11 (Linux)
     elif (( $+commands[clip.exe] )); then copy_cmd="clip.exe"        # WSL (Windows)
     else                                  copy_cmd="cat"             # Fallback
     fi

@@ -42,7 +42,7 @@ is_in_git_repo() {
 # We use 'delta' for beautiful, side-by-side diffs if installed.
 # Otherwise, we fallback to 'cat' for raw text.
 local _git_pager="cat"
-if is_installed delta; then
+if (( $+commands[delta] )); then
     _git_pager="delta --side-by-side --width \${FZF_PREVIEW_COLUMNS:-$COLUMNS}"
 fi
 

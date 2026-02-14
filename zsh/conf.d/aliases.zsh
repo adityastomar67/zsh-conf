@@ -71,7 +71,7 @@ alias history="fc -l -t '%Y/%m/%d %H:%M:%S:   '"
 # Man Page Fuzzy Finder
 # Uses fzf to search and preview man pages interactively.
 # Requires 'fzf' to be installed.
-is_installed fzf && alias man="fzf-man"
+(( $+commands[fzf] )) && alias man="fzf-man"
 
 # ------------------------------------------------------------------------------
 # Safety Nets
@@ -170,16 +170,16 @@ fi
 
 # Modern Editor Replacements
 # If Neovim is installed, make 'vim' use it.
-is_installed nvim  && alias vim="nvim" \
+(( $+commands[nvim] ))  && alias vim="nvim" \
                    && alias vimdiff="nvim -d" \
                    && alias v="nvim"
 
 # If Emacs is installed, try to use the client for speed.
-is_installed emacs && alias em="/usr/bin/emacs -nw" \
+(( $+commands[emacs] )) && alias em="/usr/bin/emacs -nw" \
                    && alias emacs="emacsclient -c -a 'emacs'"
 
 # VS Code Wrapper (forces specific extension usage)
-# is_installed code  && alias code="code --extensions-dir '$HOME/.config/Code/User/extensions'"
+# (( $+commands[code] ))  && alias code="code --extensions-dir '$HOME/.config/Code/User/extensions'"
 
 
 # Utilities & Tools
@@ -190,22 +190,22 @@ is_installed emacs && alias em="/usr/bin/emacs -nw" \
 # Modern Replacements
 
 # 'cat' -> 'bat' (Syntax highlighting)
-is_installed bat     && alias cat='bat'
+(( $+commands[bat] ))     && alias cat='bat'
 
 # 'df' -> 'duf' (Disk Usage / Free utility)
-is_installed duf     && alias df="duf" || alias df="df -h"
+(( $+commands[duf] ))     && alias df="duf" || alias df="df -h"
 
 # 'rm' -> 'trash' (Moves to trash instead of permanent delete)
-is_installed trash   && alias del="trash"
+(( $+commands[trash] ))   && alias del="trash"
 
 # 'grep' -> 'ripgrep' (Much faster search)
-is_installed ripgrep && alias grep="ripgrep"
+(( $+commands[ripgrep] )) && alias grep="ripgrep"
 
 # ------------------------------------------------------------------------------
 # Listing (The 'ls' Hierarchy)
 # Logic: Try 'eza' (best), then 'lsd' (good), then native 'ls' (fallback).
 
-if is_installed eza; then
+if (( $+commands[eza] )); then
     # General Options used in all aliases
     #   --group-directories-first : Folders on top
     #   --icons : Requires Nerd Font
@@ -219,7 +219,7 @@ if is_installed eza; then
     alias l="eza -l --git $_eza_opts"                 # Long + Git Status
     alias ls="eza -al --git $_eza_opts"               # Default 'ls' override
 
-elif is_installed lsd; then
+elif (( $+commands[lsd] )); then
     # Lsd: Good alternative if eza is missing
     alias ls="lsd -a --group-directories-first"
     alias ll="lsd -la --group-directories-first"
@@ -244,10 +244,10 @@ if [[ "$detected_os" == "Darwin" ]]; then
     alias paste='pbpaste'
 else
     # Linux: Try xsel first, fallback to xclip
-    if is_installed xsel; then
+    if (( $+commands[xsel] )); then
         alias copy='xsel --clipboard --input'
         alias paste='xsel --clipboard --output'
-    elif is_installed xclip; then
+    elif (( $+commands[xclip] )); then
         alias copy='xclip -selection clipboard'
         alias paste='xclip -selection clipboard -o'
     fi
@@ -281,7 +281,7 @@ alias killl='killall -q'
 # ───────────────────────────────────────────────────────────────────────
 ## Shortcuts for Arch Linux (Pacman) and derivatives.
 
-if is_installed pacman; then
+if (( $+commands[pacman] )); then
     # Native Pacman Wrappers
     alias pacin="sudo pacman -S"                     # Install
     alias pacrem="sudo pacman -Rns"                  # Remove (+ dependencies)
@@ -291,11 +291,11 @@ if is_installed pacman; then
     alias unlock="sudo rm /var/lib/pacman/db.lck"    # Fix lock file
 
     # AUR Helpers (Yay / Paru)
-    if is_installed yay; then
+    if (( $+commands[yay] )); then
         alias yas="yay -Syu --noconfirm"
         alias yain="yay -S"
         alias yarem="yay -Rns"
-    elif is_installed paru; then
+    elif (( $+commands[paru] )); then
         alias update="paru -Syu --nocombinedupgrade"
     fi
 
@@ -306,15 +306,15 @@ if is_installed pacman; then
 fi
 
 # Language Managers
-is_installed npm && alias npm-up="sudo npm install npm@latest -g"
-is_installed pip3 && alias pip-up="sudo pip3 list --outdated | grep -v '^\-e' | cut -d = -f 1 | xargs -n1 pip3 install -U"
+(( $+commands[npm] )) && alias npm-up="sudo npm install npm@latest -g"
+(( $+commands[pip3] )) && alias pip-up="sudo pip3 list --outdated | grep -v '^\-e' | cut -d = -f 1 | xargs -n1 pip3 install -U"
 
 
 # Git Configuration
 # ───────────────────────────────────────────────────────────────────────
 ## Extensive shortcuts for Git operations.
 
-if is_installed git; then
+if (( $+commands[git] )); then
     alias g="git"
 
     # Status & Add
@@ -424,16 +424,16 @@ alias -s {mp4,mkv,avi,mov,webm}="$_sys_open"
 
 # 6. Archives -> List Contents (Safety First)
 #    Typing 'data.zip' lists contents rather than auto-extracting (messy).
-if is_installed unzip; then
+if (( $+commands[unzip] )); then
     alias -s zip="unzip -l"
 fi
-if is_installed tar; then
+if (( $+commands[tar] )); then
     alias -s {tgz,gz}="tar tf"
 fi
 
 # 7. Log Files -> Bat (Syntax Highlighting)
 #    If 'bat' is installed, use it for logs. Otherwise, use 'tail -f'.
-if is_installed bat; then
+if (( $+commands[bat] )); then
     alias -s {log,md}="bat --paging=always"
 else
     alias -s log="tail -f"
@@ -468,4 +468,4 @@ alias dday='date +"%Y.%m.%d - " | copy ; date +"%Y.%m.%d"'
 alias week='date +%V'
 
 # Fun: Terminal Bonsai Tree
-is_installed cbonsai && alias ccbonsai="cbonsai -ilt 0.02 -c '  ,  ,  ,  ,  ' -L 5"
+(( $+commands[cbonsai] )) && alias ccbonsai="cbonsai -ilt 0.02 -c '  ,  ,  ,  ,  ' -L 5"

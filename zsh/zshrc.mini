@@ -144,12 +144,12 @@ if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
     # Check if modern alternatives exist before aliasing.
 
     # Cat -> Bat (Syntax highlighting)
-    if is_installed bat; then
+    if (( $+commands[bat] )); then
         alias cat="bat --theme=TwoDark"
     fi
 
     # Ls -> Eza (Icons, Git status)
-    if is_installed eza; then
+    if (( $+commands[eza] )); then
         alias ls='eza --icons=always --color=always -a'
         alias ll='eza --icons=always --color=always -la'
     else
@@ -157,7 +157,7 @@ if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
     fi
 
     # Vim -> Neovim
-    if is_installed nvim; then
+    if (( $+commands[nvim] )); then
         alias v='nvim'
         alias vim='nvim'
     fi
@@ -212,7 +212,7 @@ fi
 ## 3. Not already in Tmux?
 ## 4. Is this a terminal (stdin is tty)?
 
-if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" ]] && is_installed tmux && [[ -z "$TMUX" && -t 0 ]]; then
+if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" ]] && (( $+commands[tmux] )) && [[ -z "$TMUX" && -t 0 ]]; then
     # -A: Attach to existing session if it exists
     # -s: Session name ('b001')
     exec tmux new-session -A -s b001

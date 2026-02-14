@@ -44,10 +44,10 @@ local preview_cmd=""
 
 # We determine the previewer ONCE here, so both 'fd' and 'find' paths use the
 # best available tool.
-if is_installed eza; then
+if (( $+commands[eza] )); then
     # eza: Tree view, level 2, git status, icons
     preview_cmd="eza --tree --level=2 --color=always --icons --group-directories-first {} | head -200"
-elif is_installed tree; then
+elif (( $+commands[tree] )); then
     # tree: Standard tree view
     preview_cmd="tree -C {} | head -200"
 else
@@ -59,7 +59,7 @@ fi
 # 3. Search Logic
 
 # Logic: Preference Order -> fd (Rust) > find (Standard)
-if is_installed fd; then
+if (( $+commands[fd] )); then
     # --type d : Directories only
     # --hidden : Search .dotfiles
     # --follow : Follow symlinks
@@ -100,7 +100,7 @@ if builtin cd "$selected_dir"; then
     print "\n${COLOR[BLUE]}➜ Entered:${COLOR[RESET]} ${COLOR[BOLD]}$selected_dir${COLOR[RESET]}"
 
     # Auto-List: Show context immediately on arrival
-    if is_installed eza; then
+    if (( $+commands[eza] )); then
         eza -al --color=always --icons --git --group-directories-first
     else
         ls -al

@@ -40,7 +40,7 @@ fi
 ## conditionally launches Tmux. We use the ':l' modifier to lowercase the
 ## {:l} variable for case-insensitive comparison ("Yes" == "yes").
 
-if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" ]] && is_installed tmux && [[ -z "$TMUX" && -t 0 ]]; then
+if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" ]] && (( $+commands[tmux] )) && [[ -z "$TMUX" && -t 0 ]]; then
     # Only load if we are NOT already inside a Tmux session or Tmux is enabled by user.
     [[ -f "$ZSH_CONFIG_ROOT/plugins/_tmux" ]] && source "$ZSH_CONFIG_ROOT/plugins/_tmux"
 fi
