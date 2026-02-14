@@ -205,3 +205,6 @@ bindkey '^[p' pop-command
 
 # Autosuggest Acceptance: Ctrl + Space.
 bindkey '^ ' autosuggest-accept
+
+# Expand Aliases on Space: When you type an alias and press space, it expands to the full command.
+# bindkey ' ' expand-alias-on-space

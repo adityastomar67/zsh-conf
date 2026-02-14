@@ -95,6 +95,30 @@ zle -N magic_dot_expansion
 ## Widgets that provide context-aware information when the line is empty.
 
 # ------------------------------------------------------------------------------
+# Widget: Abbreviation Expansion (Fish-like behavior)
+# Description: When you type an alias and press space, it expands to the full command.
+# ------------------------------------------------------------------------------
+# This widget checks if the word you just typed is an alias.
+# If it is, it expands it immediately when you press SPACE.
+
+# function expand-alias-on-space() {
+#     # Get the last word typed
+#     local word="${LBUFFER##* }"
+
+#     # Check if it is a defined alias
+#     if alias "$word" >/dev/null 2>&1; then
+#         # Expand it (native Zsh widget)
+#         zle _expand_alias
+#     fi
+
+#     # Insert the actual space
+#     zle self-insert
+# }
+
+# # Register the widget and bind it to the Spacebar
+# zle -N expand-alias-on-space
+
+# ------------------------------------------------------------------------------
 # Widget: Magic Enter
 # Description: Executes command if buffer has text; otherwise shows status.
 # ------------------------------------------------------------------------------

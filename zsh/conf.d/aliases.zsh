@@ -124,17 +124,30 @@ alias .5="cd -5"
 
 # ------------------------------------------------------------------------------
 # Dynamic Bookmarks
-# Only create these aliases if the target directory actually exists.
+## Define the Shortcuts [Abbr]="Path"
+## Only create these aliases if the target directory actually exists.
+local -A _dir_abbreviations=(
+    # Note: DOTFILES_ROOT is defined in '$ZDOTDIR/.zshenv' (formerly DOT_PATH)
+    dt  "${DOTFILES_ROOT}"
 
-# Note: DOTFILES_ROOT is defined in '$ZDOTDIR/.zshenv' (formerly DOT_PATH)
-[[ -d "${DOTFILES_ROOT}" ]] && alias dt="cd ${DOTFILES_ROOT}"
+    pj  "$HOME/Projects"
+    dc  "$HOME/Documents"
+    dl  "$HOME/Downloads"
+    dv  "$HOME/Developer"
+    wk  "$HOME/Workspace"
+    cf  "$HOME/.config"
+)
 
-[[ -d ~/Projects ]]   && alias pj="cd ~/Projects"
-[[ -d ~/Documents ]]  && alias dc="cd ~/Documents"
-[[ -d ~/Downloads ]]  && alias dl="cd ~/Downloads"
-[[ -d ~/Developer ]]  && alias dv="cd ~/Developer"
-[[ -d ~/Workspace ]]  && alias wk="cd ~/Workspace"
+# Dynamic Alias Creation
+#    Loop through keys (abbr) and values (path), check existence, and create alias.
+for abbr path in "${(@kv)_dir_abbreviations}"; do
+    if [[ -d "$path" ]]; then
+        alias "$abbr"="cd $path"
 
+        # Optional: Register as a Named Directory (allows cd ~pj and prompt shortening)
+        # hash -d "$abbr"="$path"
+    fi
+done
 
 # Editors & Configurations
 # ───────────────────────────────────────────────────────────────────────
