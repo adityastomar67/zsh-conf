@@ -22,42 +22,101 @@
 #   - Window Title Management.
 #
 # Usage Notes
-#   Set `export PROMPT_THEME="gh0st"` in .zshenv to switch themes.
+#   Set `export PROMPT_THEME="gh0st"` in $ZDOTDIR/user.conf to switch themes.
 # ------------------------------------------------------------------------------
 
-#
 
-# 1. Shared Utilities
+# Shared Utilities
 # ───────────────────────────────────────────────────────────────────────
 ## Helper functions used across multiple themes to avoid code duplication.
 
 # Enable dynamic expansion within the prompt string.
 # Without this, variables like ${vcs_info_msg_0_} won't update.
 setopt PROMPT_SUBST
-autoload -Uz vcs_info
 
 # Load zstat for microsecond file timestamp checking
 zmodload zsh/stat
 
-# Global variables to persist cache between prompt draws
-typeset -g _GH0ST_CACHE_KEY=""     # Stores "PWD + Last Modified Time"
-typeset -g _GH0ST_CACHE_VAL=""     # Stores the visual string
-typeset -g _GH0ST_GIT_INDEX=""     # Stores location of .git/index
 
-# Function: get_random_prompt_symbol
-# Description:
-#   Returns a random "ignition" symbol from a curated list.
-#   Adds visual variety to every new line.
+# ── Shared State Variables ─────────────────────────────────────────────
+typeset -g PROMPT_SYMBOL="➜"
+typeset -g GIT_BRANCH=""
+typeset -g GIT_IS_REPO=0
+typeset -g GIT_HAS_MODIFIED=0
+typeset -g GIT_HAS_UNTRACKED=0
+typeset -g GIT_HAS_STAGED=0
+typeset -g _10K_START_TIME=""
+
+# ── The Engine (Controller) ────────────────────────────────────────────
+# Runs once per prompt. Updates the variables above.
+function _git_engine() {
+    # Reset State
+    GIT_IS_REPO=0
+    GIT_BRANCH=""
+    GIT_HAS_MODIFIED=0
+    GIT_HAS_UNTRACKED=0
+    GIT_HAS_STAGED=0
+
+    # 1. Fast Guard (0ms)
+    [[ -d .git || -f .git ]] || command git rev-parse --is-inside-work-tree &>/dev/null || return
+
+    GIT_IS_REPO=1
+
+    # 2. Get Branch
+    local ref
+    ref=$(command git symbolic-ref --quiet --short HEAD 2>/dev/null)
+    if [[ $? != 0 ]]; then
+        ref=$(command git rev-parse --short HEAD 2>/dev/null) # Detached HEAD
+    fi
+    # Truncate
+    [[ ${#ref} -gt 20 ]] && ref="${ref[1,20]}..."
+    GIT_BRANCH="$ref"
+
+    # 3. Dirty Checks (Plumbing)
+    # Check Modified
+    if ! command git diff-index --quiet HEAD -- 2>/dev/null; then
+        GIT_HAS_MODIFIED=1
+    fi
+
+    # Check Untracked (Stop at first find)
+    if [[ -n $(command git ls-files --others --exclude-standard 2>/dev/null | head -n 1) ]]; then
+        GIT_HAS_UNTRACKED=1
+    fi
+
+    # Check Staged (Optional, used by Orbit)
+    if ! command git diff-index --cached --quiet HEAD -- 2>/dev/null; then
+        GIT_HAS_STAGED=1
+    fi
+}
+
+# ── Hook Manager ───────────────────────────────────────────────────────
+# Prevents duplicate hooks when switching themes
+function _register_prompt_hook() {
+    local hook_name="$1"
+
+    # Remove all potential theme hooks first
+    add-zsh-hook -d precmd _gh0st_updater
+    add-zsh-hook -d precmd _orbit_updater
+    add-zsh-hook -d precmd _z_updater
+    add-zsh-hook -d precmd _10k_updater
+    add-zsh-hook -d preexec _10k_record_start
+
+    # Add the new one
+    add-zsh-hook precmd "$hook_name"
+}
+
+# ── Random Symbol ───────────────────────────────────────────────────
+# Returns a random "ignition" symbol from a curated list.
 function get_random_prompt_symbol() {
     local -a symbols=(
         # --- Standard ASCII (Safe) ---
-        ">"
-        ">>"
-        "-->"
-        "==>"
-        "::"
-        "~>"
-        "|>"
+        ">"   # Greater than
+        ">>"  # Double greater than
+        "-->" # Arrowhead
+        "==>" # Heavy arrowhead
+        "::"  # Colon
+        "~>"  # Tilde
+        "|>"  # Vertical bar
 
         # --- Geometric & Triangles (Clean) ---
         "▶"   # Black right-pointing triangle
@@ -92,578 +151,243 @@ function get_random_prompt_symbol() {
     print -- "${symbols[1 + $RANDOM % ${#symbols[@]}]}"
 }
 
-# Function: check_git_untracked_status
-# Description:
-#   Checks if the current Git repository has untracked files (??).
-#   Returns 0 (true) if untracked files exist, 1 (false) otherwise.
-function check_git_untracked_status() {
-    # 1. Fast Zsh Internal Check (0ms)
-    # Replaces 'is_installed' with a hash table lookup.
-    (( $+commands[git] )) || return 1
 
-    # 2. The Speed Optimization
-    # 'git ls-files' is much faster than 'git status' because it
-    # doesn't calculate diffs for modified files.
-    #
-    # --others : Show untracked files
-    # --exclude-standard : Respect .gitignore
-    # head -n 1 : Stop processing immediately after finding the first file
+# Theme: 'Z'
+# ───────────────────────────────────────────────────────────────────────
+## A minimalist theme optimized for speed.
+## Uses the shared _git_engine to reduce code duplication.
 
-    [[ -n $(command git ls-files --others --exclude-standard 2>/dev/null | head -n 1) ]]
+function theme_z() {
+
+    # The View Logic (Updater)
+    function _z_updater() {
+        # Run the shared engine (Calculates raw state)
+        _git_engine
+
+        # Reset global output
+        GIT_RPROMPT=""
+
+        # Check if we are in a repo (Using shared engine flag)
+        if (( GIT_IS_REPO )); then
+            local unstaged=""
+            local staged=""
+            local untracked=""
+            local is_dirty=0
+
+            # ── Icon Setup (FIXED) ─────────────────────────────────────────
+            # Set defaults FIRST, then override if 'icons' array exists.
+            local branch_icon=""
+            local github_icon=""
+
+            if (( ${+icons} )); then
+                branch_icon="${icons[VCS_BRANCH_ICON]:-$branch_icon}"
+                github_icon="${icons[VCS_GIT_GITHUB_ICON]:-$github_icon}"
+            fi
+
+            # ── Logic ──────────────────────────────────────────────────────
+            if (( GIT_HAS_MODIFIED )); then
+                unstaged="%F{red}●"
+                is_dirty=1
+            fi
+
+            if (( GIT_HAS_STAGED )); then
+                staged="%F{green}●"
+                is_dirty=1
+            fi
+
+            if (( GIT_HAS_UNTRACKED )); then
+                untracked="%F{cyan}●"
+                is_dirty=1
+            fi
+
+            # Branch Color Logic
+            local branch_color="%F{magenta}"
+            [[ $is_dirty -eq 1 ]] && branch_color="%F{yellow}"
+
+            # ── Assembly ───────────────────────────────────────────────────
+            GIT_RPROMPT=" %F{blue}(${branch_color}${branch_icon} ${GIT_BRANCH}%F{blue})%F{reset} ${unstaged}${staged}${untracked}%F{blue} ${github_icon}%f"
+        fi
+
+        # ── FORCE UPDATE RPROMPT (CRITICAL) ────────────────────────────────
+        # Assigning it here ensures it updates every single time.
+        RPROMPT="${GIT_RPROMPT}"
+    }
+
+    # 3. Register Hook
+    #    Uses the shared helper to ensure clean switching
+    _register_prompt_hook _z_updater
+
+    # 4. Final Left Prompt Assembly
+    local prompt_symbol="➜"
+    (( $+functions[get_random_prompt_symbol] )) && prompt_symbol=$(get_random_prompt_symbol)
+
+    PROMPT="%T %F{yellow}${prompt_symbol}%f %F{blue}%1~%f "
 }
 
 
-# 2. Theme: 'Neon'
+# Theme: 'Gh0st'
 # ───────────────────────────────────────────────────────────────────────
-## A high-contrast, cyberpunk-inspired theme.
+## A sleek, modern prompt using purely native Zsh features.
+## No dependencies. Ultra-fast Git plumbing. Self-contained.
 
-function theme_neon() {
-    setopt PROMPT_SUBST
+function theme_gh0st() {
+    typeset -g _GH0ST_GIT_MSG=""
 
-    # 1. Generate Symbol ONCE (Per session)
-    #    This prevents it from changing every time you hit Enter.
-    local session_symbol
-    session_symbol=$(get_random_prompt_symbol)
+    function _gh0st_updater() {
+        # 1. Run Engine
+        _git_engine
 
-    # 2. Fast Git Status Function
-    function _neon_git_update() {
-        NEON_GIT_INFO=""
+        # 2. Build Output based on Engine State
+        _GH0ST_GIT_MSG=""
 
-        # Fast Guard: Check for .git directory (0ms)
-        if [[ -d .git ]] || git rev-parse --is-inside-work-tree &>/dev/null; then
+        if (( GIT_IS_REPO )); then
+            local icon="%F{green}"
 
-            # Get Branch (Fast)
-            local ref
-            ref=$(command git symbolic-ref --short HEAD 2>/dev/null) || \
-            ref=$(command git rev-parse --short HEAD 2>/dev/null) || return
-
-            # Truncate long branch names
-            [[ ${#ref} -gt 20 ]] && ref="${ref[1,20]}..."
-
-            # Check Status (Plumbing = Fast)
-            local status_color=""
-            local status_indicator=""
-
-            if ! command git diff-index --quiet HEAD -- 2>/dev/null; then
-                status_color="%F{red}"
-                status_indicator="●"  # Modified
-            elif [[ -n $(command git ls-files --others --exclude-standard 2>/dev/null | head -n 1) ]]; then
-                status_color="%F{red}"
-                status_indicator="○"  # Untracked
+            # Logic: If Modified OR Untracked -> Red Dot
+            if (( GIT_HAS_MODIFIED || GIT_HAS_UNTRACKED )); then
+                icon="%F{red}●"
             fi
 
-            # Build the info string
-            NEON_GIT_INFO=" %F{201} ${ref}%f ${status_color}${status_indicator}%f"
+            _GH0ST_GIT_MSG="  %F{magenta}${GIT_BRANCH} ${icon}%f"
         fi
     }
 
-    # 3. Register Hook (Only updates Git, NOT the symbol)
-    add-zsh-hook precmd _neon_git_update
+    # Use the shared hook manager
+    _register_prompt_hook _gh0st_updater
 
-    # 4. Assembly
-    local p_dir="%K{black}%F{51}  %1~ %f%k"
-    local p_arrow="%F{51}%f"
-    local p_user="%F{213}%n%f"
+    # ── Visual Assets ──────────────────────────────────────────────────
+    local icon_dir="%(~.%B%F{black}.%B%F{cyan})%f%b"
+    local p_user="%B%F{blue}%n"
+    local p_sep="%F{red}/"
+    local p_host="%F{yellow}%m"
+    local p_path=$'%{\e[3m%}%F{242}[%~]%f%{\e[23m%}'
 
-    # Use the static variable we defined at the top
-    local p_symbol="%B%F{154}${session_symbol}%f%b"
+    PROMPT_SYMBOL=$(get_random_prompt_symbol)
 
-    # Assemble
-    PS1="${p_dir}${p_arrow} ${p_user}\${NEON_GIT_INFO} ${p_symbol} "
-    RPROMPT="%F{240} %*%f"
+    local p_status="%(?.%F{green}.%F{red})${PROMPT_SYMBOL}%f"
+
+    PS1="${icon_dir} ${p_user} ${p_sep} ${p_host} ${p_path}\${_GH0ST_GIT_MSG} ${p_status} "
 }
 
 
-# 3. Theme: 'Bubble'
-# ───────────────────────────────────────────────────────────────────────
-## A rounded, "pill" style theme using Zsh's 256-color support.
-
-function theme_bubble() {
-    # ── vcs_info setup ─────────────────────────────────────────────────────
-    zstyle ':vcs_info:*' enable git
-    zstyle ':vcs_info:*' check-for-changes true
-    # Formats: Branch name in bold
-    zstyle ':vcs_info:git:*' formats "%B%F{black} %b%f%b"
-    # Action formats (rebase/merge)
-    zstyle ':vcs_info:git:*' actionformats "%B%F{black} %b|%a%f%b"
-
-    add-zsh-hook precmd vcs_info
-
-    # ── construction ───────────────────────────────────────────────────────
-
-    # Module 1: Directory (Blue Pill)
-    #  (Blue FG) + (Blue BG / White Text) +  (Blue FG)
-    local m_dir="%F{75}%K{75}%F{0} %~ %f%k%F{75}%f"
-
-    # Module 2: Git (Green Pill) - Only shows if git exists
-    # We use a trick: Inject the Pill coloring logic INTO vcs_info.
-    # If not in a git repo, vcs_info returns empty, so no empty green pill appears.
-    zstyle ':vcs_info:git:*' formats "%F{78}%K{78}%F{0} %b%f%k%F{78}%f"
-
-    # Module 3: Prompt Character (Conditional Arrow)
-    # %(?.Success.Failure)
-    local m_char="%(?.%F{green}❯%f.%F{red}❯%f)"
-
-    # ── assembly ───────────────────────────────────────────────────────────
-
-    PS1="${m_dir} \${vcs_info_msg_0_} ${m_char} "
-    RPROMPT="%F{240}%n@%m%f"
-}
-
-
-# 4. Theme: 'Orbit'
+# Theme: 'Orbit'
 # ───────────────────────────────────────────────────────────────────────
 ## A two-line prompt with connecting lines, resembling a spaceship HUD.
 
 function theme_orbit() {
-    # ── vcs_info setup ─────────────────────────────────────────────────────
-    zstyle ':vcs_info:*' enable git
-    zstyle ':vcs_info:*' check-for-changes true
-    zstyle ':vcs_info:git:*' formats " on %F{magenta} %b%f %c%u"
+    typeset -g _ORBIT_GIT_MSG=""
 
-    add-zsh-hook precmd vcs_info
+    function _orbit_updater() {
+        _git_engine
 
-    # ── construction ───────────────────────────────────────────────────────
+        _ORBIT_GIT_MSG=""
 
-    # Top Left Corner
+        if (( GIT_IS_REPO )); then
+            local indicators=""
+
+            # Detailed Logic: Check specific flags from engine
+            (( GIT_HAS_MODIFIED ))  && indicators+="%F{red}●"
+            (( GIT_HAS_UNTRACKED )) && indicators+="%F{cyan}●"
+            (( GIT_HAS_STAGED ))    && indicators+="%F{green}●"
+
+            _ORBIT_GIT_MSG=" on %F{magenta} ${GIT_BRANCH}%f ${indicators}"
+        fi
+
+        # Enforce RPROMPT inside the loop to prevent overwrites
+        RPROMPT="%F{238}[%D{%T}]%f"
+    }
+
+    _register_prompt_hook _orbit_updater
+
+    # ── Construction ───────────────────────────────────────────────────
     local c_top="%F{blue}╭─%f"
-    # Bottom Left Corner
+    local c_mid="%F{blue}─%f"
     local c_bot="%F{blue}╰─%f"
-    # Connecting Dash
-    local c_dash="%F{blue}─%f"
-
-    # Info Segments
     local s_os="%F{white} %f"
     local s_dir="%B%F{blue}%~%f%b"
     local s_arrow="%B%(?.%F{green}›%f.%F{red}›%f)%b"
 
-    # ── assembly ───────────────────────────────────────────────────────────
-
-    # Line 1: ╭─   ~/path/to/dir on  main
-    # Line 2: ╰─ ›
-    PS1=$'\n'"${c_top}${c_dash} ${s_os}${s_dir}\${vcs_info_msg_0_}"$'\n'"${c_bot} ${s_arrow} "
-
-    # RPROMPT: Execution time or timestamp
-    RPROMPT="%F{238}[%T]%f"
+    PS1=$'\n'"${c_top}${c_mid} ${s_os}${s_dir}\${_ORBIT_GIT_MSG}"$'\n'"${c_bot} ${s_arrow} "
 }
 
 
-# 5. Theme: 'Z'
+# Theme: '10k'
 # ───────────────────────────────────────────────────────────────────────
-## A minimalist theme heavily reliant on Zsh's built-in `vcs_info` module.
-## Focuses on speed and low visual noise.
-
-function theme_z() {
-
-    # ── 1. Fast Git Status Function ────────────────────────────────────────
-    # Replaces vcs_info. Runs ONE git call to get Branch + Status + Untracked.
-    function _fast_git_status() {
-        # Fast Guard: Check if we are in a git repo
-        # 'command git' avoids aliases. '2>/dev/null' silences errors.
-        local ref
-        ref=$(command git symbolic-ref --quiet HEAD 2> /dev/null) || \
-        ref=$(command git rev-parse --short HEAD 2> /dev/null) || return
-
-        # Get the branch name (strip refs/heads/)
-        local branch="${ref#refs/heads/}"
-
-        # Performance: Truncate branch name if too long (>20 chars)
-        if (( ${#branch} > 20 )); then
-            branch="${branch:0:20}..."
-        fi
-
-        # ── Status Indicators ──────────────────────────────────────────────
-        local misc=""      # %m
-        local unstaged=""  # %u
-        local staged=""    # %c
-
-        # Run git status ONCE.
-        # --porcelain: stable parsing format
-        # -b: include branch info
-        # -unormal: standard untracked file checking
-        local git_output
-        git_output=$(command git status --porcelain -b -unormal 2>/dev/null)
-
-        # Parse the output using Zsh string manipulation (Fast)
-        if [[ $git_output == *'?'* ]]; then
-            staged+='!' # Matching your hook for untracked files
-        fi
-
-        # Check for modified (unstaged) files (Lines starting with space-M, space-D, etc)
-        if [[ $git_output =~ $'(^|\n) .+' ]]; then
-            unstaged="●" # Or your preferred symbol for %u
-        fi
-
-        # Check for staged files (Lines starting with M, A, D, etc)
-        if [[ $git_output =~ $'(^|\n)[MADRC] .+' ]]; then
-            staged+="+" # Or your preferred symbol for %c
-        fi
-
-        # ── Construct the Visual String ────────────────────────────────────
-        # Format matches your old vcs_info string:
-        # Blue ( Red Misc Unstaged Staged Yellow Icon Magenta Branch Blue ) Icon
-
-        local branch_icon="${icons[VCS_BRANCH_ICON]:-}"
-        local github_icon="${icons[VCS_GIT_GITHUB_ICON]:-}"
-
-        # We construct the variable GIT_RPROMPT directly
-        GIT_RPROMPT=" %{${COLOR[BLUE]}%}(%{${COLOR[RED]}%}${misc}${unstaged}${staged}%{${COLOR[YELLOW]}%}${branch_icon}%{${COLOR[MAGENTA]}%} ${branch}%{${COLOR[BLUE]}%}) ${github_icon}"
-    }
-
-    # ── 2. Prompt Hook ─────────────────────────────────────────────────────
-    # Runs before every prompt draw
-    function _update_prompt_data() {
-        # Reset git info
-        GIT_RPROMPT=""
-        # Run the fast status check
-        _fast_git_status
-    }
-
-    add-zsh-hook precmd _update_prompt_data
-
-    # ── 3. Final Assembly ──────────────────────────────────────────────────
-
-    # Move this TO precmd if you want the symbol to change every time.
-    # Kept here for static loading speed as per your snippet.
-    local prompt_symbol=$(get_random_prompt_symbol)
-
-    # Left Prompt
-    PROMPT="%T %{${COLOR[YELLOW]}%}${prompt_symbol}%{${COLOR[RESET]}%} %{${COLOR[BLUE]}%}%1~%{${COLOR[RESET]}%} "
-
-    # Right Prompt: Uses the raw variable we built
-    RPROMPT='${GIT_RPROMPT}'
-}
-
-
-# 6. Theme: '10k' (Custom Power User)
-# ───────────────────────────────────────────────────────────────────────
-## A complex, feature-rich theme designed to mimic Powerlevel10k features
-## manually. Handles window titles, execution timers, and auto-ls.
+## A prompt with a timer, git status, and window title.
+## No dependencies. Ultra-fast Git plumbing. Self-contained.
 
 function theme_10k() {
+    # 1. Execution Timer Hook
+    function _10k_record_start() {
+        _10K_START_TIME=$SECONDS
+    }
 
-    # ── p10k integration toggles ───────────────────────────────────────────
-    # If the actual Powerlevel10k plugin is installed, these helpers toggle segments.
+    # 2. Main Updater (Git + Timer + Title + RPROMPT)
+    function _10k_updater() {
+        # ── A. Run Git Engine ──────────────────────────────────────────
+        _git_engine
 
-    function _10k_toggle_segment() {
-        if (( $+functions[p10k] )); then
-            p10k display "*/$1"=hide,show
+        local git_part=""
+        if (( GIT_IS_REPO )); then
+            local indicators=""
+            (( GIT_HAS_MODIFIED ))  && indicators+="%F{red}●"
+            (( GIT_HAS_UNTRACKED )) && indicators+="%F{cyan}●"
+            (( GIT_HAS_STAGED ))    && indicators+="%F{green}●"
+
+            # Format: [  main ●? ]
+            git_part="[ %F{magenta} ${GIT_BRANCH}%f ${indicators}%f ] "
         fi
-    }
-    function _toggle-right-prompt() { _10k_toggle_segment right; }
-    function _toggle-left-prompt()  { _10k_toggle_segment left; }
 
-
-    # ── vcs_info configuration ─────────────────────────────────────────────
-
-    zstyle ':vcs_info:*' enable git hg
-    zstyle ':vcs_info:*' check-for-changes true
-    zstyle ':vcs_info:*' use-simple true
-    zstyle ':vcs_info:*' stagedstr "%F{green}●%f"
-    zstyle ':vcs_info:*' unstagedstr "%F{red}●%f"
-
-    # Git Formats
-    zstyle ':vcs_info:git+set-message:*' hooks git-untracked
-    zstyle ':vcs_info:git*:*' formats '[%b%m%c%u] '
-    zstyle ':vcs_info:git*:*' actionformats '[%b|%a%m%c%u] '
-
-    # Mercurial (Hg) Formats
-    zstyle ':vcs_info:hg*:*' formats '[%m%b] '
-    zstyle ':vcs_info:hg*:*' actionformats '[%b|%a%m] '
-    zstyle ':vcs_info:hg*+gen-hg-bookmark-string:*' hooks hg-bookmarks
-    zstyle ':vcs_info:hg*+set-message:*' hooks hg-message
-
-
-    # ── window title management ────────────────────────────────────────────
-    # Dynamically updates the terminal emulator window title (e.g., "vim filename").
-
-    function _10k_set_window_title() {
-        emulate -L zsh
-        # \e]0;... \a is the standard xterm escape sequence for window titles
-        print -Pn "\e]0;${1:gs/$/\\$}:q\a"
-    }
-
-    # Local counter to track history depth
-    typeset -g HISTCMD_LOCAL=0
-
-    function _10k_update_window_title() {
-        emulate -L zsh
-        local title_content
-
-        # Logic:
-        # 1. precmd: Command finished. Show Current Directory.
-        # 2. preexec: Command running. Show "Dir > Command".
-
-        if [[ $1 == "precmd" ]]; then
-            if [[ HISTCMD_LOCAL -eq 0 ]]; then
-                title_content="$(basename "$PWD")"
-            else
-                local last_cmd=$(history | tail -1 | awk '{print $2}')
-                title_content="$([ -z "$TMUX" ] && print "$(basename "$PWD") > ")$last_cmd"
+        # ── B. Execution Time ──────────────────────────────────────────
+        local exec_part=""
+        if [[ -n "$_10K_START_TIME" ]]; then
+            local delta=$(($SECONDS - _10K_START_TIME))
+            if (( delta > 2 )); then
+                exec_part="%F{cyan}${delta}s%f "
             fi
-        else
-            # Pre-exec (Running)
-            setopt EXTENDED_GLOB
-            HISTCMD_LOCAL=$((++HISTCMD_LOCAL))
-
-            # Remove command arguments/ssh prefixes for cleaner title
-            local trimmed_cmd="${2[(wr)^(*=*|mosh|ssh|sudo)]}"
-            title_content="$([ -z "$TMUX" ] && print "$(basename "$PWD") > ")$trimmed_cmd"
+            unset _10K_START_TIME
         fi
 
-        _10k_set_window_title "$title_content"
+        # ── D. FORCE SET RIGHT PROMPT ──────────────────────────────────
+        # We construct RPROMPT right here to ensure it shows up.
+        # Structure: [ExecTime] [GitStatus] Path
+        RPROMPT="${exec_part}${git_part}%F{blue}%~%f"
     }
 
-    add-zsh-hook precmd  _10k_update_window_title
-    add-zsh-hook preexec _10k_update_window_title
-
-
-    # ── execution timer ────────────────────────────────────────────────────
-    # Calculates how long the last command took and displays it in RPROMPT.
-
-    typeset -F SECONDS
-
-    function _10k_record_start_time() {
-        ZSH_START_TIME=${ZSH_START_TIME:-$SECONDS}
-    }
-    add-zsh-hook preexec _10k_record_start_time
-
-    function _10k_report_duration() {
-        if [[ -n "$ZSH_START_TIME" ]]; then
-            local delta=$(($SECONDS - $ZSH_START_TIME))
-            local elapsed_str=""
-
-            # Calculate Days, Hours, Minutes, Seconds
-            local d=$((delta / 86400))
-            local h=$(((delta - d * 86400) / 3600))
-            local m=$(((delta - d * 86400 - h * 3600) / 60))
-            local s=$(($delta - d * 86400 - h * 3600 - m * 60))
-
-            # Build string parts
-            [[ "$d" != "0" ]] && elapsed_str="${d}d"
-            [[ "$h" != "0" ]] && elapsed_str="${elapsed_str}${h}h"
-            [[ "$m" != "0" ]] && elapsed_str="${elapsed_str}${m}m"
-
-            if [[ -z "$elapsed_str" ]]; then
-                # If less than a minute, show decimal seconds
-                s="$(print -f "%.2f" $s)s"
-            else
-                # If long duration, round seconds to integer
-                s="$((~~$s))s"
-            fi
-            elapsed_str="${elapsed_str}${s}"
-
-            # Inject into RPROMPT with Cyan color
-            # Note: $__Prompt is a global state hash (assumed defined elsewhere or loosely typed)
-            export RPROMPT="%F{cyan}%{$__Prompt[ITALIC_ON]%}${elapsed_str}%{$__Prompt[ITALIC_OFF]%}%f $RPROMPT_BASE"
-            unset ZSH_START_TIME
-        else
-            # No command ran (just hit enter), reset RPROMPT
-            export RPROMPT="$RPROMPT_BASE"
-        fi
-    }
-    add-zsh-hook precmd _10k_report_duration
-
-
-    # ── utilities ──────────────────────────────────────────────────────────
-
-    # Auto-LS: Automatically list files when entering a directory
-    function _10k_auto_ls() {
-        if [[ "$ZSH_EVAL_CONTEXT" == "toplevel:shfunc" ]]; then
-            if (( $+commands[eza] )); then
-                eza --icons -a
-            elif (( $+commands[exa] )); then
-                exa --icons -a
-            else
-                ls -a
-            fi
-        fi
-    }
-    add-zsh-hook chpwd _10k_auto_ls
-
-    # VCS Optimization: Only run vcs_info for relevant commands
-    function _10k_record_last_command() {
-        __Prompt[LAST_COMMAND]="$2"
-    }
-    add-zsh-hook preexec _10k_record_last_command
-
-    function _10k_conditional_vcs_info() {
-        local last_cmd="$__Prompt[LAST_COMMAND]"
-        __Prompt[LAST_COMMAND]="<unset>"
-
-        # Check first word of command
-        case "$last_cmd[(w)1]" in
-            cd|cp|git|rm|touch|mv|hg)
-                vcs_info
-                ;;
-        esac
-    }
-    add-zsh-hook precmd _10k_conditional_vcs_info
-
-    # Recent Directories (cdr)
-    autoload -Uz chpwd_recent_dirs cdr
-    add-zsh-hook chpwd chpwd_recent_dirs
-    zstyle ':completion:*:*:cdr:*:*' menu selection
-    zstyle ':chpwd:*' recent-dirs-default true
-
-
-    # ── hooks implementation ───────────────────────────────────────────────
-
-    function +vi-hg-bookmarks() {
-        [[ -n "${hook_com[hg-active-bookmark]}" ]] && hook_com[hg-bookmark-string]="${(Mj:,:)@}" && ret=1
-    }
-    function +vi-hg-message() {
-        [[ -n "${hook_com[misc]}" ]] && hook_com[branch]=''
-        return 0
-    }
-    function +vi-git-untracked() {
-        if check_git_untracked_status; then
-            hook_com[unstaged]+="%F{blue}●%f"
-        fi
+    # 3. Auto-LS on Directory Change
+    function _10k_chpwd() {
+        if (( $+commands[eza] )); then eza --icons -a
+        else ls -a; fi
     }
 
+    # 4. Hook Registration
+    _register_prompt_hook _10k_updater
+    add-zsh-hook preexec _10k_record_start
+    add-zsh-hook chpwd _10k_chpwd
 
-    # ── final assembly ─────────────────────────────────────────────────────
+    # ── Visual Assembly (Left Prompt) ──────────────────────────────────
 
-    # Base Right Prompt (VCS + Current Directory)
-    RPROMPT_BASE="\${vcs_info_msg_0_}%F{blue}%~%f"
+    # Check TMUX
+    local in_tmux=""; [[ -n "$TMUX" ]] && in_tmux="tmux "
 
-    # Main Prompt Construction
-    function _10k_build_ps1() {
-        local in_tmux=""
-        [[ "$TERM" =~ "tmux" && -n "$TMUX" ]] && in_tmux='tmux'
+    # Suffix: Yellow/Green Arrow based on previous exit code
+    # %(!...): Check if Root
+    PROMPT_SYMBOL=$(get_random_prompt_symbol)
+    local suffix="%(!.%F{yellow}%n%f .)%(!.%F{yellow}${PROMPT_SYMBOL}%f.%F{green}${PROMPT_SYMBOL}%f)%f"
 
-        # Calculate Shell Nesting Level (SHLVL is simple, pstree is precise)
-        local nesting_lvl=1
-        if (( $+commands[pstree] )); then
-            # Count how many 'zsh' processes are in the parent tree
-            nesting_lvl="$(($(pstree -s $$ | grep -wo 'zsh' | wc -l)-1))"
-        fi
-        [[ $USER == "root" ]] && nesting_lvl="$(($nesting_lvl-1))"
+    # Left Prompt Construction:
+    # 1. SSH User/Host (Green)
+    # 2. Directory Name Only (Blue, Bold) -> %1~
+    # 3. Jobs indicator (Yellow) -> %1j
+    # 4. Error code (Yellow !) -> %?
+    PS1="%F{green}${SSH_TTY:+%n@%m}%f%F{yellow}%B%(1j.*.)%(?..!)%b%f %B%F{yellow}${in_tmux}%f${suffix} "
 
-        # Generate chevron suffix based on nesting level
-        local suffix='%(!.%F{yellow}%n%f.)%(!.%F{yellow}.%F{red})'$(print -f '\u276f%.0s' {1..$nesting_lvl})'%f'
-
-        # Construct PS1
-        # 1. SSH info (if applicable)
-        # 2. Path
-        # 3. Jobs/Exit Status
-        # 4. Tmux indicator + Suffix
-        export PS1="%F{green}${SSH_TTY:+%n@%m}%f%B${SSH_TTY:+:}%b%F{blue}%B%1~%b%F{yellow}%B%(1j.*.)%(?..!)%b%f %B%F{yellow}${in_tmux}%f${suffix}%b "
-
-        # Fix TLE indentation glitch in TMUX
-        [[ -n "$in_tmux" ]] && export ZLE_RPROMPT_INDENT=0
-    }
-
-    # Run the builder immediately
-    _10k_build_ps1
-
-    export RPROMPT=$RPROMPT_BASE
-
-    # Spellcheck Prompt (for "Did you mean..?")
-    export SPROMPT="zsh: correct %F{red}'%R'%f to %F{red}'%r'%f [%B%Uy%u%bes, %B%Un%u%bo, %B%Ue%u%bdit, %B%Ua%u%bbort]? "
+    # Spellcheck prompt
+    SPROMPT="zsh: correct %F{red}'%R'%f to %F{red}'%r'%f? "
 }
 
 
-# 7. Theme: 'Gh0st'
-# ───────────────────────────────────────────────────────────────────────
-## A sleek, modern prompt using manual Git status checking (no vcs_info).
-## Features custom icons and a clean path view.
-
-function theme_gh0st() {
-    # ── Git Status (Cached & Optimized) ───────────────────────────────────
-    function _gh0st_git_status() {
-
-        # 1. ⚡ FAST PATH: Cache Hit Check
-        # If we are in the same directory context as the last run...
-        if [[ -n "$_GH0ST_GIT_INDEX" && "${_GH0ST_CACHE_KEY%%::*}" == "$PWD" ]]; then
-            local current_mtime
-            # Check modification time of .git/index directly (No git command)
-            current_mtime=$(zstat +mtime "$_GH0ST_GIT_INDEX" 2>/dev/null)
-
-            # If timestamps match, reuse the string immediately
-            if [[ "${_GH0ST_CACHE_KEY##*::}" == "$current_mtime" ]]; then
-                GH0ST_GIT_INFO="$_GH0ST_CACHE_VAL"
-                return
-            fi
-        fi
-
-        # 2. 🐢 SLOW PATH: Cache Miss (Recalculate)
-
-        # Fast guard: Are we in a repo?
-        if ! command git rev-parse --is-inside-work-tree &>/dev/null; then
-            GH0ST_GIT_INFO=""
-            _GH0ST_GIT_INDEX="" # Reset index so we don't false-hit later
-            return
-        fi
-
-        # Find .git/index path for future caching
-        local git_dir
-        git_dir=$(command git rev-parse --git-dir 2>/dev/null)
-        local index_path="${git_dir}/index"
-
-        # Get current timestamp for the new cache key
-        local index_time=""
-        if [[ -f "$index_path" ]]; then
-            index_time=$(zstat +mtime "$index_path" 2>/dev/null)
-        fi
-
-        # Get Branch
-        local ref
-        ref=$(command git symbolic-ref --short HEAD 2>/dev/null) || \
-        ref=$(command git rev-parse --short HEAD 2>/dev/null) || return
-
-        # Truncate Branch
-        local display_branch="${ref[1,20]}"
-        [[ ${#ref} -gt 20 ]] && display_branch="${display_branch}..."
-
-        # Dirty Check
-        # We use --no-optional-locks to prevent hanging on background gc
-        local status_symbol="%{${COLOR[GREEN]}%}✓"
-
-        # Check if dirty or untracked
-        # We assume if 'git status' returns ANY output, it's dirty.
-        # This is faster than running diff-index AND ls-files separately.
-        if [[ -n $(command git --no-optional-locks status --porcelain -b -unormal 2>/dev/null | head -n 1) ]]; then
-             # Check specifically for changes (not just branch info)
-             if [[ -n $(command git --no-optional-locks status --porcelain -unormal 2>/dev/null) ]]; then
-                status_symbol="%{${COLOR[RED]}%}✗"
-             fi
-        fi
-
-        # 3. Save to Cache
-        _GH0ST_CACHE_VAL="  %{${COLOR[MAGENTA]}%}${display_branch} ${status_symbol}%{${COLOR[RESET]}%}"
-        _GH0ST_CACHE_KEY="${PWD}::${index_time}"
-        _GH0ST_GIT_INDEX="$index_path"
-
-        GH0ST_GIT_INFO="$_GH0ST_CACHE_VAL"
-    }
-
-    # ── Directory Icon ────────────────────────────────────────────────────
-    # No changes needed, this ternary logic is already optimal
-    local dir_icon="%(~.%{${COLOR[BOLD]}${COLOR[BLACK]}%}.%{${COLOR[BOLD]}${COLOR[CYAN]}%})%{${COLOR[RESET]}%}"
-
-    function _gh0st_precmd() {
-        _gh0st_git_status
-    }
-    add-zsh-hook precmd _gh0st_precmd
-
-    # ── Prompt Assembly ───────────────────────────────────────────────────
-    local p_user="%{${COLOR[BOLD]}${COLOR[BLUE]}%}%n"
-    local p_sep="%{${COLOR[RED]}%}/"
-    local p_host="%{${COLOR[YELLOW]}%}%m"
-    local p_dir="%{${COLOR[ITALIC]}${COLOR[GREY]}%}[%~]%{${COLOR[RESET]}%}"
-    local prompt_symbol=$(get_random_prompt_symbol)
-
-    # Conditional coloring for prompt char (Green if 0, Red if error)
-    local p_status="%(?.%{${COLOR[GREEN]}%}.%{${COLOR[RED]}%})${prompt_symbol}%{${COLOR[RESET]}%}"
-
-    setopt PROMPT_SUBST
-    PS1="${dir_icon} ${p_user} ${p_sep} ${p_host} ${p_dir}\${GH0ST_GIT_INFO} ${p_status} "
-}
-
-
-# 8. Initialization Logic
+# Initialization Logic
 # ───────────────────────────────────────────────────────────────────────
 ## Selects the theme based on the environment variable.
 
@@ -671,8 +395,6 @@ case "$PROMPT_THEME" in
     "gh0st")  theme_gh0st  ;;
     "z")      theme_z      ;;
     "10k")    theme_10k    ;;
-    "neon")   theme_neon   ;;
-    "bubble") theme_bubble ;;
     "orbit")  theme_orbit  ;;
-    *)        return             ;;
+    *)        return       ;;
 esac
