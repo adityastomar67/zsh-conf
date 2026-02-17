@@ -198,10 +198,11 @@ zstyle ':completion:*:*:*:*:warnings' format \
 # Define your tools configuration
 #    Format: "Binary : Command : Mode"
 local -a init_tools=(
-    "starship  : starship init zsh : immediate"
-    "dircolors : dircolors -b      : immediate"
-    "zoxide    : zoxide init zsh   : defer"
-    "atuin     : atuin init zsh    : defer"
+    "starship  : starship init zsh   : immediate" # Prompt
+    "dircolors : dircolors -b        : immediate" # Colors
+    "zoxide    : zoxide init zsh     : defer"     # Smart cd
+    "atuin     : atuin init zsh      : defer"     # Shell History
+    "but       : but completions zsh : defer"     # GitButler
 )
 
 # Iterate and Execute
