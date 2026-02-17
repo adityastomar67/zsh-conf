@@ -26,7 +26,7 @@
 # ------------------------------------------------------------------------------
 
 
-# 1. Basic Permissions & Input
+# Basic Permissions & Input
 # ───────────────────────────────────────────────────────────────────────
 
 # umask 022: User has full access, group/others have read/execute only.
@@ -37,16 +37,19 @@ umask 022
 WORDCHARS='|-.'
 
 
-# 2. Navigation Options
+# Navigation Options
 # ───────────────────────────────────────────────────────────────────────
 
 setopt AUTO_CD              # Typing 'dir' becomes 'cd dir'
 setopt AUTO_LIST            # Automatically list choices on ambiguous completion
 setopt AUTO_PARAM_SLASH     # Tab completing a directory appends a slash
 setopt LIST_PACKED          # Minimize space in completion lists
+setopt AUTO_PUSHD           # Push every visited directory to the stack
+setopt PUSHD_IGNORE_DUPS    # Do not record the same directory twice
+setopt PUSHD_SILENT         # Do not print the stack every time you cd
 
 
-# 3. Completion Behavior
+# Completion Behavior
 # ───────────────────────────────────────────────────────────────────────
 
 setopt COMPLETE_IN_WORD     # Allow completion from within a word/cursor position
@@ -65,7 +68,7 @@ unsetopt NOMATCH            # Don't error if a glob has no matches (pass to comm
 unsetopt CORRECT            # Disable "Did you mean..?" spelling correction
 
 
-# 4. History Configuration
+# History Configuration
 # ───────────────────────────────────────────────────────────────────────
 
 setopt SHARE_HISTORY             # Share history between open terminals immediately
@@ -83,7 +86,7 @@ SAVEHIST=50000
 export HISTORY_IGNORE="(zsh|clear|ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"
 
 
-# 5. Job Control & Feedback
+# Job Control & Feedback
 # ───────────────────────────────────────────────────────────────────────
 
 setopt NOTIFY                  # Report status of background jobs immediately
@@ -93,7 +96,7 @@ setopt INTERACTIVE_COMMENTS    # Allow comments (#) in interactive shell
 setopt NOBEEP                  # No beep on error
 
 
-# 6. Autosuggestions Config
+# Autosuggestions Config
 # ───────────────────────────────────────────────────────────────────────
 
 # Async Mode: Prevents lagging while typing large commands
@@ -112,44 +115,41 @@ ZSH_AUTOSUGGEST_MIN_BUFFER_SIZE=4
 ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
 
-# 7. Completion Engine Initialization
+# Completion Engine Initialization
 # ───────────────────────────────────────────────────────────────────────
 
 ## Smart caching logic for `compinit`.
 # Allow completion to match dotfiles
 _comp_options+=(globdots)
 
-# Ensure cache dump location is defined
-# ZSH_COMPLETION_DUMP="${ZDOTDIR:-$HOME}/.zcompdump"
-
 # Glob Logic:
-# #q : Start glob qualifiers
-# N  : Nullglob (don't error if file missing)
-# .  : Plain files only
-# mh : Modification time in hours
-# +24: Older than 24 hours
+#   #q : Start glob qualifiers
+#   N  : Nullglob (don't error if file missing)
+#   .  : Plain files only
+#   mh : Modification time in hours
+#   +24: Older than 24 hours
 
 if [[ -n "$ZSH_COMPLETION_DUMP"(#qN.mh+24) ]]; then
     # Scenario A: Cache is old or missing. Rebuild.
-    # -i: Ignore insecure directories
-    # -u: Use insecure directories (silently)
-    # -d: Dump path
+    #   -i: Ignore insecure directories
+    #   -u: Use insecure directories (silently)
+    #   -d: Dump path
     compinit -i -u -d "$ZSH_COMPLETION_DUMP"
 else
     # Scenario B: Cache is fresh. Fast Load.
-    # -C: Skip ALL security checks, trust the dump file
+    #   -C: Skip ALL security checks, trust the dump file
     compinit -C -d "$ZSH_COMPLETION_DUMP"
 fi
 
 
-# 8. Zstyle Configuration
+# Zstyle Configuration
 # ───────────────────────────────────────────────────────────────────────
 ## Visuals and behavior for the completion menu.
 
 # ── Matching Strategy ──
-# 1. Exact match
-# 2. Case insensitive (a=A)
-# 3. Partial matching (f-b -> foo-bar)
+#   1. Exact match
+#   2. Case insensitive (a=A)
+#   3. Partial matching (f-b -> foo-bar)
 zstyle ':completion:*' matcher-list '' \
     'm:{a-zA-Z}={A-Za-z}' \
     'r:|[._-]=* r:|=*' \
@@ -192,10 +192,10 @@ zstyle ':completion:*:*:*:*:warnings' format \
 #     "${COLOR[B_YELLOW]}Suggesting: %d${COLOR[RESET]}"
 
 
-# 9. Tool Initialization
+# Tool Initialization
 # ───────────────────────────────────────────────────────────────────────
 
-# 1. Define your tools configuration
+# Define your tools configuration
 #    Format: "Binary : Command : Mode"
 local -a init_tools=(
     "starship  : starship init zsh : immediate"
@@ -204,7 +204,7 @@ local -a init_tools=(
     "atuin     : atuin init zsh    : defer"
 )
 
-# 2. Iterate and Execute
+# Iterate and Execute
 for entry in "${init_tools[@]}"; do
     # Zsh Magic: Split the string by ':' into an array (@s/:/)
     local parts=("${(@s/:/)entry}")

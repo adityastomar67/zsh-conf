@@ -22,7 +22,8 @@
 #   - Global Aliases (Pipe expansions).
 #
 # Usage Notes
-#   To disable this entire file, set `LOAD_CUSTOM_ALIASES="No"` in $ZDOTDIR/.zshenv.
+#   To disable this entire file, set `LOAD_CUSTOM_ALIASES="No"` in $ZDOTDIR/user.conf.
+#   $EDITOR is defined in '$ZSH_CONFIG_ROOT/conf.d/env.zsh'
 # ------------------------------------------------------------------------------
 
 
@@ -49,6 +50,8 @@ detected_os=$(uname -s)
 # System & Privileges
 # ───────────────────────────────────────────────────────────────────────
 ## Wrappers for administrative commands and safety features.
+# Admin Helpers
+alias _="sudo"        # Quick sudo shorthand
 
 # ------------------------------------------------------------------------------
 # Auto-Sudo (Linux Only)
@@ -56,7 +59,7 @@ detected_os=$(uname -s)
 # 'sudo' automatically to specific commands to save typing.
 if [[ "$detected_os" == "Linux" ]]; then
     for sys_cmd in mount umount sv updatedb su shutdown poweroff reboot; do
-        alias "$sys_cmd"="sudo $sys_cmd"
+        alias "$sys_cmd"="_ $sys_cmd"
     done
     unset sys_cmd
 fi
@@ -82,13 +85,9 @@ alias ln="ln -i"
 alias rm="rm -i"      # "Are you sure?" prompt for deletions
 
 # ------------------------------------------------------------------------------
-# Admin Helpers
-alias md="mkdir -p"   # Create parent directories automatically
-alias _="sudo"        # Quick sudo shorthand
-
 # "The Magic Fixer"
 # Re-runs the last command in history ($(fc ...)) prepended with sudo.
-alias please='sudo $(fc -ln -1)'
+alias please='_ $(fc -ln -1)'
 
 # ------------------------------------------------------------------------------
 # GNU/BSD Compatibility
@@ -116,18 +115,18 @@ alias ~="cd ~"        # Go Home
 alias "-"="cd -"      # Go to Previous Directory
 
 # Numbered Shortcuts (Zsh Directory Stack)
+# Create aliases .1 through .100 to jump back in the directory stack.
 alias .1="cd -"
-alias .2="cd -2"
-alias .3="cd -3"
-alias .4="cd -4"
-alias .5="cd -5"
+for n in {2..100}; do
+    alias ".$n"="cd -$n"  # Example: .5 = cd -5, .10 = cd -10
+done
 
 # ------------------------------------------------------------------------------
 # Dynamic Bookmarks
 ## Define the Shortcuts [Abbr]="Path"
 ## Only create these aliases if the target directory actually exists.
 local -A _dir_abbreviations=(
-    # Note: DOTFILES_ROOT is defined in '$ZDOTDIR/.zshenv' (formerly DOT_PATH)
+    # Note: DOTFILES_ROOT is defined in '$ZDOTDIR/.zshenv'
     dt  "${DOTFILES_ROOT}"
 
     pj  "$HOME/Projects"
@@ -152,11 +151,12 @@ done
 # Editors & Configurations
 # ───────────────────────────────────────────────────────────────────────
 ## Shortcuts for editing configuration files and selecting editors.
-
-# Pass the target file to the helper function
-alias zedit='_safe_edit ~/.zshrc'
-alias bedit='_safe_edit ~/.bashrc'
-alias fedit='_safe_edit ~/.config/fish/config.fish'
+# Shell Configuration Editors
+# Only define aliases if the configuration files exist.
+[[ -f $ZDOTDIR/.zshrc ]]            && alias zedit='_safe_edit $ZDOTDIR/.zshrc'
+[[ -f ~/.bashrc ]]                  && alias bedit='_safe_edit ~/.bashrc'
+[[ -f ~/.config/fish/config.fish ]] && alias fedit='_safe_edit ~/.config/fish/config.fish'
+[[ -f $XDG_NVIM/init.lua ]]         && alias nvedit='_safe_edit $XDG_NVIM/init.lua'
 
 # SAFETY FIX:
 # 1. We map 'visudo' to use sudo (since regular users can't read /etc/sudoers)
@@ -282,32 +282,37 @@ alias killl='killall -q'
 ## Shortcuts for Arch Linux (Pacman) and derivatives.
 
 if (( $+commands[pacman] )); then
+    local _pac="_ pacman"  # WARN: Might break due to local keyword
+
     # Native Pacman Wrappers
-    alias pacin="sudo pacman -S"                     # Install
-    alias pacrem="sudo pacman -Rns"                  # Remove (+ dependencies)
-    alias pacupd="sudo pacman -Sy"                   # Update Db
-    alias pacupg="sudo pacman -Syu"                  # Upgrade System
-    alias cleanup="sudo pacman -Rns $(pacman -Qtdq)" # Remove orphans
-    alias unlock="sudo rm /var/lib/pacman/db.lck"    # Fix lock file
+    alias pacin="$_pac -S --needed"                    # Install (skip if up-to-date)
+    alias pacrem="$_pac -Rns"                          # Remove (+ dependencies & configs)
+    alias pacupd="$_pac -Sy"                           # Update local database
+    alias pacupg="$_pac -Syu"                          # Full system upgrade
+    alias cleanup="pacman -Qtdq | xargs -r $_pac -Rns" # Remove orphan packages
+    alias unlock="_ rm /var/lib/pacman/db.lck"      # Remove stale lock file
 
     # AUR Helpers (Yay / Paru)
     if (( $+commands[yay] )); then
         alias yas="yay -Syu --noconfirm"
         alias yain="yay -S"
         alias yarem="yay -Rns"
+
     elif (( $+commands[paru] )); then
         alias update="paru -Syu --nocombinedupgrade"
     fi
 
     # Mirrorlist Maintenance (Reflector)
-    alias mirrora="sudo reflector --latest 50 --number 20 --sort age --save /etc/pacman.d/mirrorlist"
-    alias mirrord="sudo reflector --latest 50 --number 20 --sort delay --save /etc/pacman.d/mirrorlist"
-    alias mirrors="sudo reflector --latest 50 --number 20 --sort score --save /etc/pacman.d/mirrorlist"
+    if (( $+commands[reflector] )); then
+        for s in age delay score; do
+            alias "mirror${s[1]}"="_ reflector --latest 50 --number 20 --sort $s --save /etc/pacman.d/mirrorlist"
+        done
+    fi
 fi
 
 # Language Managers
-(( $+commands[npm] )) && alias npm-up="sudo npm install npm@latest -g"
-(( $+commands[pip3] )) && alias pip-up="sudo pip3 list --outdated | grep -v '^\-e' | cut -d = -f 1 | xargs -n1 pip3 install -U"
+(( $+commands[npm] )) && alias npm-up="_ npm install npm@latest -g"
+(( $+commands[pip3] )) && alias pip-up="_ pip3 list --outdated | grep -v '^\-e' | cut -d = -f 1 | xargs -n1 pip3 install -U"
 
 
 # Git Configuration
@@ -318,51 +323,48 @@ if (( $+commands[git] )); then
     alias g="git"
 
     # Status & Add
-    alias gst="git status"
-    alias gss="git status -s"         # Short status
-    alias ga="git add"
-    alias gaa="git add --all"
+    alias gst="git status -sb"                 # Short status with branch info
+    alias ga="git add"                         # Add files to staging
+    alias gaa="git add --all"                  # Add all files to staging
+    alias gapa="git add --patch"               # Interactively stage hunks
 
     # Commit
-    alias gc="git commit -v"
-    alias gcm="git commit -m"
-    alias gca="git commit -v -a"      # Stage all modified and commit
+    alias gc="git commit -v"                   # Commit with verbose output
+    alias gcm="git commit -m"                  # Commit with message
+    alias gca="git commit -v -a"               # Commit all changed files with verbose output
+    alias 'gca!'="git commit -v -a --amend"    # PRO: Quick fix last commit
 
-    # Branching & Switching
-    alias gb="git branch"
-    alias gba="git branch -a"         # List all (local+remote)
-    alias gco="git checkout"
-    alias gcb="git checkout -b"       # Create branch
-    alias gsw="git switch"
+    # Branching & Switching (Modern Git)
+    alias gb="git branch"                      # List branches
+    alias gba="git branch -a"                  # List all branches
+    alias gsw="git switch"                     # Switch branches
+    alias gsc="git switch -c"                  # Create and switch branches
+    alias gco="git checkout"                   # Checkout branches
 
-    # Remotes
-    alias gl="git pull"
-    alias gp="git push"
-    alias gf="git fetch"
-    alias gcl="git clone --quiet"
+    # Remotes & Sync
+    alias gl="git pull"                        # Pull changes from remote
+    alias gp="git push"                        # Push changes to remote
+    alias 'gpf!'="git push --force-with-lease" # PRO: Safe force push
+    alias gf="git fetch"                       # Fetch changes from remote
+    alias gcl="git clone --recurse-submodules" # Clone with submodules
 
     # History & Logs
-    alias gd="git diff"
-    alias glg="git log --stat"
-    alias glo="git log --oneline --decorate"
-    # alias glog="git log --oneline --decorate --graph"
-    # Pretty Log: Shows hash, refs, message, relative time, and author in colors
+    alias gd="git diff"                        # Diff changes
+    alias gds="git diff --staged"              # See what is about to be committed
+    alias glo="git log --oneline --decorate"   # Log in one line
     alias glol="git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ar) %C(bold blue)<%an>%Creset'"
 
-    # Advanced / Undo
-    alias grh="git reset"
-    alias grhh="git reset --hard"     # !!! Destructive
-    alias gcp="git cherry-pick"
-
-    # Stash
-    alias gsta="git stash push"
-    alias gstp="git stash pop"
-    alias gstd="git stash drop"
-    alias gstl="git stash list"
+    # Stash & Reset
+    alias gsta="git stash push"                # Push changes to stash
+    alias gstp="git stash pop"                 # Pop changes from stash
+    alias grh="git reset"                      # Reset changes
+    alias grhh="git reset --hard"              # Hard reset changes
+    alias gcp="git cherry-pick"                # Cherry-pick changes
 
     # Work in Progress (WIP)
-    # Commits everything including untracked files with a "wip" message. Skips CI.
-    alias gwip='git add -A; git rm $(git ls-files --deleted) 2> /dev/null; git commit --no-verify --no-gpg-sign -m "--wip-- [skip ci]"'
+    # PRO: Simplified WIP that handles removals automatically and skips hooks
+    alias gwip='git add -A; git commit -m "--wip-- [skip ci]" --no-verify'
+    alias gunwip='git log -n 1 | grep -q -c "\-\-wip\-\-" && git reset HEAD~1'
 fi
 
 
@@ -371,13 +373,13 @@ fi
 ## Global aliases (-g) are expanded anywhere in the command line,
 ## not just at the beginning. They act like pipes.
 
-# Usage:  cat file.txt |G pattern
-alias -g ':G'="| grep"
+# Usage:  cat file.txt :G pattern
+(( $+commands[ripgrep] )) && alias -g ':G'="| ripgrep" || alias -g ':G'="| grep"
 
-# Usage:  long_command |L
+# Usage:  long_command :L
 alias -g ':L'="| less"
 
-# Usage:  ls -la |H
+# Usage:  ls -la :H
 alias -g ':H'="| head"
 alias -g ':T'="| tail"
 alias -g ':S'="| sed"
@@ -456,6 +458,7 @@ alias h="history"
 alias x="chmod +x"                  # Make executable
 alias weather='curl -s wttr.in'     # Check weather
 alias myip="curl ipinfo.io/ip"      # Check Public IP
+alias md="mkdir -p"                 # Create parent directories automatically
 
 # Tmux Smart Exit
 # If inside Tmux: Kill the specific session.
@@ -469,3 +472,9 @@ alias week='date +%V'
 
 # Fun: Terminal Bonsai Tree
 (( $+commands[cbonsai] )) && alias ccbonsai="cbonsai -ilt 0.02 -c '  ,  ,  ,  ,  ' -L 5"
+
+# Cleanup
+unset detected_os
+unset _pac
+unset _sys_open
+
