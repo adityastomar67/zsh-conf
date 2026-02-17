@@ -141,7 +141,7 @@ local -A _dir_abbreviations=(
 #    Loop through keys (abbr) and values (dir), check existence, and create alias.
 for abbr dir in "${(@kv)_dir_abbreviations}"; do
     if [[ -d "$dir" ]]; then
-        alias "-$abbr"="cd $dir" # Example: -dv = cd ~/Developer
+        alias -- "-$abbr"="cd $dir" # Example: -dv = cd ~/Developer
 
         # Optional: Register as a Named Directory (allows nvim ~pj and prompt shortening)
         hash -d "$abbr"="$dir"
