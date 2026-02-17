@@ -31,17 +31,14 @@
 # ───────────────────────────────────────────────────────────────────────
 ## Preparation steps: Feature flags, clean slate, and OS detection.
 
-# 1. Feature Guard
+# Feature Guard
 # Exit immediately if the user has disabled aliases in the main config.
-# Note: ${LOAD_CUSTOM_ALIASES} was renamed in 'user.conf'
-if [[ "${LOAD_CUSTOM_ALIASES:l}" != "yes" ]]; then
-    return
-fi
+[[ "${LOAD_CUSTOM_ALIASES:l}" != "yes" ]] && return
 
-# 2. Reset: Remove all existing aliases to prevent conflicts or stale definitions.
+# Reset: Remove all existing aliases to prevent conflicts or stale definitions.
 unalias -a
 
-# 3. Environment Detection
+# Environment Detection
 # Capture the kernel name to handle OS-specific flags (Darwin vs Linux).
 local detected_os
 detected_os=$(uname -s)

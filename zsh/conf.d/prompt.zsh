@@ -153,6 +153,7 @@ function get_random_prompt_symbol() {
     print -- "${symbols[1 + $RANDOM % ${#symbols[@]}]}"
 }
 
+
 # ── THEMES ───────────────────────────────────────────────────
 
 # Theme: 'Z'

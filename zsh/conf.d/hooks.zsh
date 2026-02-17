@@ -29,7 +29,8 @@
 ## rather than just cycling through every command.
 
 # Load the function definitions from Zsh's function path
-autoload -Uz up-line-or-beginning-search down-line-or-beginning-search add-zsh-hook
+autoload -Uz up-line-or-beginning-search \
+    down-line-or-beginning-search add-zsh-hook edit-command-line
 
 # Register them as ZLE widgets so they can be bound to keys
 zle -N up-line-or-beginning-search
@@ -38,11 +39,15 @@ zle -N down-line-or-beginning-search
 
 # Custom Editor Widgets
 # ───────────────────────────────────────────────────────────────────────
-
 ## Advanced macros to speed up command line editing.
 
-# Register as a Widget (so you can bind a key to it)
-zle -N ftmux
+# ------------------------------------------------------------------------------
+# Widget: Pop-Command
+# Description:
+#   Opens the new tmux session in a floating window.
+#   Useful for complex running commands separated from the main terminal.
+# ------------------------------------------------------------------------------
+zle -N pop-command
 
 
 # ------------------------------------------------------------------------------
@@ -51,7 +56,6 @@ zle -N ftmux
 #   Opens the current buffer in your external $EDITOR (Vim, Nano, VS Code).
 #   Useful for complex multi-line commands or scripting on the fly.
 # ------------------------------------------------------------------------------
-autoload -Uz edit-command-line
 zle -N edit-command-line
 
 
@@ -208,7 +212,6 @@ function chpwd_auto_ls() {
     print
     "${_chpwd_ls_cmd[@]}"
 }
-
 add-zsh-hook chpwd chpwd_auto_ls
 
 
@@ -288,7 +291,6 @@ copy_buffer_to_clipboard() {
 
     zle -M "✓ Copied buffer to clipboard."
 }
-
 zle -N copy_buffer_to_clipboard
 
 

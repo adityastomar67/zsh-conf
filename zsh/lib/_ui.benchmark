@@ -141,6 +141,6 @@ zprof | awk \
             time_color, bar_visual, color_reset
     }'
 
-# Final spacing
-print -f \
-    "\n${COLOR[DIM]}  For detailed analysis:${COLOR[RESET]} ${COLOR[BOLD]}${COLOR[BLUE]}\`_zsh_debug_startup\`${COLOR[RESET]}\n\n"
+[[ "${ENABLE_MINIMAL_MODE:l}" != "yes" ]] && print -f \
+    "\n${COLOR[DIM]}  For detailed analysis:${COLOR[RESET]} ${COLOR[BOLD]}${COLOR[BLUE]}\`_zsh_debug_startup\`${COLOR[RESET]}\n\n" || \
+    printf "\n"

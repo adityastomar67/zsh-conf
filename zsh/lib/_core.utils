@@ -27,6 +27,9 @@
 #   - Depends on `_ui.color` for colored output.
 # ------------------------------------------------------------------------------
 
+## Check for minimal mode
+[[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]] && return
+
 # Initialization & Autoloads
 # ───────────────────────────────────────────────────────────────────────
 ## Load essential functions from the $fpath so they are available immediately.
@@ -295,7 +298,7 @@ function _safe_edit() {
 # User Overrides / Offline Config
 # ───────────────────────────────────────────────────────────────────────
 ## Creates a placeholder file for local, non-git-tracked overrides.
-## We run this synchronously to ensure the file exists before sourcing.
+## We run this asynchronously because it's not critical to the shell's operation initially.
 
 (
     # Define the location (Use ZDOTDIR if available, else HOME)
@@ -341,7 +344,7 @@ EOF
         # Optional: Print a subtle notification on first creation
         print "${COLOR[GREEN]}[INFO] Created local override file at: ${COLOR[YELLOW]}${override_file}${COLOR[RESET]}"
     fi
-)
+) &!
 
 # Wallpaper Sync
 # Lazy load the wallpaper randomizer if the binary exists.

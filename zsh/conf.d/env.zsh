@@ -61,7 +61,7 @@ export XDG_CACHE_HOME="$HOME/.cache"
 export XDG_DATA_HOME="$HOME/.local/share"
 export XDG_STATE_HOME="$HOME/.local/state"
 
-# Disable the "hint" messages you are seeing
+# Disable the "hint" messages you are seeing in HOMEBREW
 export HOMEBREW_NO_ENV_HINTS=1
 
 
@@ -72,7 +72,7 @@ export HOMEBREW_NO_ENV_HINTS=1
 # ------------------------------------------------------------------------------
 # Sudo Prompt
 # Custom prompt when asking for root password (displays username).
-export SUDO_PROMPT="${COLOR[RED]}[NOTE]${COLOR[RESET]} Deploying root access for ${COLOR[YELLOW]}${COLOR[BOLD]}%u${COLOR[RESET]}, Password pls: "
+export SUDO_PROMPT="${COLOR[RED]}[NOTE]${COLOR[RESET]} Deploying root access for ${COLOR[YELLOW]}${COLOR[BOLD]}%u${COLOR[RESET]}, Password please: "
 
 # ------------------------------------------------------------------------------
 # Manpager (Manual Page Viewer)
@@ -83,9 +83,9 @@ if (( $+commands[nvim] )); then
     export VISUAL="nvim"
 
     # Use Neovim as a pager:
-    # --clean      : No plugins (fast startup)
-    # -c ...       : Run Vim commands to optimize for reading (no line nums, etc)
-    # +Man!        : Trigger the Man plugin
+    #   --clean      : No plugins (fast startup)
+    #   -c ...       : Run Vim commands to optimize for reading (no line nums, etc)
+    #   +Man!        : Trigger the Man plugin
     export MANPAGER="nvim --clean \
         -c 'runtime ftplugin/man.vim' \
         -c 'set laststatus=0' \
@@ -110,9 +110,9 @@ elif (( $+commands[vim] )); then
 
 else
     # Fallback: Less
-    # -s : Squeeze blank lines
-    # +M : Long prompt
-    # +Gg: Visual bells
+    #   -s : Squeeze blank lines
+    #   +M : Long prompt
+    #   +Gg: Visual bells
     export MANPAGER="less -s +M +Gg"
 fi
 
@@ -141,7 +141,8 @@ if [[ -n "$SSH_CONNECTION" ]]; then
     # If neofetch exists, run it. If lolcat exists, colorize it.
     if (( $+commands[neofetch] )); then
         if (( $+commands[lolcat] )); then
-            # -S 10: Spread rainbow, -F 0.05: Frequency
+            # -S 10: Spread rainbow
+            # -F 0.05: Frequency
             neofetch | lolcat -S 10 -F 0.05
         else
             neofetch
