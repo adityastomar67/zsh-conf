@@ -141,10 +141,10 @@ local -A _dir_abbreviations=(
 #    Loop through keys (abbr) and values (dir), check existence, and create alias.
 for abbr dir in "${(@kv)_dir_abbreviations}"; do
     if [[ -d "$dir" ]]; then
-        alias "$abbr"="cd $dir"
+        alias "-$abbr"="cd $dir" # Example: -dv = cd ~/Developer
 
-        # Optional: Register as a Named Directory (allows cd ~pj and prompt shortening)
-        # hash -d "$abbr"="$dir"
+        # Optional: Register as a Named Directory (allows nvim ~pj and prompt shortening)
+        hash -d "$abbr"="$dir"
     fi
 done
 
@@ -201,6 +201,9 @@ fi
 # 'grep' -> 'ripgrep' (Much faster search)
 (( $+commands[ripgrep] )) && alias grep="ripgrep"
 
+# Fun: Terminal Bonsai Tree
+(( $+commands[cbonsai] )) && alias bonsai="cbonsai -ilt 0.02 -c '  ,  ,  ,  ,  ' -L 5"
+
 # ------------------------------------------------------------------------------
 # Listing (The 'ls' Hierarchy)
 # Logic: Try 'eza' (best), then 'lsd' (good), then native 'ls' (fallback).
@@ -227,7 +230,7 @@ elif (( $+commands[lsd] )); then
 else
     # Native Fallback
     if [[ "$detected_os" == "Darwin" ]]; then
-        alias ls="ls -G"         # macOS color flag
+        alias ls="ls -G"           # macOS color flag
         alias ll="ls -laG"
     else
         alias ls="ls --color=auto" # Linux color flag
@@ -290,7 +293,7 @@ if (( $+commands[pacman] )); then
     alias pacupd="$_pac -Sy"                           # Update local database
     alias pacupg="$_pac -Syu"                          # Full system upgrade
     alias cleanup="pacman -Qtdq | xargs -r $_pac -Rns" # Remove orphan packages
-    alias unlock="_ rm /var/lib/pacman/db.lck"      # Remove stale lock file
+    alias unlock="_ rm /var/lib/pacman/db.lck"         # Remove stale lock file
 
     # AUR Helpers (Yay / Paru)
     if (( $+commands[yay] )); then
@@ -394,7 +397,7 @@ alias -g ':LL'="2>&1 | less"         # Pipe Output+Errors to Less
 # ───────────────────────────────────────────────────────────────────────
 ## Executing files based on extension (e.g., typing 'main.py' runs python).
 
-# 1. Define the System Opener
+# Define the System Opener
 #    macOS uses 'open', Linux uses 'xdg-open'.
 if [[ "$detected_os" == "Darwin" ]]; then
     local _sys_open="open"
@@ -402,29 +405,33 @@ else
     local _sys_open="xdg-open"
 fi
 
-# 2. Text & Config Files -> Open in Editor
+# Text & Config Files -> Open in Editor
 #    Extensions usually meant for editing.
 alias -s {txt,md,markdown,yml,yaml,toml,conf,ini,json,xml,csv}="$EDITOR"
 alias -s {zsh,bash,sh,zshrc,bashrc}="$EDITOR"
 
-# 3. Source Code -> Open in Editor (Safe Default)
+# Source Code -> Open in Editor (Safe Default)
 #    We default to editing to prevent accidental execution of unfinished code.
 alias -s {c,cpp,h,hpp,rs,go,java,ts,css,html}="$EDITOR"
 
-# 4. Script Execution -> Run Immediately
+# Script Execution -> Run Immediately
 #    Typing 'script.py' will run it through python3.
-alias -s py="python3"
+if (( $+commands[python3] )); then
+    alias -s py='python3'
+elif (( $+commands[python] )); then
+    alias -s py='python'
+fi
 alias -s js="node"
 alias -s rb="ruby"
 
-# 5. Media & Documents -> System Default Viewer
+# Media & Documents -> System Default Viewer
 #    Opens PDFs, images, and videos in your default GUI app.
 alias -s {pdf,epub,djvu}="$_sys_open"
 alias -s {jpg,jpeg,png,gif,svg,webp,bmp}="$_sys_open"
 alias -s {mp3,wav,flac,aac,ogg}="$_sys_open"
 alias -s {mp4,mkv,avi,mov,webm}="$_sys_open"
 
-# 6. Archives -> List Contents (Safety First)
+# Archives -> List Contents (Safety First)
 #    Typing 'data.zip' lists contents rather than auto-extracting (messy).
 if (( $+commands[unzip] )); then
     alias -s zip="unzip -l"
@@ -433,7 +440,7 @@ if (( $+commands[tar] )); then
     alias -s {tgz,gz}="tar tf"
 fi
 
-# 7. Log Files -> Bat (Syntax Highlighting)
+# Log Files -> Bat (Syntax Highlighting)
 #    If 'bat' is installed, use it for logs. Otherwise, use 'tail -f'.
 if (( $+commands[bat] )); then
     alias -s {log,md}="bat --paging=always"
@@ -441,37 +448,32 @@ else
     alias -s log="tail -f"
 fi
 
-# 8. Git Patches -> Apply
+# Git Patches -> Apply
 #    Typing a .patch file applies it to the repo.
 alias -s patch="git apply"
-
-# Cleanup variable
-unset _sys_open
 
 
 # Miscellaneous
 # ───────────────────────────────────────────────────────────────────────
 
-alias cls="clear"
-alias clean="clear"
-alias h="history"
+alias cls="clear"                   # Clear screen
+alias clean="clear"                 # Clear screen too
+alias h="history"                   # History
 alias x="chmod +x"                  # Make executable
 alias weather='curl -s wttr.in'     # Check weather
 alias myip="curl ipinfo.io/ip"      # Check Public IP
 alias md="mkdir -p"                 # Create parent directories automatically
+alias new="touch"                   # Create new file
 
 # Tmux Smart Exit
-# If inside Tmux: Kill the specific session.
-# If in normal shell: Exit.
+#   - If inside Tmux: Kill the specific session.
+#   - If in normal shell: Exit.
 alias ':q'='[ -n "$TMUX" ] && tmux kill-session -t $(tmux display-message -p "#S") || exit'
 
 # Time & Date
 # Copies formatted date to clipboard and prints it.
 alias dday='date +"%Y.%m.%d - " | copy ; date +"%Y.%m.%d"'
 alias week='date +%V'
-
-# Fun: Terminal Bonsai Tree
-(( $+commands[cbonsai] )) && alias ccbonsai="cbonsai -ilt 0.02 -c '  ,  ,  ,  ,  ' -L 5"
 
 # Cleanup
 unset detected_os

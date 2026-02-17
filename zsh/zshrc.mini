@@ -162,7 +162,12 @@ if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
         alias vim='nvim'
     fi
 
-    alias py="python3"
+    # Python
+    if (( $+commands[python3] )); then
+        alias py='python3'
+    elif (( $+commands[python] )); then
+        alias py='python'
+    fi
 
     # ── shell management ───────────────────────────────────────────────────
 
