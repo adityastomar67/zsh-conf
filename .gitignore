@@ -150,3 +150,5 @@ npm-debug.log*
 yarn-debug.log*
 zsh-debug.log
 zsh-profiler.log
+/zsh/conf.d/PR.zsh
+/temp.zsh

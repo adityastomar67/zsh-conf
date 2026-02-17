@@ -19,7 +19,6 @@
 #   - Git/Hg Integration (via vcs_info or raw commands).
 #   - Execution Timer.
 #   - Auto-ls functionality.
-#   - Window Title Management.
 #
 # Usage Notes
 #   Set `export PROMPT_THEME="gh0st"` in $ZDOTDIR/user.conf to switch themes.
@@ -36,6 +35,9 @@ setopt PROMPT_SUBST
 
 # Load zstat for microsecond file timestamp checking
 zmodload zsh/stat
+
+# Spellcheck prompt
+SPROMPT="zsh: correct %F{red}'%R'%f to %F{red}'%r'%f? "
 
 
 # ── Shared State Variables ─────────────────────────────────────────────
@@ -151,6 +153,7 @@ function get_random_prompt_symbol() {
     print -- "${symbols[1 + $RANDOM % ${#symbols[@]}]}"
 }
 
+# ── THEMES ───────────────────────────────────────────────────
 
 # Theme: 'Z'
 # ───────────────────────────────────────────────────────────────────────
@@ -381,14 +384,10 @@ function theme_10k() {
     # 3. Jobs indicator (Yellow) -> %1j
     # 4. Error code (Yellow !) -> %?
     PS1="%F{green}${SSH_TTY:+%n@%m}%f%F{yellow}%B%(1j.*.)%(?..!)%b%f %B%F{yellow}${in_tmux}%f${suffix} "
-
-    # Spellcheck prompt
-    SPROMPT="zsh: correct %F{red}'%R'%f to %F{red}'%r'%f? "
 }
 
 
-# Initialization Logic
-# ───────────────────────────────────────────────────────────────────────
+# ── Initialization Logic ────────────────────────────────────────────
 ## Selects the theme based on the environment variable.
 
 case "$PROMPT_THEME" in
