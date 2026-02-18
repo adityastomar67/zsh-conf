@@ -138,6 +138,7 @@ if [[ -n "$ZSH_COMPLETION_DUMP"(#qN.mh+24) ]]; then
 else
     # Scenario B: Cache is fresh. Fast Load.
     #   -C: Skip ALL security checks, trust the dump file
+    #   -d: Dump path
     compinit -C -d "$ZSH_COMPLETION_DUMP"
 fi
 

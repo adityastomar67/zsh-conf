@@ -34,7 +34,7 @@
 # ───────────────────────────────────────────────────────────────────────
 ## Load essential functions from the $fpath so they are available immediately.
 
-# Load the completion system (but don't init it yet, that happens in opts.zsh)
+# Load the completion system (but don't init it yet, that happens in options.zsh)
 autoload -Uz compinit
 
 # Load color definitions (UI helpers)

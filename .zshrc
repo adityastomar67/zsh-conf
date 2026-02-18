@@ -32,7 +32,8 @@
 # ───────────────────────────────────────────────────────────────────────
 ## We source the user.conf file here to ensure critical environment variables
 ## are available even in non-login shells that might skip user.conf in zshenv.
-source "$ZDOTDIR/user.conf"
+
+[[ -f "$ZDOTDIR/user.conf" ]] && source "$ZDOTDIR/user.conf"
 
 
 # Benchmarking Initialization
@@ -89,7 +90,9 @@ fi
 ## Randomly selects between color scripts or motivational quotes if enabled.
 
 if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
-    ZSH_BENCHMARK="No" # Disable benchmark during visuals
+    # Disable benchmark during visuals
+    ZSH_BENCHMARK="No"
+
     local -a available_visual_commands=()
 
     # Check for installed visualization tools
@@ -103,8 +106,6 @@ if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
 
         # Execute the command
         ${=available_visual_commands[$random_idx]}
-
-        # Add visual spacing
         print
     fi
 fi
