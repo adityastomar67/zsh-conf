@@ -134,6 +134,7 @@ magic_enter() {
 
     # Tell ZLE we are outputting text to prevent prompt overlap
     zle -I
+    printf '\033[2J\033[H'
     print ""
 
     # ::: Background Jobs Detector :::
@@ -152,31 +153,23 @@ magic_enter() {
     fi
 
     # ::: Smart Git Status :::
-    # We combine the fast Zsh check with the robust Git check
+    # Optimization: Use porcelain status to check for ANY change (staged, modified, untracked)
+    # This is much faster than ls-files + diff-index.
+    # We ignore submodules for speed unless they are dirty.
     if [[ -d .git ]] || git rev-parse --is-inside-work-tree &>/dev/null; then
 
-        # OPTIMIZATION:
-        # Check modified (diff-index) OR untracked (ls-files)
-        # Exits instantly on the first hit.
-        if ! git diff-index --quiet HEAD -- 2>/dev/null || \
-        [[ -n $(git ls-files --others --exclude-standard 2>/dev/null | head -n 1) ]]; then
-
-            # Dirty State
+        # Check if dirty (Exit code 0 = clean, but here we capture output)
+        # We capture the first line. If it's not empty, it's dirty.
+        if [[ -n $(command git status --porcelain --ignore-submodules=dirty 2>/dev/null | head -n 1) ]]; then
+             # Dirty State
             print "${COLOR[YELLOW]}::: Git Status (Dirty) :::${COLOR[RESET]}"
-            git status
+            git status -sb
         else
             # Clean State
             print "${COLOR[GREEN]}::: Git Status (Clean) :::${COLOR[RESET]}"
             git log -n 3 --oneline --color=always
         fi
         print "\n"
-    fi
-
-    # ::: Directory Listing :::
-    if (( $+commands[eza] )); then
-        eza --icons --git --group-directories-first --header
-    else
-        ls -F --color=auto --group-directories-first
     fi
 
     zle redisplay
