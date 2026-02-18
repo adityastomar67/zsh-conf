@@ -201,7 +201,22 @@ function chpwd_auto_ls() {
     # Return immediately if in HOME to reduce clutter
     [[ "$PWD" == "$HOME" ]] && return
 
-    # Execute the pre-calculated command
+    # 1. Network Guard: Skip on /Volumes or /Network to avoid hangs
+    if [[ "$PWD" == /Volumes* || "$PWD" == /Network* ]]; then
+        return
+    fi
+    # 2. Size Guard: Check file count quickly
+    #    ls -1A = one column, all files
+    #    wc -l  = count lines
+    local count=$(command ls -1A | wc -l)
+    count=${count// /}
+
+    if (( count > 100 )); then
+        print "${COLOR[DIM]}::: Directory contains $count files. Auto-LS skipped. :::${COLOR[RESET]}"
+        return
+    fi
+
+    # 3. Safe Execution
     print
     "${_chpwd_ls_cmd[@]}"
 }
