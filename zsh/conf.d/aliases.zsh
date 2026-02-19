@@ -196,7 +196,21 @@ fi
 (( $+commands[trash] ))   && alias del="trash"
 
 # 'grep' -> 'ripgrep' (Much faster search)
-(( $+commands[ripgrep] )) && alias grep="ripgrep"
+if (( $+commands[rg] )); then
+    alias grep="rg"
+    alias -g ':G'="| rg"
+elif (( $+commands[ripgrep] )); then
+    alias grep="ripgrep"
+    alias -g ':G'="| ripgrep"
+else
+    alias -g ':G'="| grep"
+fi
+
+# 'find' -> 'fd' (Simple, fast, user-friendly)
+(( $+commands[fd] )) && alias find="fd"
+
+# 'diff' -> 'delta' (Syntax highlighted diffs)
+(( $+commands[delta] )) && alias diff="delta"
 
 # Fun: Terminal Bonsai Tree
 (( $+commands[cbonsai] )) && alias bonsai="cbonsai -ilt 0.02 -c '  ,  ,  ,  ,  ' -L 5"
@@ -374,7 +388,7 @@ fi
 ## not just at the beginning. They act like pipes.
 
 # Usage:  cat file.txt :G pattern
-(( $+commands[ripgrep] )) && alias -g ':G'="| ripgrep" || alias -g ':G'="| grep"
+# (Defined above in the grep/ripgrep section)
 
 # Usage:  long_command :L
 alias -g ':L'="| less"
