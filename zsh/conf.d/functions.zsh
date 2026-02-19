@@ -229,7 +229,7 @@ pj() {
 # ------------------------------------------------------------------------------
 function weather() {
     # 1. Dependency Check
-    if (( $+commands[curl] )); then
+    if ! (( $+commands[curl] )); then
         print "${COLOR[RED]}Error: curl is required.$COLOR[RESET]"
         return 1
     fi

@@ -23,7 +23,7 @@
     [[ ":$PATH:" != *":$bin_dir:"* ]] && export PATH="$bin_dir:$PATH"
 
     # Guard: Install if missing (Requires curl)
-    if ! (( $+commands[theme] )).sh; then
+    if ! (( $+commands[theme.sh] )); then
         if (( $+commands[curl] )); then
             print "Installing theme.sh..."
             mkdir -p "$bin_dir"
@@ -36,7 +36,7 @@
     fi
 
     # Guard: Abort if installation failed
-    (( $+commands[theme] )).sh || return 1
+    (( $+commands[theme.sh] )) || return 1
 
     # Load history
     if [[ -r "$HOME/.theme_history" ]]; then

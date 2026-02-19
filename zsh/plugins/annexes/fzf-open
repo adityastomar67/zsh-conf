@@ -71,7 +71,7 @@ if [[ -n "$selection" ]]; then
     local -a file_array
     file_array=("${(@f)selection}")
 
-    print "\n${COLOR[GREEN]::${COLOR[RESET]} Opening ${COLOR[BOLD]}${#file_array[@]}${COLOR[RESET]} files in ${COLOR[UNDERLINE]}$editor_cmd${COLOR[RESET]}..."
+    print "\n${COLOR[GREEN]}::${COLOR[RESET]} Opening ${COLOR[BOLD]}${#file_array[@]}${COLOR[RESET]} files in ${COLOR[UNDERLINE]}$editor_cmd${COLOR[RESET]}..."
 
     # Execute the editor with all selected files as arguments
     "$editor_cmd" "${file_array[@]}"
