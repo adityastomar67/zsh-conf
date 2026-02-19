@@ -74,7 +74,7 @@ done
 # These are sourced silently to prevent startup noise from minor tools.
 
 function _load_aux_stuff() {
-    local aux_modules=("aliases" "functions")
+    local aux_modules=("functions" "aliases")
 
     for module in "${aux_modules[@]}"; do
         local target="$ZSH_CONFIG_ROOT/conf.d/${module}.zsh"

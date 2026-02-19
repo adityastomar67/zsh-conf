@@ -98,7 +98,7 @@ fi
 # ------------------------------------------------------------------------------
 # Shell Management
 # 'exec zsh' replaces the current process, reloading the config cleanly.
-alias zsh="exec zsh"
+(( $+functions[_zsh_reload] )) && alias zsh="_zsh_reload" || alias zsh="exec zsh"  # Fallback if the function isn't defined yet
 alias which='type -a' # 'type -a' is more robust in Zsh than 'which'
 
 

@@ -90,6 +90,16 @@ function _zsh_debug_startup() {
     ZSH_BENCHMARK="No" zsh -l -i -x -v 2>> "$debug_log"
 }
 
+function _zsh_reload() {
+    # If the async git worker from prompt.zsh is active, kill it.
+    if (( ${+_GIT_ASYNC_PID} )) && (( _GIT_ASYNC_PID > 0 )); then
+        # Check if process exists (-0) then kill (-15)
+        if kill -0 "$_GIT_ASYNC_PID" 2>/dev/null; then
+            kill -15 "$_GIT_ASYNC_PID" 2>/dev/null
+        fi
+    fi
+    exec zsh
+}
 
 # ........................[  3. Core Overrides  ]........................ #
 
