@@ -130,6 +130,86 @@ function lg() {
         fi
         rm -f "$lg_config_file"
     fi
+    fi
+}
+
+
+# ------------------------------------------------------------------------------
+# Function: pj (Project Jumper)
+# Description:
+#   Fuzzy find directories in Code/Work/Projects and jump to them.
+#   Integrates with zoxide if available.
+# ------------------------------------------------------------------------------
+pj() {
+    emulate -L zsh # Reset zsh options for this function (prevents bugs)
+
+    # 1. Dependency Check
+    if ! (( $+commands[fzf] )); then
+        print "${COLOR[RED]}Error: fzf is required.$COLOR[RESET]"
+        return 1
+    fi
+
+    # 2. Configuration  # TODO: Move this to a user-editable config file or environment variable
+    # Define your search roots here
+    # Search paths defined in user.conf, fallback to defaults if missing
+    local -a raw_paths
+    if (( ${#PROJECT_SEARCH_PATHS[@]} > 0 )); then
+        raw_paths=("${PROJECT_SEARCH_PATHS[@]}")
+    else
+        raw_paths=(
+            "$HOME/Code"
+            "$HOME/Projects"
+            "$HOME/Work"
+            "$HOME/workspace"
+            "${DOTFILES_ROOT}"
+        )
+    fi
+
+    # 3. Fast Validation (Zsh Magic)
+    # (N/) filters the list to only existing directories.
+    # $^ expands the array to apply the check to each element.
+    local search_paths=($^raw_paths(N/))
+
+    if (( ${#search_paths} == 0 )); then
+        print "${COLOR[YELLOW]}No valid project directories found.$COLOR[RESET]"
+        return 1
+    fi
+
+    # 4. Preview Strategy (Smart Fallback)
+    local preview_cmd="ls -A --color=always {}"
+    (( $+commands[eza] )) && preview_cmd="eza -1 --color=always --icons --group-directories-first --git {}"
+
+    # 5. Search Execution
+    local proj
+    local fzf_opts=(
+        --query "$*"       # Use function args as search query
+        --select-1         # Auto-select if only 1 match found
+        --exit-0           # Exit if query yields no results
+        --prompt="🚀 Jump > "
+        --preview "$preview_cmd"
+        --height=50%
+        --layout=reverse
+        --border
+    )
+
+    # Use 'fd' if available (faster, respects .gitignore), else 'find'
+    if (( $+commands[fd] )); then
+        # --absolute-path ensures cd works from anywhere
+        proj=$(fd . "${search_paths[@]}" --min-depth 1 --max-depth 2 --type d --absolute-path 2>/dev/null | fzf "${fzf_opts[@]}")
+    else
+        proj=$(find "${search_paths[@]}" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | fzf "${fzf_opts[@]}")
+    fi
+
+    # 6. Result Handling
+    if [[ -n "$proj" ]]; then
+        # Zoxide / Autojump integration
+        (( $+commands[zoxide] )) && zoxide add "$proj"
+
+        cd "$proj"
+
+        # Optional: Print where we landed
+        print "${COLOR[GREEN]}➜ Switched to: ${COLOR[BOLD]}$proj${COLOR[RESET]}"
+    fi
 }
 
 
@@ -142,7 +222,7 @@ function lg() {
 function weather() {
     # 1. Dependency Check
     if (( $+commands[curl] )); then
-        print "❌ Error: curl is required."
+        print "${COLOR[RED]}Error: curl is required.$COLOR[RESET]"
         return 1
     fi
 
@@ -216,4 +296,89 @@ function kubectl() {
     # 4. Standard passthrough
     command kubectl "$@"
 }
+
+
+
+# ........................[  7. Lazy Loading Wrappers  ]........................ #
+
+# ------------------------------------------------------------------------------
+# Function: nvm (Lazy Load)
+# Description:
+#   Loads NVM (Node Version Manager) only when a node-related command is run.
+#   Usage: nvm, node, npm, npx, pnpm, yarn
+# ------------------------------------------------------------------------------
+# 1. Define the commands that trigger loading
+local nvm_triggers=(nvm node npm npx pnpm yarn)
+
+# 2. Check if NVM exists before setting up triggers
+if [[ -d "$HOME/.nvm" ]]; then
+
+    # The "Worker" function
+    _nvm_lazy_load() {
+        # Cleanup: Unset the dummy functions
+        unset -f _nvm_lazy_load $nvm_triggers
+
+        # Setup: Load NVM
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+        # Optional: Load bash completion (makes nvm usable immediately)
+        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+        # Execution: Run the command that triggered this function
+        # "$0" is the command name (e.g., 'npm'), "$@" are the args
+        exec "$0" "$@"
+    }
+
+    # 3. Create the dummy triggers
+    for cmd in $nvm_triggers; do
+        eval "function $cmd() { _nvm_lazy_load \"\$@\"; }"
+    done
+fi
+
+# ------------------------------------------------------------------------------
+# Function: pyenv (Lazy Load)
+# Description:
+#   Loads Pyenv only when a python-related command is run.
+#   Usage: pyenv, python, pip, poetry
+# ------------------------------------------------------------------------------
+# Check if pyenv is in path OR installed in home
+# 1. Define the trigger command list
+# Add any other pyenv-managed commands here (e.g., pytest, jupyter)
+local _pyenv_triggers=(pyenv python pip poetry)
+
+# 2. The single "Worker" function
+_pyenv_lazy_load() {
+    # Cleanup: Remove the dummy functions/aliases so they don't loop
+    unset -f _pyenv_lazy_load
+    for cmd in $_pyenv_triggers; do unset -f $cmd; done
+
+    # Setup: Add pyenv to PATH if it's not there (Standard Install)
+    [[ -d "$HOME/.pyenv/bin" ]] && export PATH="$HOME/.pyenv/bin:$PATH"
+
+    # Activate: Initialize pyenv (this updates PATH and shims)
+    if (( $+commands[pyenv] )); then
+        eval "$(pyenv init -)"
+
+        # Optional: Load pyenv-virtualenv if you use it
+        # eval "$(pyenv virtualenv-init -)"
+    else
+        echo "Error: pyenv not found." >&2
+        return 1
+    fi
+
+    # Re-run: Execute the command the user actually typed
+    # "$0" is the function name (e.g., python), "$@" are the args
+    exec "$0" "$@"
+}
+
+# 3. Create the triggers
+# We check if pyenv exists roughly (directory or binary) before setting traps
+if [[ -d "$HOME/.pyenv" ]] || (( $+commands[pyenv] )); then
+    for cmd in $_pyenv_triggers; do
+        # Define a function for each trigger that calls the loader
+        eval "function $cmd() { _pyenv_lazy_load \"\$@\"; }"
+    done
+fi
+
 
