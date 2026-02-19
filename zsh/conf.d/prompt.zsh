@@ -52,25 +52,20 @@ typeset -g _10K_START_TIME=""
 # Async State
 typeset -g _GIT_ASYNC_PID=0
 typeset -g _GIT_ASYNC_LOCK=0
+typeset -gA _GIT_REPO_CACHE
 
 # ── The Engine (Async Controller) ──────────────────────────────────────
 # Replaces the synchronous logic with a non-blocking background fetch.
 function _git_engine() {
     # 1. Callback Short-Circuit
-    # If we are running inside the signal handler (just updated vars),
-    # don't spawn another process.
     if (( _GIT_ASYNC_LOCK )); then
         return
     fi
 
-    # 2. Fast Guard (0ms) - Check if we are even in a git repo
-    # If not, clear vars and return immediately.
-    if ! command git rev-parse --is-inside-work-tree &>/dev/null; then
+    # 2. Cache Check (The Optimization)
+    # If we know this PWD is NOT a repo, abort immediately (0ms latency).
+    if [[ "${_GIT_REPO_CACHE[$PWD]}" == "0" ]]; then
         GIT_IS_REPO=0
-        GIT_BRANCH=""
-        GIT_HAS_MODIFIED=0
-        GIT_HAS_UNTRACKED=0
-        GIT_HAS_STAGED=0
         return
     fi
 
@@ -79,11 +74,11 @@ function _git_engine() {
     if (( _GIT_ASYNC_PID > 0 )); then
         # Check if process exists
         if kill -0 "$_GIT_ASYNC_PID" 2>/dev/null; then
-            # Optimization: If PWD matched the last job, maybe let it finish?
-            # For now, we prefer responsiveness: Interactivity = Kill old, Start new.
             kill -15 "$_GIT_ASYNC_PID" 2>/dev/null
         fi
     fi
+
+    local current_pwd="$PWD"
 
     # 4. Spawn Background Worker
     # We use a subshell with &! to disown it immediately.
@@ -95,66 +90,70 @@ function _git_engine() {
         local modified=0
         local untracked=0
         local staged=0
+        local is_repo=0
         local status_out
 
-        # Single Call Strategy: git status --porcelain=v2 --branch
-        # This gives us branch info AND file status in one go.
-        status_out=$(command git status --porcelain=v2 --branch 2>/dev/null)
+        # We try to run git status. If it fails, we are not in a repo.
+        # --branch gives us branch info, --porcelain=v2 gives parseable status.
+        if status_out=$(command git status --porcelain=v2 --branch 2>/dev/null); then
+            is_repo=1
 
-        if [[ -n "$status_out" ]]; then
-            # 1. Parse Branch (Look for header: # branch.head master)
-            # We use Zsh flag (f) to split by lines
-            local -a lines
-            lines=("${(@f)status_out}")
+            if [[ -n "$status_out" ]]; then
+                # 1. Parse Branch (Look for header: # branch.head master)
+                # We use Zsh flag (f) to split by lines
+                local -a lines
+                lines=("${(@f)status_out}")
 
-            local line
-            for line in "${lines[@]}"; do
-                if [[ "$line" == "# branch.head "* ]]; then
-                    branch="${line#\# branch.head }"
-                    # Handle detached head which shows as "(detached)" or hash
-                    if [[ "$branch" == "(detached)" ]]; then
-                        branch=$(command git rev-parse --short HEAD 2>/dev/null)
-                    fi
-                    continue
-                fi
-
-                # 2. Parse Status
-                # Porcelain v2 Format:
-                # 1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
-                # 2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
-                # u <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>  (Unmerged)
-                # ? <path>                                      (Untracked)
-
-                if [[ "$line" == \?* ]]; then
-                    untracked=1
-                else
-                    # Capture the XY column (status codes)
-                    # line format: 1 XY ... or 2 XY ...
-                    local xy_code=""
-                    if [[ "$line" == 1\ * || "$line" == 2\ * ]]; then
-                         local parts=("${(@s/ /)line}")
-                         xy_code="${parts[2]}"
+                local line
+                for line in "${lines[@]}"; do
+                    if [[ "$line" == "# branch.head "* ]]; then
+                        branch="${line#\# branch.head }"
+                        # Handle detached head which shows as "(detached)" or hash
+                        if [[ "$branch" == "(detached)" ]]; then
+                            branch=$(command git rev-parse --short HEAD 2>/dev/null)
+                        fi
+                        continue
                     fi
 
-                    # Check Staged (X is not dot)
-                    if [[ "$xy_code" == [MADRC]* ]]; then
-                        staged=1
-                    fi
+                    # 2. Parse Status
+                    # Porcelain v2 Format:
+                    # 1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
+                    # 2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
+                    # u <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>  (Unmerged)
+                    # ? <path>                                      (Untracked)
 
-                    # Check Modified (Y is not dot)
-                    if [[ "$xy_code" == ?[MD]* ]]; then
-                        modified=1
+                    if [[ "$line" == \?* ]]; then
+                        untracked=1
+                    else
+                        # Capture the XY column (status codes)
+                        # line format: 1 XY ... or 2 XY ...
+                        local xy_code=""
+                        if [[ "$line" == 1\ * || "$line" == 2\ * ]]; then
+                             local parts=("${(@s/ /)line}")
+                             xy_code="${parts[2]}"
+                        fi
+
+                        # Check Staged (X is not dot)
+                        if [[ "$xy_code" == [MADRC]* ]]; then
+                            staged=1
+                        fi
+
+                        # Check Modified (Y is not dot)
+                        if [[ "$xy_code" == ?[MD]* ]]; then
+                            modified=1
+                        fi
                     fi
-                fi
-            done
+                done
+            fi
+
+            # Truncate branch name
+            [[ ${#branch} -gt 20 ]] && branch="${branch[1,20]}..."
         fi
 
-        # Truncate branch name
-        [[ ${#branch} -gt 20 ]] && branch="${branch[1,20]}..."
-
         # B. Write Result Atomically
-        # formatting: BRANCH|MODIFIED|UNTRACKED|STAGED
-        print -r "$branch|$modified|$untracked|$staged" >! "$output_file"
+        # formatting: PWD|IS_REPO|BRANCH|MODIFIED|UNTRACKED|STAGED
+        # We assume pipe | is safe enough for PWD usually
+        print -r "$current_pwd|$is_repo|$branch|$modified|$untracked|$staged" >! "$output_file"
 
         # C. Signal Parent
         kill -s USR1 "$$"
@@ -176,16 +175,25 @@ function _git_async_callback() {
         read -r content < "$output_file"
         rm -f "$output_file"
 
-        # Parse: BRANCH|MODIFIED|UNTRACKED|STAGED
+        # Parse: PWD|IS_REPO|BRANCH|MODIFIED|UNTRACKED|STAGED
         local -a parts
         parts=("${(@s/|/)content}")
 
-        if (( ${#parts} >= 4 )); then
-            GIT_IS_REPO=1
-            GIT_BRANCH="${parts[1]}"
-            GIT_HAS_MODIFIED="${parts[2]}"
-            GIT_HAS_UNTRACKED="${parts[3]}"
-            GIT_HAS_STAGED="${parts[4]}"
+        if (( ${#parts} >= 6 )); then
+            local worker_pwd="${parts[1]}"
+            local is_repo="${parts[2]}"
+
+            # Update Cache
+            _GIT_REPO_CACHE["$worker_pwd"]="$is_repo"
+
+            # Only update global display vars if we are still in the same dir
+            if [[ "$worker_pwd" == "$PWD" ]]; then
+                GIT_IS_REPO="$is_repo"
+                GIT_BRANCH="${parts[3]}"
+                GIT_HAS_MODIFIED="${parts[4]}"
+                GIT_HAS_UNTRACKED="${parts[5]}"
+                GIT_HAS_STAGED="${parts[6]}"
+            fi
         fi
     fi
 
@@ -193,8 +201,6 @@ function _git_async_callback() {
     _GIT_ASYNC_PID=0
 
     # 2. Trigger Re-render
-    # Manually run the registered PRECMD functions (the theme updaters)
-    # This rebuilds PROMPT/RPROMPT strings with the new variables.
     local func
     for func in $precmd_functions; do
         "$func"
@@ -370,7 +376,7 @@ function theme_gh0st() {
                 icon="%F{red}●"
             fi
 
-            _GH0ST_GIT_MSG="  %F{magenta}${GIT_BRANCH} ${icon}%f"
+            _GH0ST_GIT_MSG="  %F{magenta}${GIT_BRANCH} %{${COLOR[UNDERLINE]}%}${icon}%{${COLOR[RESET]}%}"
         fi
     }
 
