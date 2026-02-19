@@ -130,7 +130,6 @@ function lg() {
         fi
         rm -f "$lg_config_file"
     fi
-    fi
 }
 
 

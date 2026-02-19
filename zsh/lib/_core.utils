@@ -241,19 +241,48 @@ _eval_cache() {
 
 #  Dynamic Path Injection
 #  Iterate through USER_PATH_ENTRIES defined in env.zsh
-for directory_entry in "${USER_PATH_ENTRIES[@]}"; do
+# Ensure PATH does not contain duplicates (Built-in Zsh feature)
+typeset -U path
 
-    # Resolve relative paths (start without /) to Home
-    if [[ "$directory_entry" != /* ]]; then
-        directory_entry="$HOME/$directory_entry"
-    fi
+# ── Path Builder Engine ───────────────────────────────────────────────
+# Usage: _build_path "dir1" "dir2" ...
+function _build_path() {
+    # 1. Guard: Stop if no arguments passed
+    (( $# )) || return
 
-    # Only add if directory actually exists
-    if [[ -d "$directory_entry" ]]; then
-        path+=("$directory_entry")
+    local -a _raw_paths=("${@}")
+    local -a _expanded_paths
+    local entry
+
+    # 2. Fast Expansion: Prepend $HOME to relative paths
+    for entry in "${_raw_paths[@]}"; do
+        # If entry does not start with /, prepend $HOME/
+        [[ "$entry" != /* ]] && entry="$HOME/$entry"
+        _expanded_paths+=("$entry")
+    done
+
+    # 3. Bulk Existence Check & Injection (The "Magic")
+    #    $^var  -> "Distribute" the modifier to every element in the array
+    #    (N-/)  -> N: Null glob (remove if not found)
+    #              -: Follow symlinks (ensure the target exists)
+    #              /: Only match directories
+    path+=(${^_expanded_paths}(N-/))
+}
+
+# ── Execution ─────────────────────────────────────────────────────────
+
+# 1. Immediate Injection (Critical System Paths)
+_build_path "${USER_PATH_ENTRIES[@]}"
+
+# 2. Deferred Injection (Lazy Load)
+#    Only runs if there are actually deferred entries to process
+if (( ${#DEFERRED_PATH_ENTRIES} )); then
+    if (( $+functions[zsh-defer] )); then
+        zsh-defer -t 0.5 _build_path "${DEFERRED_PATH_ENTRIES[@]}"
+    else
+        _build_path "${DEFERRED_PATH_ENTRIES[@]}"
     fi
-done
-unset directory_entry
+fi
 
 
 # File Helpers
