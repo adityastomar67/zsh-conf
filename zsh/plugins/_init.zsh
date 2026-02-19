@@ -50,6 +50,13 @@ fpath=("$ZSH_CONFIG_ROOT/plugins/annexes" $fpath)
 # Glob Modifiers:
 #   (N) : Null Glob. If no files match, return an empty list instead of erroring.
 #   (:t): Tail. Extracts the filename (basename) from the full path.
-autoload -Uz "$ZSH_CONFIG_ROOT/plugins/annexes/"*(N:t)
+local digest="$ZSH_CONFIG_ROOT/plugins/annexes.zwc"
+if [[ -f "$digest" ]]; then
+    # Load from the compiled digest (Fastest)
+    autoload -w "$digest"
+else
+    # Fallback: Load individual files
+    autoload -Uz "$ZSH_CONFIG_ROOT/plugins/annexes/"*(N:t)
+fi
 
 #endregion

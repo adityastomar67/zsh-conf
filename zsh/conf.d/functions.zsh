@@ -30,11 +30,20 @@
 [[ "${LOAD_CUSTOM_FUNCTIONS:l}" != "yes" ]] && return
 
 # Annex Loading: Dynamically adds 'annexes' to the fpath (function path).
+# We respect the "Directory Digest" created in .zshrc (functions.zwc).
 # (N:t) modifier:
 #   N: null_glob (don't error if empty)
 #   t: tail (basename only)
 fpath=("$ZSH_CONFIG_ROOT/conf.d/annexes" $fpath)
-autoload -Uz "$ZSH_CONFIG_ROOT/conf.d/annexes/"*(N:t)
+
+local digest="$ZSH_CONFIG_ROOT/conf.d/annexes.zwc"
+if [[ -f "$digest" ]]; then
+    # Load from the compiled digest (Fastest)
+    autoload -w "$digest"
+else
+    # Fallback: Load individual files
+    autoload -Uz "$ZSH_CONFIG_ROOT/conf.d/annexes/"*(N:t)
+fi
 
 
 # ........................[  2. Debugging Tools  ]........................ #
