@@ -120,27 +120,16 @@ done
 
 # ------------------------------------------------------------------------------
 # Dynamic Bookmarks
-## Define the Shortcuts [Abbr]="Path"
-## Only create these aliases if the target directory actually exists.
-local -A _dir_abbreviations=(
-    # Note: DOTFILES_ROOT is defined in '$ZDOTDIR/.zshenv'
-    dt  "${DOTFILES_ROOT}"
-
-    pj  "$HOME/Projects"
-    dc  "$HOME/Documents"
-    dl  "$HOME/Downloads"
-    dv  "$HOME/Developer"
-    wk  "$HOME/Workspace"
-    cf  "$HOME/.config"
-)
+## Define shortcuts based on DIRECTORY_SHORTCUTS in user.conf
+## [Abbr]="Path" -> "-Abbr"="cd Path"
 
 # Dynamic Alias Creation
-#    Loop through keys (abbr) and values (dir), check existence, and create alias.
-for abbr dir in "${(@kv)_dir_abbreviations}"; do
+#    Loop through keys (abbr) and values (dir) and create aliases unconditionally.
+for abbr dir in "${(@kv)DIRECTORY_SHORTCUTS}"; do
     if [[ -d "$dir" ]]; then
         alias -- "-$abbr"="cd $dir" # Example: -dv = cd ~/Developer
 
-        # Optional: Register as a Named Directory (allows nvim ~pj and prompt shortening)
+        # Register as a Named Directory (allows nvim ~pj and prompt shortening)
         hash -d "$abbr"="$dir"
     fi
 done

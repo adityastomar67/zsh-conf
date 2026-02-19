@@ -152,8 +152,8 @@ pj() {
     # Define your search roots here
     # Search paths defined in user.conf, fallback to defaults if missing
     local -a raw_paths
-    if (( ${#PROJECT_SEARCH_PATHS[@]} > 0 )); then
-        raw_paths=("${PROJECT_SEARCH_PATHS[@]}")
+    if (( ${#DIRECTORY_SHORTCUTS} > 0 )); then
+        raw_paths=("${(@v)DIRECTORY_SHORTCUTS}")
     else
         raw_paths=(
             "$HOME/Code"
