@@ -45,55 +45,55 @@ COLOR[BLINK]=$'\e[5m'      # Slow blink (often disabled by users)
 COLOR[REVERSE]=$'\e[7m'    # Swap foreground and background
 COLOR[HIDDEN]=$'\e[8m'     # Text is present but invisible (passwords)
 COLOR[STRIKE]=$'\e[9m'     # Strikethrough
-COLOR[NEWLINE]=$'\x0A'
+COLOR[NEWLINE]=$'\x0A'     # Newline character
 
 # ── 2. standard foreground ─────────────────────────────────────────────
 # Basic text colors supported by almost all terminals.
 
-COLOR[BLACK]=$'\e[30m'
-COLOR[RED]=$'\e[31m'
-COLOR[GREEN]=$'\e[32m'
-COLOR[YELLOW]=$'\e[33m'
-COLOR[BLUE]=$'\e[34m'
-COLOR[MAGENTA]=$'\e[35m'
-COLOR[PURPLE]=$'\e[95m'
-COLOR[CYAN]=$'\e[36m'
+COLOR[BLACK]=$'\e[30m'     # Black text
+COLOR[RED]=$'\e[31m'       # Red text
+COLOR[GREEN]=$'\e[32m'     # Green text
+COLOR[YELLOW]=$'\e[33m'    # Yellow text
+COLOR[BLUE]=$'\e[34m'      # Blue text
+COLOR[MAGENTA]=$'\e[35m'   # Magenta text
+COLOR[PURPLE]=$'\e[95m'    # Purple text
+COLOR[CYAN]=$'\e[36m'      # Cyan text
 COLOR[WHITE]=$'\e[37m'     # Light Grey usually
 
 # ── 3. bright/neon foreground ──────────────────────────────────────────
 # "AIxTerm" high-intensity colors (often codes 90-97).
 
 COLOR[GREY]=$'\e[90m'      # Dark Grey (Bright Black)
-COLOR[B_RED]=$'\e[91m'
-COLOR[B_GREEN]=$'\e[92m'
-COLOR[B_YELLOW]=$'\e[93m'
-COLOR[B_BLUE]=$'\e[94m'
-COLOR[B_MAGENTA]=$'\e[95m'
-COLOR[B_CYAN]=$'\e[96m'
+COLOR[B_RED]=$'\e[91m'     # Bright Red text
+COLOR[B_GREEN]=$'\e[92m'   # Bright Green text
+COLOR[B_YELLOW]=$'\e[93m'  # Bright Yellow text
+COLOR[B_BLUE]=$'\e[94m'    # Bright Blue text
+COLOR[B_MAGENTA]=$'\e[95m' # Bright Magenta text
+COLOR[B_CYAN]=$'\e[96m'    # Bright Cyan text
 COLOR[B_WHITE]=$'\e[97m'   # Pure White
 
 # ── 4. standard backgrounds ────────────────────────────────────────────
 # Sets the background color behind the text.
 
-COLOR[BG_BLACK]=$'\e[40m'
-COLOR[BG_RED]=$'\e[41m'
-COLOR[BG_GREEN]=$'\e[42m'
-COLOR[BG_YELLOW]=$'\e[43m'
-COLOR[BG_BLUE]=$'\e[44m'
-COLOR[BG_MAGENTA]=$'\e[45m'
-COLOR[BG_CYAN]=$'\e[46m'
-COLOR[BG_WHITE]=$'\e[47m'
+COLOR[BG_BLACK]=$'\e[40m'   # Black background
+COLOR[BG_RED]=$'\e[41m'     # Red background
+COLOR[BG_GREEN]=$'\e[42m'   # Green background
+COLOR[BG_YELLOW]=$'\e[43m'  # Yellow background
+COLOR[BG_BLUE]=$'\e[44m'    # Blue background
+COLOR[BG_MAGENTA]=$'\e[45m' # Magenta background
+COLOR[BG_CYAN]=$'\e[46m'    # Cyan background
+COLOR[BG_WHITE]=$'\e[47m'   # White background
 
 # ── 5. high intensity backgrounds ──────────────────────────────────────
 
-COLOR[BG_GREY]=$'\e[100m'
-COLOR[BG_B_RED]=$'\e[101m'
-COLOR[BG_B_GREEN]=$'\e[102m'
-COLOR[BG_B_YELLOW]=$'\e[103m'
-COLOR[BG_B_BLUE]=$'\e[104m'
-COLOR[BG_B_MAGENTA]=$'\e[105m'
-COLOR[BG_B_CYAN]=$'\e[106m'
-COLOR[BG_B_WHITE]=$'\e[107m'
+COLOR[BG_GREY]=$'\e[100m'      # Dark Grey background
+COLOR[BG_B_RED]=$'\e[101m'     # Bright Red background
+COLOR[BG_B_GREEN]=$'\e[102m'   # Bright Green background
+COLOR[BG_B_YELLOW]=$'\e[103m'  # Bright Yellow background
+COLOR[BG_B_BLUE]=$'\e[104m'    # Bright Blue background
+COLOR[BG_B_MAGENTA]=$'\e[105m' # Bright Magenta background
+COLOR[BG_B_CYAN]=$'\e[106m'    # Bright Cyan background
+COLOR[BG_B_WHITE]=$'\e[107m'   # Bright White background
 
 
 # Debugging / Visualization
