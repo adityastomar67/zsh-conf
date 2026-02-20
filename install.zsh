@@ -91,7 +91,8 @@ Config::init() {
 
     # Target files
     CONFIG_PATHS[RC]="${CONFIG_PATHS[REPO]}/.zshrc"
-    CONFIG_PATHS[ENV]="${CONFIG_PATHS[REPO]}/user.conf"
+    CONFIG_PATHS[ENV]="${CONFIG_PATHS[REPO]}/.zshenv"
+    CONFIG_PATHS[CONF]="${CONFIG_PATHS[REPO]}/user.conf"
     CONFIG_PATHS[HIST]="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-cache/zhistory"
     CONFIG_PATHS[DUMP]="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-cache/.zcompdump"
 
@@ -272,11 +273,11 @@ typeset -A SYSTEM_INFO
 System::detect_os() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
         SYSTEM_INFO[PKG_MANAGER]="brew"
-    elif System::(( $+commands[pacman] )); then
+    elif (( $+commands[pacman] )); then
         SYSTEM_INFO[PKG_MANAGER]="pacman"
-    elif System::(( $+commands[apt-get] )); then
+    elif (( $+commands[apt-get] )); then
         SYSTEM_INFO[PKG_MANAGER]="apt"
-    elif System::(( $+commands[dnf] )); then
+    elif (( $+commands[dnf] )); then
         SYSTEM_INFO[PKG_MANAGER]="dnf"
     else
         Logger::error "Unsupported OS/Distro."
@@ -286,6 +287,11 @@ System::detect_os() {
 
 System::install_package() {
     local pkg="$1"
+
+    # Pre-authenticate sudo to prevent background process from hanging
+    if [[ "${SYSTEM_INFO[PKG_MANAGER]}" != "brew" ]]; then
+        sudo -v
+    fi
 
     # Background execution for spinner compatibility
     case "${SYSTEM_INFO[PKG_MANAGER]}" in
@@ -336,28 +342,10 @@ System::cleanup() {
     sleep 2
 }
 
-System::is_installed() {
-    # Returns 0 (true) if found, 1 (false) if not
-    command -v "$1" >/dev/null 2>&1
-}
-
 
 # 6. Class: FileSystem
 # ───────────────────────────────────────────────────────────────────────
 ## Helpers for File I/O, patching, and backups.
-
-FileSystem::sed_patch() {
-    local find="$1"
-    local replace="$2"
-    local file="$3"
-
-    # MacOS sed handles inplace backups differently
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "s|$find|$replace|g" "$file"
-    else
-        sed -i "s|$find|$replace|g" "$file"
-    fi
-}
 
 FileSystem::atomic_backup() {
     local file="$1"
@@ -432,7 +420,7 @@ Installer::check_dependencies() {
 
 Installer::ensure_zsh_shell() {
     # 1. Install Zsh if missing
-    if ! System::(( $+commands[zsh] )); then
+    if ! (( $+commands[zsh] )); then
         if Interface::prompt_confirm "Zsh is not installed. Install it?"; then
             System::install_package "zsh"
             wait $!
@@ -473,7 +461,10 @@ Installer::configure_user_features() {
         "ENABLE_THEME_SH_INTEGRATION" "ENABLE_AUTO_TMUX"
     )
 
-    if [[ -f "${CONFIG_PATHS[ENV]}" ]]; then
+    if [[ -f "${CONFIG_PATHS[CONF]}" ]]; then
+        local target_file="${CONFIG_PATHS[CONF]}"
+        local sed_args=()
+
         # Iterate 1-based to match Zsh array behavior
         for ((i = 1; i <= ${#feature_names[@]}; i++)); do
             Interface::print_banner
@@ -481,15 +472,23 @@ Installer::configure_user_features() {
             print
 
             if Interface::prompt_confirm "Enable ${THEME_COLORS[BOLD]}${feature_names[$i]}${THEME_COLORS[RESET]}?"; then
-                # Enable: Change "No" to "Yes" in .zshenv
-                FileSystem::sed_patch "${config_keys[$i]}=\"No\"" "${config_keys[$i]}=\"Yes\"" "${CONFIG_PATHS[ENV]}"
+                # Queue modification logic for .zshenv
+                sed_args+=("-e" "s|${config_keys[$i]}=\"No\"|${config_keys[$i]}=\"Yes\"|g")
                 print -f "      %s Enabled %s\n" "${THEME_ICONS[GEAR]}" "${feature_names[$i]}"
             else
                 print -f "      ${THEME_COLORS[GREY]}· Disabled %s${THEME_COLORS[RESET]}\n" "${feature_names[$i]}"
             fi
         done
+
+        if [[ ${#sed_args[@]} -gt 0 ]]; then
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                sed -i '' "${sed_args[@]}" "$target_file"
+            else
+                sed -i "${sed_args[@]}" "$target_file"
+            fi
+        fi
     else
-        Logger::error "${CONFIG_PATHS[ENV]} (source) not found."
+        Logger::error "${CONFIG_PATHS[CONF]} (source) not found."
     fi
 }
 
@@ -525,6 +524,7 @@ Installer::main() {
     sleep 1
     FileSystem::atomic_backup "${CONFIG_PATHS[RC]}"
     FileSystem::atomic_backup "${CONFIG_PATHS[ENV]}"
+    FileSystem::atomic_backup "${CONFIG_PATHS[CONF]}"
 
     # 6. Repository Cloning
     Interface::print_banner
@@ -544,10 +544,11 @@ Installer::main() {
         # B. Clone Scripts (Binary Dependencies)
         (
             local temp_dir="/tmp/zsh_bin_${TIMESTAMP}"
+            mkdir -p "$BIN_TARGET_DIR"
             git clone --depth=1 --quiet "$BIN_SOURCE_REPO" "$temp_dir"
 
-            # Copy all files (including dotfiles) to destination
-            cp -rf "$temp_dir/*" "$BIN_TARGET_DIR/"
+            # Copy all files (including dotfiles) to destination safely
+            cp -a "$temp_dir/." "$BIN_TARGET_DIR/"
 
             # Remove temp
             rm -rf "$temp_dir"
@@ -565,9 +566,22 @@ Installer::main() {
 
     # Move History and Compdump to new locations
     [[ -f "${CONFIG_PATHS[HIST]}" ]] && rm -f "${CONFIG_PATHS[HIST]}"
-    mv "${CONFIG_PATHS[REPO]}/zhistory" "${CONFIG_PATHS[HIST]}"
+    [[ -f "${CONFIG_PATHS[REPO]}/zhistory" ]] && mv "${CONFIG_PATHS[REPO]}/zhistory" "${CONFIG_PATHS[HIST]}"
 
-    print 'export ZDOTDIR="$HOME/.config/zsh-conf"' > $HOME/.zshenv &>/dev/null
+
+    # 7. Environment Setup
+    Interface::print_banner
+    Logger::info "Environment Setup"
+    cat <<'EOF' >| "$HOME/.zshenv"
+# .zshenv - Zsh environment configuration
+# This file is sourced by all instances of zsh.
+# It sets the ZDOTDIR variable to point to your custom configuration directory.
+
+export ZDOTDIR="$HOME/.config/zsh-conf"
+EOF
+    Logger::success "ZDOTDIR configured in $HOME/.zshenv"
+    sleep 1
+
 
     # 8. Dependencies & Features
     Installer::check_dependencies

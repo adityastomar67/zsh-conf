@@ -61,6 +61,7 @@ zcompdump-*
 Ignore/
 _IGNORE
 Scratch/
+.zsh_backups/
 
 # Local Overrides
 # These files allow users to define machine-specific config (e.g., work vs home)
