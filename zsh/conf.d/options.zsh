@@ -114,6 +114,17 @@ ZSH_AUTOSUGGEST_MIN_BUFFER_SIZE=4
 # Disable suggestions for long buffers (prevents lag on large pastes)
 ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
+# Ignore internal/unrelated widgets to drastically speed up startup binding
+ZSH_AUTOSUGGEST_IGNORE_WIDGETS=(
+    orig-\*
+    beep
+    run-help
+    set-local-history
+    which-command
+    yank
+    yank-pop
+)
+
 
 # Completion Engine Initialization
 # ───────────────────────────────────────────────────────────────────────
