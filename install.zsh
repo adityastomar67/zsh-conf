@@ -88,16 +88,17 @@ Config::init() {
     # --------------------------------------------------------------------------
     # The root directory where the configuration will live
     CONFIG_PATHS[REPO]="${ZDOTDIR:-$HOME/.config/zsh-conf}"
+    CONFIG_PATHS[CACHE]="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-cache"
 
     # Target files
     CONFIG_PATHS[RC]="${CONFIG_PATHS[REPO]}/.zshrc"
     CONFIG_PATHS[ENV]="${CONFIG_PATHS[REPO]}/.zshenv"
     CONFIG_PATHS[CONF]="${CONFIG_PATHS[REPO]}/user.conf"
-    CONFIG_PATHS[HIST]="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-cache/zhistory"
-    CONFIG_PATHS[DUMP]="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-cache/.zcompdump"
+    CONFIG_PATHS[HIST]="${CONFIG_PATHS[CACHE]}/zhistory"
+    CONFIG_PATHS[DUMP]="${CONFIG_PATHS[CACHE]}/.zcompdump"
 
     # Backup location (Time-stamped)
-    CONFIG_PATHS[BACKUP]="${CONFIG_PATHS[REPO]}/.zsh_backups/$(date +%Y-%m-%d)"
+    CONFIG_PATHS[BACKUP]="${CONFIG_PATHS[REPO]}_backups/$(date +%Y-%m-%d)"
 
     # External Binaries
     BIN_TARGET_DIR="${CONFIG_PATHS[REPO]}/zsh/bin"
@@ -386,7 +387,7 @@ Installer::check_dependencies() {
     local installed_pkgs=()
 
     for pkg in "${REQUIRED_PACKAGES[@]}"; do
-        if System::is_installed "$pkg"; then
+        if (( $+commands[$pkg] )); then
             installed_pkgs+=("$pkg")
         else
             missing_pkgs+=("$pkg")
@@ -407,7 +408,7 @@ Installer::check_dependencies() {
             Interface::spinner $! "Installing ${package}..."
             wait $!
 
-            if System::is_installed "$package"; then
+            if (( $+commands[$package] )); then
                 Logger::success "Installed $package"
             else
                 Logger::error "Failed to install $package"
@@ -525,6 +526,7 @@ Installer::main() {
     FileSystem::atomic_backup "${CONFIG_PATHS[RC]}"
     FileSystem::atomic_backup "${CONFIG_PATHS[ENV]}"
     FileSystem::atomic_backup "${CONFIG_PATHS[CONF]}"
+    mkdir -p "${CONFIG_PATHS[CACHE]}" 2>/dev/null
 
     # 6. Repository Cloning
     Interface::print_banner
@@ -533,28 +535,29 @@ Installer::main() {
 
     # Handle Directory Collision (Back up existing folder)
     if [[ -d "${CONFIG_PATHS[REPO]}" ]]; then
-        mv "${CONFIG_PATHS[REPO]}" "${CONFIG_PATHS[BACKUP]}/backup_${DATE}_${TIMESTAMP}"
+        mkdir -p "${CONFIG_PATHS[BACKUP]}"
+        mv "${CONFIG_PATHS[REPO]}" "${CONFIG_PATHS[BACKUP]}/zsh-conf"
     fi
 
     # Parallel Cloning
     {
-        # A. Clone Main Config
+        local temp_dir="/tmp/zsh_bin_${TIMESTAMP}"
+
+        # Start both clones concurrently
         git clone -b remastered --single-branch --depth=1 --quiet "https://github.com/adityastomar67/zsh-conf.git" "${CONFIG_PATHS[REPO]}" &
+        local pid_repo=$!
 
-        # B. Clone Scripts (Binary Dependencies)
-        (
-            local temp_dir="/tmp/zsh_bin_${TIMESTAMP}"
-            mkdir -p "$BIN_TARGET_DIR"
-            git clone --depth=1 --quiet "$BIN_SOURCE_REPO" "$temp_dir"
+        git clone --depth=1 --quiet "$BIN_SOURCE_REPO" "$temp_dir" &
+        local pid_bin=$!
 
-            # Copy all files (including dotfiles) to destination safely
-            cp -a "$temp_dir/." "$BIN_TARGET_DIR/"
+        # Wait for both config and binary clones to finish
+        wait $pid_repo
+        wait $pid_bin
 
-            # Remove temp
-            rm -rf "$temp_dir"
-        ) &
-
-        wait
+        # Now safely copy the binary dependencies (since repo clone is done)
+        mkdir -p "$BIN_TARGET_DIR"
+        cp -a "$temp_dir/." "$BIN_TARGET_DIR/"
+        rm -rf "$temp_dir"
     } &
 
     Interface::spinner $! "Cloning repository..."
