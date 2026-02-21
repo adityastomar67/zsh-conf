@@ -200,14 +200,15 @@ function _git_async_callback() {
     _GIT_ASYNC_LOCK=1 # Prevent infinite loops
     _GIT_ASYNC_PID=0
 
-    # 2. Trigger Re-render
-    local func
-    for func in $precmd_functions; do
-        "$func"
-    done
-
-    # 3. Redraw Prompt
-    zle reset-prompt
+    # 2. Trigger Re-render and Redraw Prompt
+    # Only update and redraw if ZLE is active, to prevent "widgets can only be called when ZLE is active" errors
+    if zle 2>/dev/null; then
+        local func
+        for func in $precmd_functions; do
+            "$func" 2>/dev/null
+        done
+        zle reset-prompt 2>/dev/null
+    fi
 
     _GIT_ASYNC_LOCK=0
 }
