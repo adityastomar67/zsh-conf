@@ -129,12 +129,16 @@ _comp_options+=(globdots)
 #   mh : Modification time in hours
 #   +24: Older than 24 hours
 
-if [[ -n "$ZSH_COMPLETION_DUMP"(#qN.mh+24) ]]; then
+if [[ ! -f "$ZSH_COMPLETION_DUMP" || -n "$ZSH_COMPLETION_DUMP"(#qN.mh+24) ]]; then
     # Scenario A: Cache is old or missing. Rebuild.
     #   -i: Ignore insecure directories
     #   -u: Use insecure directories (silently)
     #   -d: Dump path
     compinit -i -u -d "$ZSH_COMPLETION_DUMP"
+
+    # Touch the cache file to reset the 24-hour expiration timer
+    # since compinit doesn't update the mtime if no new completion files are found.
+    touch "$ZSH_COMPLETION_DUMP"
 else
     # Scenario B: Cache is fresh. Fast Load.
     #   -C: Skip ALL security checks, trust the dump file
