@@ -9,7 +9,7 @@
 
 > **A Blazing Fast, Modular, and Aesthetic Zsh Configuration Framework.**
 
-> A shell config with ~20ms load times.
+> A shell config with ~20ms load times. (Tested on M4)
 
 This configuration is designed for speed, modularity, and a beautiful terminal experience. It leverages modern tools like `zoxide`, `fzf`, `eza`, and `starship` to provide a powerful command-line environment without the bloat.
 
