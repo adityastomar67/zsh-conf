@@ -201,12 +201,11 @@ function _git_async_callback() {
     _GIT_ASYNC_PID=0
 
     # 2. Trigger Re-render and Redraw Prompt
-    # Only update and redraw if ZLE is active, to prevent "widgets can only be called when ZLE is active" errors
+    # Only update and redraw if ZLE is active
     if zle 2>/dev/null; then
-        local func
-        for func in $precmd_functions; do
-            "$func" 2>/dev/null
-        done
+        if [[ -n "$_CURRENT_PROMPT_HOOK" ]]; then
+            "$_CURRENT_PROMPT_HOOK" 2>/dev/null
+        fi
         zle reset-prompt 2>/dev/null
     fi
 
@@ -217,6 +216,8 @@ function _git_async_callback() {
 TRAPUSR1() { _git_async_callback }
 
 # ── Hook Manager ───────────────────────────────────────────────────────
+typeset -g _CURRENT_PROMPT_HOOK=""
+
 # Prevents duplicate hooks when switching themes
 function _register_prompt_hook() {
     local hook_name="$1"
@@ -230,6 +231,7 @@ function _register_prompt_hook() {
 
     # Add the new one
     add-zsh-hook precmd "$hook_name"
+    _CURRENT_PROMPT_HOOK="$hook_name"
 }
 
 # ── Random Symbol ───────────────────────────────────────────────────

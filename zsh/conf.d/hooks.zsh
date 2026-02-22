@@ -197,7 +197,6 @@ fi
 function chpwd_auto_ls() {
     emulate -L zsh
 
-    # Optimization: Use $PWD (variable) instead of $(pwd) (subshell)
     # Return immediately if in HOME to reduce clutter
     [[ "$PWD" == "$HOME" ]] && return
 
