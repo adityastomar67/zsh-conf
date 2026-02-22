@@ -21,7 +21,7 @@
 #   - Review Mode: Integrates with 'fzf' for a searchable target list.
 #
 # Usage Notes
-#   - Syntax: rm_pattern "*.tmp"
+#   - Syntax: pattern-remove "*.tmp"
 #   - Keybinds: [y] to delete, [v] to view full list, [N] to abort.
 # ------------------------------------------------------------------------------
 
@@ -46,8 +46,8 @@ local search_pattern="$1"
 
 # Check for empty input
 if [[ -z "$search_pattern" ]]; then
-    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Usage: rm_pattern ${COLOR[WHITE]}<filename_pattern>${COLOR[RESET]}"
-    print "        Example: rm_pattern '*.log'"
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Usage: pattern-remove ${COLOR[WHITE]}<filename_pattern>${COLOR[RESET]}"
+    print "        Example: pattern-remove '*.log'"
     return 1
 fi
 
