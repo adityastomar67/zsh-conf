@@ -331,14 +331,13 @@ function _safe_edit() {
 
 (
     # Define the location (Use ZDOTDIR if available, else HOME)
-    local override_file="$HOME/User-Overrides.zsh"
+    typeset override_file="$HOME/User-Overrides.zsh"
 
-    # Only create if it doesn't exist (Check is instant)
-    if [[ ! -f "$override_file" ]]; then
+    # Check if the file exists and is non-empty. If not, create it with template content.
+    if [[ ! -s "$override_file" ]]; then
 
-        # Use 'cat' with a quoted Heredoc (<<'EOF') to prevents variable expansion
-        cat > "$override_file" <<'EOF'
-# ------------------------------------------------------------------------------
+    # Write directly using Zsh's built-in print. No 'cat', no heredocs.
+    print -r -- '# ------------------------------------------------------------------------------
 # USER OVERRIDES & SECRETS
 # ------------------------------------------------------------------------------
 # This file is for local configuration that should NOT be tracked by Git.
@@ -352,33 +351,26 @@ function _safe_edit() {
 # vim: ft=zsh
 # ------------------------------------------------------------------------------
 
-# ── 1. Environment Variables ──────────────────────────────────────────
-# export GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
-# export OPENAI_API_KEY="sk-xxxxxxxxxxxx"
-
-# ── 2. Local Aliases ──────────────────────────────────────────────────
+# ── 1. Local Aliases ──────────────────────────────────────────────────
 # alias ssh-work="ssh user@192.168.1.xx"
 # alias myip="curl -s http://ipecho.net/plain; print"
 
-# ── 3. Path Additions ─────────────────────────────────────────────────
+# ── 2. Path Additions ─────────────────────────────────────────────────
 # path+=("$HOME/my-custom-bin")
 
-# ── 4. Function Overrides ─────────────────────────────────────────────
+# ── 3. Function Overrides ─────────────────────────────────────────────
 # function work_vpn() {
 #     sudo tailscale up --exit-node=work-pc
-# }
+# }' > "$override_file"
 
-EOF
-
-        # Optional: Print a subtle notification on first creation
         print "${COLOR[GREEN]}[INFO] Created local override file at: ${COLOR[YELLOW]}${override_file}${COLOR[RESET]}"
     fi
 ) &!
 
 # Wallpaper Sync
 # Lazy load the wallpaper randomizer if the binary exists.
-if [[ "${ENABLE_WALLPAPER_SYNC:l}" == "yes" ]] && (( $+commands[RandomWall] )); then
-    RandomWall &!
+if [[ "${ENABLE_WALLPAPER_SYNC:l}" == "yes" ]]; then
+    zsh-defer eval 'RandomWall >/dev/null 2>&1 &!'
 fi
 
 
