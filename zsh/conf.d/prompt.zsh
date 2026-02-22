@@ -50,6 +50,7 @@ typeset -g GIT_HAS_STAGED=0
 typeset -g _10K_START_TIME=""
 
 # Async State
+typeset -g _GIT_ASYNC_FD=0
 typeset -g _GIT_ASYNC_PID=0
 typeset -g _GIT_ASYNC_LOCK=0
 typeset -gA _GIT_REPO_CACHE
@@ -58,13 +59,15 @@ typeset -gA _GIT_REPO_CACHE
 # Replaces the synchronous logic with a non-blocking background fetch.
 function _git_engine() {
     # 1. Callback Short-Circuit
-    if (( _GIT_ASYNC_LOCK )); then
+    if (( _GIT_ASYNC_LOCK )) || (( _GIT_ASYNC_FD )); then
         return
     fi
 
+    local current_pwd="$PWD"
+
     # 2. Cache Check (The Optimization)
     # If we know this PWD is NOT a repo, abort immediately (0ms latency).
-    if [[ "${_GIT_REPO_CACHE[$PWD]}" == "0" ]]; then
+    if [[ "${_GIT_REPO_CACHE[$current_pwd]}" == "0" ]]; then
         GIT_IS_REPO=0
         return
     fi
@@ -78,13 +81,9 @@ function _git_engine() {
         fi
     fi
 
-    local current_pwd="$PWD"
-
-    # 4. Spawn Background Worker
-    # We use a subshell with &! to disown it immediately.
-    local output_file="/tmp/zsh_git_result_$$"
-
-    (
+    # 4. Spawn Background Worker using process substitution
+    # This avoids TRAPUSR1 segfaults by using standard shell FDs integrated with ZLE.
+    exec {fd}< <(
         # A. Worker Logic (Heavy Lift)
         local branch=""
         local modified=0
@@ -150,70 +149,76 @@ function _git_engine() {
             [[ ${#branch} -gt 20 ]] && branch="${branch[1,20]}..."
         fi
 
-        # B. Write Result Atomically
+        # B. Write Result directly to stdout, which parent reads via FD
         # formatting: PWD|IS_REPO|BRANCH|MODIFIED|UNTRACKED|STAGED
         # We assume pipe | is safe enough for PWD usually
-        print -r "$current_pwd|$is_repo|$branch|$modified|$untracked|$staged" >! "$output_file"
-
-        # C. Signal Parent
-        kill -s USR1 "$$"
-
-    ) &!
+        print -r "$current_pwd|$is_repo|$branch|$modified|$untracked|$staged"
+    )
 
     _GIT_ASYNC_PID=$!
+    _GIT_ASYNC_FD=$fd
+
+    # Register the callback with ZLE
+    zle -F "$fd" _git_async_callback
 }
 
-# ── Signal Handler ──────────────────────────────────────
-# Triggered when the background worker finishes
+# ── FD Handler ──────────────────────────────────────
+# Triggered when the background worker has finished data
 function _git_async_callback() {
-    local output_file="/tmp/zsh_git_result_$$"
+    local fd=$1
+    local content
+
+    # Keep a lock to prevent recursive triggering via updater hooks
+    _GIT_ASYNC_LOCK=1
 
     # 1. Read Result
-    if [[ -f "$output_file" ]]; then
-        local content
-        # Read the first line
-        read -r content < "$output_file"
-        rm -f "$output_file"
+    if ! read -r content <&"$fd"; then
+        # If read fails, cleanup safely
+        zle -F "$fd"
+        exec {fd}<&- 2>/dev/null
+        _GIT_ASYNC_FD=0
+        _GIT_ASYNC_LOCK=0
+        return
+    fi
 
-        # Parse: PWD|IS_REPO|BRANCH|MODIFIED|UNTRACKED|STAGED
-        local -a parts
-        parts=("${(@s/|/)content}")
+    # Clean up FD immediately
+    zle -F "$fd"
+    exec {fd}<&- 2>/dev/null
+    _GIT_ASYNC_FD=0
+    _GIT_ASYNC_PID=0
 
-        if (( ${#parts} >= 6 )); then
-            local worker_pwd="${parts[1]}"
-            local is_repo="${parts[2]}"
+    # Parse: PWD|IS_REPO|BRANCH|MODIFIED|UNTRACKED|STAGED
+    local -a parts
+    parts=("${(@s/|/)content}")
 
-            # Update Cache
-            _GIT_REPO_CACHE["$worker_pwd"]="$is_repo"
+    if (( ${#parts} >= 6 )); then
+        local worker_pwd="${parts[1]}"
+        local is_repo="${parts[2]}"
 
-            # Only update global display vars if we are still in the same dir
-            if [[ "$worker_pwd" == "$PWD" ]]; then
-                GIT_IS_REPO="$is_repo"
-                GIT_BRANCH="${parts[3]}"
-                GIT_HAS_MODIFIED="${parts[4]}"
-                GIT_HAS_UNTRACKED="${parts[5]}"
-                GIT_HAS_STAGED="${parts[6]}"
+        # Update Cache
+        _GIT_REPO_CACHE["$worker_pwd"]="$is_repo"
+
+        # Only update global display vars if we are still in the same dir
+        if [[ "$worker_pwd" == "$PWD" ]]; then
+            GIT_IS_REPO="$is_repo"
+            GIT_BRANCH="${parts[3]}"
+            GIT_HAS_MODIFIED="${parts[4]}"
+            GIT_HAS_UNTRACKED="${parts[5]}"
+            GIT_HAS_STAGED="${parts[6]}"
+
+            # 2. Trigger Re-render and Redraw Prompt
+            # Only update and redraw if ZLE is active
+            if zle 2>/dev/null; then
+                if [[ -n "$_CURRENT_PROMPT_HOOK" ]]; then
+                    "$_CURRENT_PROMPT_HOOK" 2>/dev/null
+                fi
+                zle reset-prompt 2>/dev/null
             fi
         fi
     fi
 
-    _GIT_ASYNC_LOCK=1 # Prevent infinite loops
-    _GIT_ASYNC_PID=0
-
-    # 2. Trigger Re-render and Redraw Prompt
-    # Only update and redraw if ZLE is active
-    if zle 2>/dev/null; then
-        if [[ -n "$_CURRENT_PROMPT_HOOK" ]]; then
-            "$_CURRENT_PROMPT_HOOK" 2>/dev/null
-        fi
-        zle reset-prompt 2>/dev/null
-    fi
-
     _GIT_ASYNC_LOCK=0
 }
-
-# Register the trap
-TRAPUSR1() { _git_async_callback }
 
 # ── Hook Manager ───────────────────────────────────────────────────────
 typeset -g _CURRENT_PROMPT_HOOK=""

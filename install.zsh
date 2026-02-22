@@ -321,22 +321,33 @@ System::cleanup() {
         fi
     done
 
-    # 3. Smart Cleanup of Source Directory
-    # If the user ran the installer from ~/Downloads/zsh-conf, ask to delete it
-    # since we installed a copy to ~/.config/zsh-conf
+    # 3. Smart Cleanup of Source
+    # If the user ran the installer from outside the target directory (~/.config/zsh-conf)
     if [[ "$source_dir" != "$dest_dir" ]]; then
-        Logger::warn "Installer ran from temporary location: $source_dir"
+        # Check if the source directory is a full repository clone or zip extraction
+        if [[ -d "$source_dir/zsh" && -f "$source_dir/README.md" ]]; then
+            Logger::warn "Installer ran from a cloned repository at: $source_dir"
 
-        # Safety: Prevent deletion of Home or Root
-        if [[ "$source_dir" == "$HOME" || "$source_dir" == "/" ]]; then
-            Logger::error "Unsafe source directory detected. Skipping source deletion."
-        else
-            if Interface::prompt_confirm "Delete this source directory to save space?"; then
-                cd "$HOME" || exit
-                rm -rf "$source_dir"
-                Logger::success "Source repository removed."
+            # Safety: Prevent deletion of Home or Root
+            if [[ "$source_dir" == "$HOME" || "$source_dir" == "/" || -z "$source_dir" ]]; then
+                Logger::error "Unsafe source directory detected. Skipping deletion."
             else
-                Logger::info "Source repository kept."
+                if Interface::prompt_confirm "Delete the cloned repository ($source_dir) to save space?"; then
+                    cd "$HOME" || exit
+                    rm -rf "$source_dir"
+                    Logger::success "Source repository removed."
+                else
+                    Logger::info "Source repository kept."
+                fi
+            fi
+        else
+            # It's likely just a single downloaded script (e.g., via curl or wget)
+            local script_file="${current_script_path:A}"
+            if [[ -f "$script_file" ]]; then
+                if Interface::prompt_confirm "Delete the downloaded installer script ($script_file)?"; then
+                    rm -f "$script_file"
+                    Logger::success "Installer script removed."
+                fi
             fi
         fi
     fi
