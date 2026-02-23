@@ -89,6 +89,7 @@ For custom aliases, functions, or exports that you don't want tracked by git (or
 
 - **File**: `~/User-Overrides.zsh`
 - **Usage**: Automatically sourced at the end of `.zshrc`.
+  - During installation, any `PATH` exports found in your existing `~/.zshrc` are copied into this file (once), so your custom paths are preserved.
 
 ### 3. Secrets (API Keys)
 
