@@ -592,6 +592,39 @@ Installer::ensure_zsh_shell() {
     fi
 }
 
+Installer::migrate_user_path() {
+    local source_rc="$HOME/.zshrc"
+    local override_file="$HOME/User-Overrides.zsh"
+    local marker_begin="# >>> zsh-conf: migrated PATH from ~/.zshrc >>>"
+    local marker_end="# <<< zsh-conf: migrated PATH from ~/.zshrc <<<"
+
+    [[ -f "$source_rc" ]] || return
+    [[ "$source_rc:A" != "${CONFIG_PATHS[RC]:A}" ]] || return
+
+    if [[ -f "$override_file" ]] && grep -qF "$marker_begin" "$override_file"; then
+        return
+    fi
+
+    local path_lines
+    path_lines="$(awk '{
+        if ($0 ~ /^[[:space:]]*export[[:space:]]+PATH=/) {print; next}
+        if ($0 ~ /^[[:space:]]*PATH=.*export[[:space:]]+PATH/) {print; next}
+    }' "$source_rc")"
+
+    [[ -n "$path_lines" ]] || return
+
+    {
+        print ""
+        print "$marker_begin"
+        print "# Source: $source_rc"
+        print "# Added on: $(date +%Y-%m-%d)"
+        print "$path_lines"
+        print "$marker_end"
+    } >> "$override_file"
+
+    Logger::success "Migrated PATH exports to $override_file"
+}
+
 Installer::configure_user_features() {
     Interface::print_banner
     Logger::info "Feature Configuration"
@@ -674,6 +707,9 @@ Installer::main() {
     FileSystem::atomic_backup "${CONFIG_PATHS[ENV]}"
     FileSystem::atomic_backup "${CONFIG_PATHS[CONF]}"
     mkdir -p "${CONFIG_PATHS[CACHE]}" 2>/dev/null
+
+    # 5b. Migrate PATH exports from existing local .zshrc (if any)
+    Installer::migrate_user_path
 
     # 6. Repository Cloning
     Interface::print_banner
