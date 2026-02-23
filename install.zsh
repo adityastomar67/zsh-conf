@@ -82,6 +82,7 @@ Theme::init() {
 
 typeset -A CONFIG_PATHS
 typeset -a REQUIRED_PACKAGES
+typeset -A COMMAND_ALIASES
 
 Config::init() {
     # Directory Definitions
@@ -112,6 +113,12 @@ Config::init() {
         "git-delta" "lazygit" "lsd" "navi"
         "npm" "ranger" "ripgrep" "shellcheck"
         "starship" "tmux" "zoxide"
+    )
+
+    # Map package names to their actual binary names when they differ.
+    COMMAND_ALIASES=(
+        "ripgrep" "rg"
+        "git-delta" "delta"
     )
 }
 
@@ -296,10 +303,10 @@ System::install_package() {
 
     # Background execution for spinner compatibility
     case "${SYSTEM_INFO[PKG_MANAGER]}" in
-        pacman) sudo pacman -S --noconfirm "$pkg" &>/dev/null & ;;
-        brew)   brew install "$pkg" &>/dev/null & ;;
-        apt)    sudo apt-get install -y "$pkg" &>/dev/null & ;;
-        dnf)    sudo dnf install -y "$pkg" &>/dev/null & ;;
+        pacman) sudo pacman -S --noconfirm "$pkg" >| /dev/null 2>&1 & ;;
+        brew)   brew install "$pkg" >| /dev/null 2>&1 & ;;
+        apt)    sudo apt-get install -y "$pkg" >| /dev/null 2>&1 & ;;
+        dnf)    sudo dnf install -y "$pkg" >| /dev/null 2>&1 & ;;
     esac
 }
 
@@ -394,11 +401,21 @@ Installer::check_dependencies() {
     Logger::info "Analyzing Dependencies..."
     sleep 2
 
+    if [[ "${SYSTEM_INFO[PKG_MANAGER]}" == "brew" ]] && ! (( $+commands[brew] )); then
+        Logger::error "Homebrew not found. Install it from https://brew.sh and re-run."
+        Logger::warn "Skipping dependency installation."
+        return
+    fi
+
     local missing_pkgs=()
     local installed_pkgs=()
 
     for pkg in "${REQUIRED_PACKAGES[@]}"; do
-        if (( $+commands[$pkg] )); then
+        local cmd="$pkg"
+        if [[ -n "${COMMAND_ALIASES[$pkg]-}" ]]; then
+            cmd="${COMMAND_ALIASES[$pkg]}"
+        fi
+        if (( $+commands[$cmd] )); then
             installed_pkgs+=("$pkg")
         else
             missing_pkgs+=("$pkg")
@@ -417,9 +434,16 @@ Installer::check_dependencies() {
 
             # Show spinner while waiting for PID ($!)
             Interface::spinner $! "Installing ${package}..."
-            wait $!
+            if ! wait $!; then
+                Logger::error "Failed to install $package"
+                continue
+            fi
 
-            if (( $+commands[$package] )); then
+            local cmd="$package"
+            if [[ -n "${COMMAND_ALIASES[$package]-}" ]]; then
+                cmd="${COMMAND_ALIASES[$package]}"
+            fi
+            if (( $+commands[$cmd] )); then
                 Logger::success "Installed $package"
             else
                 Logger::error "Failed to install $package"
@@ -435,8 +459,11 @@ Installer::ensure_zsh_shell() {
     if ! (( $+commands[zsh] )); then
         if Interface::prompt_confirm "Zsh is not installed. Install it?"; then
             System::install_package "zsh"
-            wait $!
-            Logger::success "Zsh installed!"
+            if ! wait $!; then
+                Logger::error "Failed to install zsh"
+            else
+                Logger::success "Zsh installed!"
+            fi
         else
             Logger::warn "Skipping Zsh installation. Script may fail."
         fi
