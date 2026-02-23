@@ -27,11 +27,6 @@
 # ------------------------------------------------------------------------------
 
 
-# ── extraction engine ────────────────────────────────────────────────────────
-
-
-
-
 # ------------------------------------------------------------------------------
 # 1. Environment Sandbox
 
@@ -39,16 +34,6 @@
 emulate -L zsh
 setopt localoptions no_xtrace pipefail
 
-# UI Color Palette (High-fidelity 256-color codes)
-local c_blue="%F{39}"
-local c_green="%F{46}"
-local c_red="%F{196}"
-local c_yellow="%F{226}"
-local c_grey="%F{240}"
-local c_white="%F{255}"
-local c_reset="%f"
-local c_bold="%B"
-local c_unbold="%b"
 
 # ------------------------------------------------------------------------------
 # 2. Input Validation
@@ -57,13 +42,13 @@ local file="$1"
 
 # Check if an argument was provided
 if [[ -z "$file" ]]; then
-    print -P "${c_red}[ERROR]${c_reset} Usage: extract <archive_file>"
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Usage: extract <archive_file>"
     return 1
 fi
 
 # Check if the file physically exists on the disk
 if [[ ! -f "$file" ]]; then
-    print -P "${c_red}[ERROR]${c_reset} File '${c_bold}$file${c_unbold}' not found."
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} File '${COLOR[BOLD]}$file${COLOR[RESET]}' not found."
     return 1
 fi
 
@@ -115,12 +100,12 @@ case "$lower_file" in
             cmd="ar"
             args="x"
         else
-            print -P "${c_red}[ERROR]${c_reset} 'ar' command needed for .deb extraction."
+            print "${COLOR[RED]}[ERROR]${COLOR[RESET]} 'ar' command needed for .deb extraction."
             return 1
         fi
         ;;
     *)
-        print -P "${c_red}[ERROR]${c_reset} Unsupported format: ${file:e}"
+        print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Unsupported format: ${file:e}"
         return 1
         ;;
 esac
@@ -130,8 +115,8 @@ esac
 
 # Check the Zsh 'commands' hash to verify the binary is in the $PATH
 if (( ! $+commands[$cmd] )); then
-    print -P "${c_red}[ERROR]${c_reset} Command '${c_bold}$cmd${c_unbold}' is required but not installed."
-    print -P "        Please install it (e.g., brew install $cmd / sudo apt install $cmd)"
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Command '${COLOR[BOLD]}$cmd${COLOR[RESET]}' is required but not installed."
+    print "        Please install it (e.g., brew install $cmd / sudo apt install $cmd)"
     return 1
 fi
 
@@ -141,15 +126,38 @@ fi
 # Calculate file size for the UI header
 local size=$(du -h "$file" | cut -f1)
 
-print -P "${c_blue}╭──────────────────────────────────────╮${c_reset}"
-print -P "${c_blue}│        📦  ARCHIVE EXTRACTOR         │${c_reset}"
-print -P "${c_blue}├──────────────────────────────────────┤${c_reset}"
-print -P "${c_blue}│${c_reset}  File:   ${c_white}${file:t}${c_reset}"
-print -P "${c_blue}│${c_reset}  Size:   ${c_white}$size${c_reset}"
-print -P "${c_blue}│${c_reset}  Method: ${c_yellow}$cmd${c_reset}"
-print -P "${c_blue}╰──────────────────────────────────────╯${c_reset}"
+# Grab the raw values
+local val_file="${file:t}"
+local val_size="$size"
+local val_cmd="$cmd"
 
-print -P -n "   ${c_blue}::${c_reset} Extracting... "
+# Smart Truncation:
+# Inner width is 38. Prefix ("  File:   ") is 10. Max value length is 28.
+if (( ${#val_file} > 28 )); then
+    val_file="${val_file:0:25}..."
+fi
+
+# Calculate required padding spaces
+local pad_file=$(( 38 - 10 - ${#val_file} ))
+local pad_size=$(( 38 - 10 - ${#val_size} ))
+local pad_cmd=$(( 38 - 10 - ${#val_cmd} ))
+
+# Generate the exact whitespace needed
+local space_file="" space_size="" space_cmd=""
+(( pad_file > 0 )) && printf -v space_file "%*s" $pad_file ""
+(( pad_size > 0 )) && printf -v space_size "%*s" $pad_size ""
+(( pad_cmd > 0 ))  && printf -v space_cmd "%*s" $pad_cmd ""
+
+# Print the perfectly aligned box
+print "${COLOR[BLUE]}╭──────────────────────────────────────╮${COLOR[RESET]}"
+print "${COLOR[BLUE]}│        📦  ARCHIVE EXTRACTOR         │${COLOR[RESET]}"
+print "${COLOR[BLUE]}├──────────────────────────────────────┤${COLOR[RESET]}"
+print "${COLOR[BLUE]}│${COLOR[RESET]}  File:   ${COLOR[WHITE]}${val_file}${COLOR[RESET]}${space_file}${COLOR[BLUE]}│${COLOR[RESET]}"
+print "${COLOR[BLUE]}│${COLOR[RESET]}  Size:   ${COLOR[WHITE]}${val_size}${COLOR[RESET]}${space_size}${COLOR[BLUE]}│${COLOR[RESET]}"
+print "${COLOR[BLUE]}│${COLOR[RESET]}  Method: ${COLOR[YELLOW]}${val_cmd}${COLOR[RESET]}${space_cmd}${COLOR[BLUE]}│${COLOR[RESET]}"
+print "${COLOR[BLUE]}╰──────────────────────────────────────╯${COLOR[RESET]}"
+
+print -n "   ${COLOR[BLUE]}::${COLOR[RESET]} Extracting... "
 
 # ------------------------------------------------------------------------------
 # 6. Background Execution & Async Spinner
@@ -185,7 +193,7 @@ tput civis 2>/dev/null
 # ---- SAFE: Loop while the extraction PID is still active
 while kill -0 $pid 2>/dev/null; do
     i=$(( (i+1) % 10 ))
-    print -f "\b${c_blue}${spin:$i:1}${c_reset}"
+    print -f "\b${COLOR[BLUE]}${spin:$i:1}${COLOR[RESET]}"
     sleep 0.1
 done
 
@@ -207,13 +215,13 @@ local duration_fmt=$(print -f "%.2f" $duration)
 print -f "\b" # Clean up the last spinner character
 
 if (( exit_code == 0 )); then
-    print -P "${c_green}✔${c_reset} Done in ${duration_fmt}s"
+    print "${COLOR[GREEN]}✔${COLOR[RESET]} Done in ${duration_fmt}s"
     rm -f "$log_file"
 else
     # In case of failure, we display the stored error log to the user.
-    print -P "${c_red}✘${c_reset} Failed."
+    print "${COLOR[RED]}✘${COLOR[RESET]} Failed."
     print
-    print -P "${c_yellow}--- Error Log ---${c_reset}"
+    print "${COLOR[YELLOW]}--- Error Log ---${COLOR[RESET]}"
     cat "$log_file"
     rm -f "$log_file"
     return $exit_code

@@ -41,12 +41,6 @@
 emulate -L zsh
 setopt localoptions no_xtrace pipefail
 
-# UI Color Palette (High-fidelity Zsh codes)
-local c_blue="%F{39}"
-local c_green="%F{46}"
-local c_grey="%F{240}"
-local c_white="%F{255}"
-local c_reset="%f"
 
 # ------------------------------------------------------------------------------
 # 2. Filtering Configuration
@@ -54,7 +48,7 @@ local c_reset="%f"
 # Regex pattern to ignore utility commands that don't represent "work"
 local ignore_pattern="^(ls|cd|clear|exit|z|zsh|pwd|history|exec|source|sudo)$"
 
-print -P "${c_blue}::${c_reset} Analyzing command history..."
+print "${COLOR[BLUE]}::${COLOR[RESET]} Analyzing command history..."
 
 # ------------------------------------------------------------------------------
 # 3. Processing Pipeline
@@ -99,22 +93,32 @@ local unique_count=$(print "$data" | wc -l | tr -d ' ')
 # ------------------------------------------------------------------------------
 # 5. Dashboard Rendering
 
+print "${COLOR[BLUE]}╭──────────────────────────────────────────────────╮${COLOR[RESET]}"
+print "${COLOR[BLUE]}│             📊  COMMAND HISTORY STATS            │${COLOR[RESET]}"
+print "${COLOR[BLUE]}├──────────────────────────────────────────────────┤${COLOR[RESET]}"
 
+# 1. Define the exact text lengths and the middle gap (6 spaces)
+local text_analyzed="Analyzed: $total_cmds"
+local text_unique="Unique: $unique_count"
+local middle_gap="      "
 
-print -P "${c_blue}╭──────────────────────────────────────────────────╮${c_reset}"
-print -P "${c_blue}│             📊  COMMAND HISTORY STATS            │${c_reset}"
-print -P "${c_blue}├──────────────────────────────────────────────────┤${c_reset}"
+# 2. Calculate remaining space to distribute
+local visible_len=$(( ${#text_analyzed} + ${#middle_gap} + ${#text_unique} ))
+local remaining=$(( 50 - visible_len ))
 
-# !!! CRITICAL: Formatting
-# We use print -f with %s to pass Zsh color variables into the AWK-style formatting
-# to avoid rendering glitches or misinterpreted percent signs.
-print -f "%s│%s  Analyzed: %s%-10s%s Unique: %s%-11s%s  %s│%s\n" \
-    "$c_blue" "$c_reset" \
-    "$c_white" "$total_cmds" "$c_reset" \
-    "$c_white" "$unique_count" "$c_reset" \
-    "$c_blue" "$c_reset"
+# 3. Split the remaining space evenly for perfect centering
+local left_pad=$(( remaining / 2 ))
+local right_pad=$(( remaining - left_pad )) # Handles odd numbers gracefully
 
-print -P "${c_blue}╰──────────────────────────────────────────────────╯${c_reset}"
+# 4. Generate the exact whitespace strings
+local space_left="" space_right=""
+(( left_pad > 0 )) && printf -v space_left "%*s" $left_pad ""
+(( right_pad > 0 )) && printf -v space_right "%*s" $right_pad ""
+
+# 5. Print the perfectly centered row
+print "${COLOR[BLUE]}│${COLOR[RESET]}${space_left}Analyzed: ${COLOR[WHITE]}${total_cmds}${COLOR[RESET]}${middle_gap}Unique: ${COLOR[WHITE]}${unique_count}${COLOR[RESET]}${space_right}${COLOR[BLUE]}│${COLOR[RESET]}"
+
+print "${COLOR[BLUE]}╰──────────────────────────────────────────────────╯${COLOR[RESET]}"
 
 # ------------------------------------------------------------------------------
 # 6. Bar Chart Rendering
@@ -151,8 +155,8 @@ function get_color(pct) {
     grey  = "\033[38;5;240m"
     white = "\033[1;37m"
 
-    # Final Dashboard Print
-    print -f "  %s%4d%s  %s%5.1f%%%s  %s%-12s%s  %s%s%s\n",
+    # Final Dashboard Print (Using standard AWK printf)
+    printf "  %s%4d%s  %s%5.1f%%%s  %s%-12s%s  %s%s%s\n",
         white, count, reset,
         grey, percent, reset,
         white, cmd, reset,
