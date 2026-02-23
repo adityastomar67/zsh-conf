@@ -394,6 +394,12 @@ Installer::check_dependencies() {
     Logger::info "Analyzing Dependencies..."
     sleep 2
 
+    if [[ "${SYSTEM_INFO[PKG_MANAGER]}" == "brew" ]] && ! (( $+commands[brew] )); then
+        Logger::error "Homebrew not found. Install it from https://brew.sh and re-run."
+        Logger::warn "Skipping dependency installation."
+        return
+    fi
+
     local missing_pkgs=()
     local installed_pkgs=()
 
