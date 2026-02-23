@@ -82,6 +82,7 @@ Theme::init() {
 
 typeset -A CONFIG_PATHS
 typeset -a REQUIRED_PACKAGES
+typeset -A COMMAND_ALIASES
 
 Config::init() {
     # Directory Definitions
@@ -112,6 +113,12 @@ Config::init() {
         "git-delta" "lazygit" "lsd" "navi"
         "npm" "ranger" "ripgrep" "shellcheck"
         "starship" "tmux" "zoxide"
+    )
+
+    # Map package names to their actual binary names when they differ.
+    COMMAND_ALIASES=(
+        "ripgrep" "rg"
+        "git-delta" "delta"
     )
 }
 
@@ -404,7 +411,11 @@ Installer::check_dependencies() {
     local installed_pkgs=()
 
     for pkg in "${REQUIRED_PACKAGES[@]}"; do
-        if (( $+commands[$pkg] )); then
+        local cmd="$pkg"
+        if [[ -n "${COMMAND_ALIASES[$pkg]-}" ]]; then
+            cmd="${COMMAND_ALIASES[$pkg]}"
+        fi
+        if (( $+commands[$cmd] )); then
             installed_pkgs+=("$pkg")
         else
             missing_pkgs+=("$pkg")
@@ -428,7 +439,11 @@ Installer::check_dependencies() {
                 continue
             fi
 
-            if (( $+commands[$package] )); then
+            local cmd="$package"
+            if [[ -n "${COMMAND_ALIASES[$package]-}" ]]; then
+                cmd="${COMMAND_ALIASES[$package]}"
+            fi
+            if (( $+commands[$cmd] )); then
                 Logger::success "Installed $package"
             else
                 Logger::error "Failed to install $package"
