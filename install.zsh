@@ -417,7 +417,10 @@ Installer::check_dependencies() {
 
             # Show spinner while waiting for PID ($!)
             Interface::spinner $! "Installing ${package}..."
-            wait $!
+            if ! wait $!; then
+                Logger::error "Failed to install $package"
+                continue
+            fi
 
             if (( $+commands[$package] )); then
                 Logger::success "Installed $package"
@@ -435,8 +438,11 @@ Installer::ensure_zsh_shell() {
     if ! (( $+commands[zsh] )); then
         if Interface::prompt_confirm "Zsh is not installed. Install it?"; then
             System::install_package "zsh"
-            wait $!
-            Logger::success "Zsh installed!"
+            if ! wait $!; then
+                Logger::error "Failed to install zsh"
+            else
+                Logger::success "Zsh installed!"
+            fi
         else
             Logger::warn "Skipping Zsh installation. Script may fail."
         fi
