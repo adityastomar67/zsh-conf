@@ -296,10 +296,10 @@ System::install_package() {
 
     # Background execution for spinner compatibility
     case "${SYSTEM_INFO[PKG_MANAGER]}" in
-        pacman) sudo pacman -S --noconfirm "$pkg" &>/dev/null & ;;
-        brew)   brew install "$pkg" &>/dev/null & ;;
-        apt)    sudo apt-get install -y "$pkg" &>/dev/null & ;;
-        dnf)    sudo dnf install -y "$pkg" &>/dev/null & ;;
+        pacman) sudo pacman -S --noconfirm "$pkg" >| /dev/null 2>&1 & ;;
+        brew)   brew install "$pkg" >| /dev/null 2>&1 & ;;
+        apt)    sudo apt-get install -y "$pkg" >| /dev/null 2>&1 & ;;
+        dnf)    sudo dnf install -y "$pkg" >| /dev/null 2>&1 & ;;
     esac
 }
 
