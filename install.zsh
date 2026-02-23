@@ -303,10 +303,10 @@ System::install_package() {
 
     # Background execution for spinner compatibility
     case "${SYSTEM_INFO[PKG_MANAGER]}" in
-        pacman) sudo pacman -S --noconfirm "$pkg" &>/dev/null & ;;
-        brew)   brew install "$pkg" &>/dev/null & ;;
-        apt)    sudo apt-get install -y "$pkg" &>/dev/null & ;;
-        dnf)    sudo dnf install -y "$pkg" &>/dev/null & ;;
+        pacman) sudo pacman -S --noconfirm "$pkg" >| /dev/null 2>&1 & ;;
+        brew)   brew install "$pkg" >| /dev/null 2>&1 & ;;
+        apt)    sudo apt-get install -y "$pkg" >| /dev/null 2>&1 & ;;
+        dnf)    sudo dnf install -y "$pkg" >| /dev/null 2>&1 & ;;
     esac
 }
 
@@ -518,6 +518,12 @@ Installer::check_dependencies() {
     Logger::info "Analyzing Dependencies..."
     sleep 2
 
+    if [[ "${SYSTEM_INFO[PKG_MANAGER]}" == "brew" ]] && ! (( $+commands[brew] )); then
+        Logger::error "Homebrew not found. Install it from https://brew.sh and re-run."
+        Logger::warn "Skipping dependency installation."
+        return
+    fi
+
     local missing_pkgs=()
     local installed_pkgs=()
 
@@ -541,7 +547,10 @@ Installer::check_dependencies() {
 
             # Show spinner while waiting for PID ($!)
             Interface::spinner $! "Installing ${package}..."
-            wait $!
+            if ! wait $!; then
+                Logger::error "Failed to install $package"
+                continue
+            fi
 
             if System::is_tool_installed "$package"; then
                 Logger::success "Installed $package"
@@ -559,8 +568,11 @@ Installer::ensure_zsh_shell() {
     if ! (( $+commands[zsh] )); then
         if Interface::prompt_confirm "Zsh is not installed. Install it?"; then
             System::install_package "zsh"
-            wait $!
-            Logger::success "Zsh installed!"
+            if ! wait $!; then
+                Logger::error "Failed to install zsh"
+            else
+                Logger::success "Zsh installed!"
+            fi
         else
             Logger::warn "Skipping Zsh installation. Script may fail."
         fi

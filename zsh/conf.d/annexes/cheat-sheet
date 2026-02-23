@@ -42,12 +42,12 @@ emulate -L zsh
 # setopt localoptions no_notify no_monitor
 
 # Check for critical dependencies before starting
-if ! command -v fzf &>/dev/null; then
+if ! (( $+commands[fzf] )); then
     print "${COLOR[RED]}[ERROR]${COLOR[RESET]} 'fzf' is required for this command."
     return 1
 fi
 
-if ! command -v curl &>/dev/null; then
+if ! (( $+commands[curl] )); then
     print "${COLOR[RED]}[ERROR]${COLOR[RESET]} 'curl' is required."
     return 1
 fi
@@ -169,7 +169,7 @@ while true; do
         print -e "   ${COLOR[GREY]}  Fetching...${COLOR[RESET]}"
 
         # Output Handling & Paging
-        if command -v bat &>/dev/null; then
+        if (( $+commands[bat] )); then
             # Option A: 'bat' (Preferred)
             # We append '?T' to the URL to tell cheat.sh to send plain text (no ANSI),
             # allowing 'bat' to apply its own superior syntax highlighting.

@@ -26,11 +26,6 @@
 # ------------------------------------------------------------------------------
 
 
-# ── user interface function ──────────────────────────────────────────────────
-
-
-
-
 # ------------------------------------------------------------------------------
 # 1. Environment Sandbox
 
@@ -59,25 +54,11 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 3. UI Styling
-
-# We use 256-color codes for high-fidelity UI elements.
-local c_red="%F{196}"
-local c_green="%F{46}"
-local c_yellow="%F{226}"
-local c_blue="%F{39}"
-local c_grey="%F{240}"
-local c_white="%F{255}"
-local c_reset="%f"
-local c_bold="%B"
-local c_unbold="%b"
-
-# ------------------------------------------------------------------------------
-# 4. Pre-Flight Checks
+# Pre-Flight Checks
 
 # Check A: Does the directory even exist?
 if [[ ! -d "$trash_root" ]]; then
-    print -P "\n${c_green}✔${c_reset} Trash is already empty (Directory missing)."
+    print "\n${COLOR[GREEN]}✔${COLOR[RESET]} Trash is already empty (Directory missing)."
     return 0
 fi
 
@@ -87,12 +68,12 @@ local check_path="$trash_root"
 [[ "$is_mac" -eq 0 ]] && check_path="$trash_root/files"
 
 if [[ ! -d "$check_path" ]] || [[ -z "$(ls -A "$check_path" 2>/dev/null)" ]]; then
-    print -P "\n${c_green}✔${c_reset} Trash is already empty."
+    print "\n${COLOR[GREEN]}✔${COLOR[RESET]} Trash is already empty."
     return 0
 fi
 
 # ------------------------------------------------------------------------------
-# 5. Analysis Logic
+#    5. Analysis Logic
 
 # Before asking for confirmation, we calculate the payload size and item count.
 # This involves a recursive 'du' and a 'find' piped to 'wc'.
@@ -118,25 +99,39 @@ print -f "\r\e[K"
 # ------------------------------------------------------------------------------
 # 6. The Confirmation Dashboard
 
-print -P "${c_red}╭──────────────────────────────────────╮${c_reset}"
-print -P "${c_red}│      🗑  CONFIRM TRASH EMPTY         │${c_reset}"
-print -P "${c_red}├──────────────────────────────────────┤${c_reset}"
-print -P "${c_red}│${c_reset}  Items: ${c_white}$file_count files${c_reset}"
-print -P "${c_red}│${c_reset}  Size:  ${c_white}$total_size${c_reset}"
-print -P "${c_red}╰──────────────────────────────────────╯${c_reset}"
+# Store the values to calculate their exact lengths
+local val_items="${file_count} files"
+local val_size="${total_size}"
 
-print -P "${c_yellow}⚠  Warning:${c_reset} This action is ${c_bold}permanent${c_unbold}."
-print -P -n "   Empty trash now? [y/N] "
+# Calculate required spaces (Inner width 38 - Prefix 9 - Value Length)
+local pad_items=$(( 38 - 9 - ${#val_items} ))
+local pad_size=$(( 38 - 9 - ${#val_size} ))
+
+# Generate the exact whitespace needed to reach the right border
+local space_items="" space_size=""
+(( pad_items > 0 )) && printf -v space_items "%*s" $pad_items ""
+(( pad_size > 0 )) && printf -v space_size "%*s" $pad_size ""
+
+# 4. Print the perfectly aligned box
+print "${COLOR[RED]}╭──────────────────────────────────────╮${COLOR[RESET]}"
+print "${COLOR[RED]}│       🗑  CONFIRM TRASH EMPTY         │${COLOR[RESET]}"
+print "${COLOR[RED]}├──────────────────────────────────────┤${COLOR[RESET]}"
+print "${COLOR[RED]}│${COLOR[RESET]}  Items: ${COLOR[WHITE]}${val_items}${COLOR[RESET]}${space_items}${COLOR[RED]}│${COLOR[RESET]}"
+print "${COLOR[RED]}│${COLOR[RESET]}  Size:  ${COLOR[WHITE]}${val_size}${COLOR[RESET]}${space_size}${COLOR[RED]}│${COLOR[RESET]}"
+print "${COLOR[RED]}╰──────────────────────────────────────╯${COLOR[RESET]}"
+
+print "${COLOR[YELLOW]}⚠  Warning:${COLOR[RESET]} This action is ${COLOR[BOLD]}permanent${COLOR[RESET]}."
+print -n "   Empty trash now? [y/N] "
 
 # ------------------------------------------------------------------------------
-# 7. Execution Block
+# Execution Block
 
 local confirm
 read -k 1 confirm
 print # Insert newline after keystroke
 
 if [[ "$confirm" =~ ^[yY]$ ]]; then
-    print -P "\n${c_blue}::${c_reset} Scrubbing files..."
+    print "\n${COLOR[BLUE]}::${COLOR[RESET]} Scrubbing files..."
 
     # Complex Logic: OS-Specific Removal
     # On Linux, we must be careful to delete the *contents* of subdirectories
@@ -158,7 +153,7 @@ if [[ "$confirm" =~ ^[yY]$ ]]; then
         rm -rf "$trash_root/expunged"/* 2>/dev/null
     fi
 
-    print -P "   ${c_green}✔${c_reset} Trash emptied! Reclaimed ${c_bold}$total_size${c_unbold}."
+    print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Trash emptied! Reclaimed ${COLOR[BOLD]}$total_size${COLOR[RESET]}."
 else
-    print -P "\n   ${c_grey}Operation aborted.${c_reset}"
+    print "\n   ${COLOR[GREY]}Operation aborted.${COLOR[RESET]}"
 fi
