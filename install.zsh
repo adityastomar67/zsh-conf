@@ -82,6 +82,7 @@ Theme::init() {
 
 typeset -A CONFIG_PATHS
 typeset -a REQUIRED_PACKAGES
+typeset -A COMMAND_ALIASES
 
 Config::init() {
     # Directory Definitions
@@ -112,6 +113,12 @@ Config::init() {
         "git-delta" "lazygit" "lsd" "navi"
         "npm" "ranger" "ripgrep" "shellcheck"
         "starship" "tmux" "zoxide"
+    )
+
+    # Map package names to their actual binary names when they differ.
+    COMMAND_ALIASES=(
+        "ripgrep" "rg"
+        "git-delta" "delta"
     )
 }
 
@@ -303,6 +310,123 @@ System::install_package() {
     esac
 }
 
+System::resolve_command_candidates() {
+    local pkg="$1"
+    local -a candidates
+
+    case "$pkg" in
+        npm)       candidates=("npm" "node") ;;
+        ripgrep)   candidates=("rg") ;;
+        git-delta) candidates=("delta") ;;
+        *)         candidates=("$pkg") ;;
+    esac
+
+    print -r -- "${candidates[@]}"
+}
+
+System::command_exists_any() {
+    local -a cmds=("$@")
+    local cmd
+
+    for cmd in "${cmds[@]}"; do
+        if (( $+commands[$cmd] )); then
+            return 0
+        fi
+    done
+    return 1
+}
+
+System::pkg_manager_candidates() {
+    local pkg="$1"
+    local -a candidates
+
+    case "${SYSTEM_INFO[PKG_MANAGER]}" in
+        brew)
+            case "$pkg" in
+                npm) candidates=("node") ;;
+                *)   candidates=("$pkg") ;;
+            esac
+            ;;
+        *)
+            candidates=("$pkg")
+            ;;
+    esac
+
+    print -r -- "${candidates[@]}"
+}
+
+System::tool_installed_via_pkg_manager() {
+    local pkg="$1"
+    local -a candidates
+    local candidate
+
+    candidates=($(System::pkg_manager_candidates "$pkg"))
+
+    case "${SYSTEM_INFO[PKG_MANAGER]}" in
+        brew)
+            (( $+commands[brew] )) || return 1
+            for candidate in "${candidates[@]}"; do
+                brew list --versions "$candidate" >| /dev/null 2>&1 && return 0
+            done
+            ;;
+        apt)
+            (( $+commands[dpkg] )) || return 1
+            for candidate in "${candidates[@]}"; do
+                dpkg -s "$candidate" >| /dev/null 2>&1 && return 0
+            done
+            ;;
+        dnf)
+            (( $+commands[rpm] )) || return 1
+            for candidate in "${candidates[@]}"; do
+                rpm -q "$candidate" >| /dev/null 2>&1 && return 0
+            done
+            ;;
+        pacman)
+            (( $+commands[pacman] )) || return 1
+            for candidate in "${candidates[@]}"; do
+                pacman -Q "$candidate" >| /dev/null 2>&1 && return 0
+            done
+            ;;
+    esac
+
+    return 1
+}
+
+System::tool_installed_via_volta() {
+    local cmd="$1"
+    (( $+commands[volta] )) || return 1
+    volta which "$cmd" >| /dev/null 2>&1
+}
+
+System::tool_installed_via_nvm() {
+    local cmd="$1"
+    local nvm_dir="${NVM_DIR:-$HOME/.nvm}"
+    local nvm_sh="${nvm_dir}/nvm.sh"
+
+    [[ -f "$nvm_sh" ]] || return 1
+
+    command zsh -lc "source \"$nvm_sh\" >/dev/null 2>&1; command -v \"$cmd\" >/dev/null 2>&1"
+}
+
+System::is_tool_installed() {
+    local pkg="$1"
+    local -a candidates
+    local cmd
+
+    candidates=($(System::resolve_command_candidates "$pkg"))
+
+    if System::command_exists_any "${candidates[@]}"; then
+        return 0
+    fi
+
+    for cmd in "${candidates[@]}"; do
+        System::tool_installed_via_volta "$cmd" && return 0
+        System::tool_installed_via_nvm "$cmd" && return 0
+    done
+
+    System::tool_installed_via_pkg_manager "$pkg"
+}
+
 System::cleanup() {
     # 1. Determine Source vs Destination
     local current_script_path="${(%):-%x}"
@@ -398,7 +522,7 @@ Installer::check_dependencies() {
     local installed_pkgs=()
 
     for pkg in "${REQUIRED_PACKAGES[@]}"; do
-        if (( $+commands[$pkg] )); then
+        if System::is_tool_installed "$pkg"; then
             installed_pkgs+=("$pkg")
         else
             missing_pkgs+=("$pkg")
@@ -419,7 +543,7 @@ Installer::check_dependencies() {
             Interface::spinner $! "Installing ${package}..."
             wait $!
 
-            if (( $+commands[$package] )); then
+            if System::is_tool_installed "$package"; then
                 Logger::success "Installed $package"
             else
                 Logger::error "Failed to install $package"
