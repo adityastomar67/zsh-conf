@@ -52,6 +52,11 @@ The installer will:
 3.  Clone the repository to `~/.config/zsh-conf`.
 4.  Set up symlinks and environment variables.
 
+**Dependency Detection Details**
+- The installer detects tools already present via **PATH**, **Volta**, **NVM**, or the OS package manager.
+- For tools with different binary names (e.g., `ripgrep` → `rg`, `git-delta` → `delta`), the installer checks the correct binary.
+- On macOS, if Homebrew is missing, dependency installation is skipped with a clear message so you can install via your preferred manager.
+
 ### Prerequisites
 
 - **Nerd Font**: Required for icons in the prompt and `lsd`/`eza`. (e.g., [JetBrainsMono Nerd Font](https://www.nerdfonts.com/font-downloads)).
