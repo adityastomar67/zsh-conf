@@ -377,14 +377,14 @@ function theme_gh0st() {
         _GH0ST_GIT_MSG=""
 
         if (( GIT_IS_REPO )); then
-            local icon="%F{green}"
+            local icon="%F{green}"
 
             # Logic: If Modified OR Untracked -> Red Dot
             if (( GIT_HAS_MODIFIED || GIT_HAS_UNTRACKED )); then
-                icon="%F{red}●"
+                icon="%F{red}"
             fi
 
-            _GH0ST_GIT_MSG="  %F{magenta}${GIT_BRANCH} %{${COLOR[UNDERLINE]}%}${icon}%{${COLOR[RESET]}%}"
+            _GH0ST_GIT_MSG="  %F{magenta}${GIT_BRANCH} ${icon}%{${COLOR[RESET]}%}"
         fi
     }
 

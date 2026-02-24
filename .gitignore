@@ -154,3 +154,4 @@ zsh-profiler.log
 /zsh/conf.d/PR.zsh
 /temp.zsh
 Tools
+test*
