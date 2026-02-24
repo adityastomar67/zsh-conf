@@ -45,12 +45,16 @@ chmod +x install.zsh
 
 ### Protocol
 
-The installer will:
+The installation script executes a comprehensive setup flow:
 
-1.  Check for required dependencies (and offer to install them).
-2.  **Backup** your existing `.zshrc` and configuration.
-3.  Clone the repository to `~/.config/zsh-conf`.
-4.  Set up symlinks and environment variables.
+1.  **Environment Detection**: Identifies your operating system (macOS/Linux) and active package managers (Homebrew, APT, Pacman).
+2.  **Automated Provisioning**: Prompts to install missing dependencies using the most appropriate tool for your system.
+3.  **Atomic Backups**: Automatically creates timestamped backups of your existing `.zshrc`, `.zshenv`, and other shell configurations to prevent data loss.
+4.  **Core Installation**: Clones the framework into `~/.config/zsh-conf` and establishes the modular directory structure.
+5.  **Configuration Linking**: Generates symlinks for entry points and initializes a local `.env` file for private environment variables.
+6.  **Performance Optimization**: Compiles shell scripts into bytecode (`.zwc`) to guarantee the ~20ms startup time from the very first launch.
+
+<br>
 
 **Dependency Detection Details**
 - The installer detects tools already present via **PATH**, **Volta**, **NVM**, or the OS package manager.
@@ -200,22 +204,27 @@ Any shortcut defined in `user.conf` also becomes a global named directory.
 
 Use these _anywhere_ in a command.
 
-- **`:G`** -> `| grep` (e.g., `ps aux :G python`)
-- **`:L`** -> `| less` (e.g., `cat huge_file.log :L`)
+- **`:G`**  -> `| grep` (e.g., `ps aux :G python`)
+- **`:L`**  -> `| less` (e.g., `cat huge_file.log :L`)
 - **`:NE`** -> `2> /dev/null` (Silence errors)
 
 ### Suffix Aliases
 
 Just type the file name to open it!
 
-- `main.py` -> Runs `python main.py`
-- `README.md` -> Opens in `$EDITOR`
-- `image.png` -> Opens in system image viewer
+- `main.py`     -> Runs `python main.py`
+- `README.md`   -> Opens in `$EDITOR`
+- `image.png`   -> Opens in system image viewer
 - `archive.zip` -> Lists contents
 
 ### The "Magic" Fixer
 
 - **`please`**: Forgot `sudo`? Type `please`, and it re-runs the last command with sudo.
+- **`esc^3`**: Or maybe you're in buffer and want to add sudo to the command? just escape thrice, and sudo will be added to the command.
+
+### Contextual History Search
+
+- **`up arrow`**: Search through your history if you have something in your buffer. or shows the last command.
 
 ---
 
@@ -241,6 +250,18 @@ We don't load heavyweight tools like `nvm` (Node) or `pyenv` (Python) until you 
 
 - `nvm` is only loaded when you type `node`, `npm`, or `yarn`.
 - Saves huge amounts of startup time.
+
+### UI Enhanced Git commands
+
+Custom wrappers that turn standard `git` output into a rich, visual experience.
+
+- **`git clone`**: Adds visual headers, icons, and real-time stream coloring for a cleaner progress view.
+- **`git pull`**: Displays local/remote branch context before syncing, with colorized status updates.
+- **`git status`**: A complete overhaul using `awk` to provide an iconic, high-density overview of your workspace (Added `+`, Modified `M`, Deleted `D`, Conflicts `C`).
+- **`git log`**: An interactive TUI powered by `fzf`.
+    - **Preview**: Real-time `git show` of the selected commit.
+    - **Actions**: `Enter` to view full diff, `Ctrl-Y` to copy hash, `Ctrl-X` to copy message, and `Ctrl-O` to checkout.
+    - **Layout**: Perfectly aligned columns for Hash, Age, Author, and Message.
 
 ---
 

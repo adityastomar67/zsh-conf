@@ -1,360 +1,630 @@
 #!/usr/bin/env zsh
 
-#    ░█▀▀░█░█░█▀▀░█░█░█░█░█▀▀░█░░░█░░
-#    ░▀▀█░█▀▄░█▀▀░█▀▄░█▀▄░█▀▀░█░░░█░░
-#    ░▀▀▀░▀░▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀▀▀░▀▀▀
-
 # ------------------------------------------------------------------------------
-# File Purpose
-#   A "High-Fidelity" wrapper for the Git CLI.
-#   Updated with Zsh ANSI-C quoting to fix "033" output artifacts.
+# Function: _git_wrapper
+# Description:
+#   A "High-Fidelity" wrapper for the Git CLI, designed to dramatically improve
+#   the developer experience by replacing standard Git output with a modern,
+#   colorized, icon-driven, and highly interactive Terminal UI.
+#
+#   How it works:
+#       1. Intercepts common Git commands (`clone`, `pull`, `status`, `log`).
+#       2. Validates if the command is running interactively (TTY) or piped.
+#       3. If piped, it falls back to the raw `git` command to prevent breaking scripts.
+#       4. If interactive, it routes to custom sub-modules that parse Git's raw text
+#          stream and reconstruct it visually.
+#
+# Sub-Modules:
+#    _clone  : Adds a clean header, dynamic progress bars, and post-clone instructions.
+#    _pull   : Visualizes branch states, fast-forwards, and conflicts cleanly.
+#    _status : Parses `git status -sb` to build an icon-based file tree.
+#    _log    : Replaces the standard log with a fully interactive, searchable
+#               FZF interface, complete with quick-copy shortcuts and a split-pane preview.
+#
+# Features:
+#    Contextual Icons: Nerd Fonts mapping to added, deleted, renamed, or conflicted files.
+#    Safe Execution: Uses `emulate -L zsh` to prevent polluting the global shell state.
+#    Cross-Platform Clipboard: Auto-detects `pbcopy`, `wl-copy`, `xclip`, or `clip.exe`.
+#    Alias Support: Inherits custom shorthand like `git st` or `git down`.
+#
+# Dependencies:
+#    git  : Required for core functionality.
+#    awk  : Required for advanced string parsing in `_status`.
+#    sed  : Required for stream manipulation.
+#    fzf  : Required for the interactive `_log` dashboard.
 # ------------------------------------------------------------------------------
 
 
-# 1. Environment Sandbox
+## ── Environment & Helpers ──────────────────────────────────────────────────────
+## ------------------------------------------------------------------------------
+
+# Environment Sandbox
 emulate -L zsh
 setopt localoptions no_xtrace pipefail
 
+local BOLD=$'\033[1m'
 
-# ── module: clone ────────────────────────────────────────────────────────────
+# Clipboard Abstraction (Cross-Platform)
+#   - Detects the correct clipboard command based on OS.
+local _clip="cat" # Default fallback prevents crashes on headless servers
 
-function _git_clone() {
+if [[ "$OSTYPE" == darwin* ]]; then
+    _clip="pbcopy"
+elif [[ "$OSTYPE" == linux* ]]; then
+    # 1. Catch WSL (Windows Subsystem for Linux)
+    if [[ -n "$WSL_DISTRO_NAME" ]] && (( $+commands[clip.exe] )); then
+        _clip="clip.exe"
+    # 2. Catch native Wayland
+    elif (( $+commands[wl-copy] )); then
+        _clip="wl-copy"
+    # 3. Catch native X11
+    elif (( $+commands[xclip] )); then
+        _clip="xclip -selection clipboard"
+    fi
+fi
 
-    local i_down=' '
-    local i_folder=' '
+# Smart Pager Selection
+#   - Use 'delta' for beautiful, side-by-side diffs if installed.
+#   - Otherwise, fallback to 'cat' for raw text.
+local _git_pager="cat"
+if (( $+commands[delta] )); then
+    # Escaping both variables ensures FZF calculates width dynamically at runtime!
+    _git_pager="delta --side-by-side --width \${FZF_PREVIEW_COLUMNS:-\$COLUMNS}"
+fi
 
-    # 1. Argument Parsing
-    local args=("$@")
-    local repo_url=""
-    local target_dir=""
+# Function: is_in_git_repo
+# Description: Checks if the current directory is within a Git work tree.
+is_in_git_repo() {
+    # Ultra-Fast Path: Pure Zsh upward traversal (No forks!)
+    local d="$PWD"
+    while [[ "$d" != "/" ]]; do
+        # Check for .git directory (standard) or file (worktrees)
+        [[ -e "$d/.git" ]] && return 0
 
-    for arg in "${args[@]}"; do
-        [[ "$arg" =~ ^- ]] && continue
-        if [[ -z "$repo_url" ]]; then
-            repo_url="$arg"
-        else
-            target_dir="$arg"
-        fi
+        # Zsh magic: ':h' strips the last directory level (like 'dirname')
+        d="${d:h}"
     done
 
-    if [[ -z "$target_dir" && -n "$repo_url" ]]; then
-        target_dir=$(basename "$repo_url" .git)
-    fi
-
-    # 2. Render Header
-    print -f "\n${COLOR[BLUE]}%s  CLONING REPOSITORY${COLOR[RESET]}\n" "$i_down"
-    print -f "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}\n"
-    print -f "Source:  ${COLOR[MAGENTA]}%s${COLOR[RESET]}\n" "$repo_url"
-    print -f "Dest:    ${COLOR[DIM]}%s %s${COLOR[RESET]}\n\n" "$i_folder" "$target_dir"
-
-    # 3. Execution & Stream Coloring
-    # We pipe 2>&1 to capture output, and use sed to inject the raw escape bytes
-    command git clone --progress "$@" 2>&1 | sed \
-        -e "s/\(remote:\)/${COLOR[BLUE]}\1${COLOR[RESET]}/g" \
-        -e "s/\(Cloning into\)/${COLOR[DIM]}${COLOR[BOLD]}\1${COLOR[RESET]}/g" \
-        -e "s/\(100%\)/${COLOR[GREEN]}\1${COLOR[RESET]}/g" \
-        -e "s/\(Receiving objects:\)/${COLOR[MAGENTA]}\1${COLOR[RESET]}/g" \
-        -e "s/\(Resolving deltas:\)/${COLOR[BLUE]}\1${COLOR[RESET]}/g" \
-        -e "s/\(Updating files:\)/${COLOR[MAGENTA]}\1${COLOR[RESET]}/g"
-
-    local exit_code=${pipestatus[1]}
-
-    # 4. Render Footer
-    if [[ $exit_code -eq 0 ]]; then
-        print -f "\n${COLOR[GREEN]}  SUCCESS${COLOR[RESET]} Repository ready.\n"
-        print -f "${COLOR[DIM]}   Run:${COLOR[RESET]} \033[1mcd $PWD/%s${COLOR[RESET]}\n\n" "$target_dir"
-    else
-        print -f "\n${COLOR[RED]}  FAILED${COLOR[RESET]} Clone encountered errors.\n\n"
-    fi
-
-    return $exit_code
+    # Final check for root
+    [[ -e "/.git" ]] && return 0
+    return 1
 }
 
-# ── module: pull ───────────────────────────────────────────────────────────────────────
 
-function _git_pull() {
+## ── Initialization Functions ───────────────────────────────────────────────────
+## ------------------------------------------------------------------------------
 
-    if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
-        exit 1
+# ── Branch Management ─────────────────────────────────────────────────────────
+# Function: __pull
+# Logic:
+#   - Displays a visual header with the current branch and remote information.
+#   - Executes 'git pull' with progress, colorizing and formatting the output in real-time.
+#   - Provides a clear visual summary of the update status (success or conflict).
+# -----------------------------------------------------------------------------
+function __pull() {
+    if ! is_in_git_repo; then
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        return 1
     fi
 
-    local i_down=' '
-    local i_branch=' '
-    local i_remote=' '
+    local current_branch=$(command git branch --show-current 2>/dev/null)
+    local -a remotes=($(command git remote 2>/dev/null))
 
-    local current_branch=$(command git rev-parse --abbrev-ref HEAD 2>/dev/null)
-    local remote_name=$(command git remote 2>/dev/null | head -n1)
-    [[ -z "$remote_name" ]] && remote_name="origin"
-
-    print -f "\n${COLOR[BLUE]}%s  SYNCING CHANGES${COLOR[RESET]}\n" "$i_down"
-    print -f "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}\n"
-    print -f "Local:   ${COLOR[MAGENTA]}%s %s${COLOR[RESET]}\n" "$i_branch" "$current_branch"
-    print -f "Remote:  ${COLOR[DIM]}%s %s${COLOR[RESET]}\n\n" "$i_remote" "$remote_name"
+    print "\n${COLOR[BLUE]}  SYNCING CHANGES${COLOR[RESET]}"
+    print "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}"
+    print "Local:  ${COLOR[MAGENTA]}  ${current_branch}${COLOR[RESET]}"
+    print "Remote: ${COLOR[DIM]}  ${remotes[1]:-origin}${COLOR[RESET]}\n"
 
     command git pull --progress "$@" 2>&1 | sed \
+        -e "s/^\(remote:\)/${COLOR[BLUE]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(hint:\)/${COLOR[YELLOW]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(fatal:\)/${COLOR[RED]}${BOLD}\1${COLOR[RESET]}/g" \
+        -e "s/^\(error:\)/${COLOR[RED]}${c_bold}\1${COLOR[RESET]}/g" \
+        -e "s/^\(Aborting.*\)/${COLOR[RED]}${c_bold}\1${COLOR[RESET]}/g" \
+        -e "s/^\(Please .*\)/${COLOR[YELLOW]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(Merge with strategy .*\)/${COLOR[DIM]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(From \)\(http.*\)/${COLOR[DIM]}\1${COLOR[RESET]}${COLOR[CYAN]}\2${COLOR[RESET]}/g" \
+        -e "s/\([a-f0-9]\{7\}\.\.[a-f0-9]\{7\}\)/${COLOR[MAGENTA]}\1${COLOR[RESET]}/g" \
+        -e "s/\(git config pull\.[a-z]* [a-z]*\)/${COLOR[CYAN]}\1${COLOR[RESET]}/g" \
+        -e "s/\"\(git config[^\"]*\)\"/\"${COLOR[CYAN]}\1${COLOR[RESET]}\"/g" \
+        -e "s/\(# .*\)/${COLOR[DIM]}\1${COLOR[RESET]}/g" \
+        -e "s/\(--rebase\)/${COLOR[CYAN]}\1${COLOR[RESET]}/g" \
+        -e "s/\(--global\)/${COLOR[CYAN]}\1${COLOR[RESET]}/g" \
+        -e "s/\(--no-rebase\)/${COLOR[CYAN]}\1${COLOR[RESET]}/g" \
+        -e "s/\(--ff-only\)/${COLOR[CYAN]}\1${COLOR[RESET]}/g" \
+        -e "s/\(100%\)/${COLOR[GREEN]}\1${COLOR[RESET]}/g" \
         -e "s/\(Updating\)/${COLOR[BLUE]}\1${COLOR[RESET]}/g" \
         -e "s/\(Fast-forward\)/${COLOR[MAGENTA]}\1${COLOR[RESET]}/g" \
         -e "s/\(Unpacking objects:\)/${COLOR[DIM]}\1${COLOR[RESET]}/g" \
         -e "s/\(Already up to date.\)/${COLOR[GREEN]}\1${COLOR[RESET]}/g" \
-        -e "s/ \+/ ${COLOR[GREEN]}+${COLOR[RESET]}/g" \
+        -e "s/ +/ ${COLOR[GREEN]}+${COLOR[RESET]}/g" \
         -e "s/ -/ ${COLOR[RED]}-${COLOR[RESET]}/g" \
-        -e "s/\(files changed\)/${COLOR[RESET]}\033[1m\1${COLOR[RESET]}/g" \
+        -e "s/\(files changed\)/${COLOR[RESET]}${BOLD}\1${COLOR[RESET]}/g" \
         -e "s/\(insertions\)/${COLOR[GREEN]}\1${COLOR[RESET]}/g" \
         -e "s/\(deletions\)/${COLOR[RED]}\1${COLOR[RESET]}/g"
 
-    local exit_code=${pipestatus[1]}
+    local EXIT_CODE=${pipestatus[1]}
 
-    if [[ $exit_code -eq 0 ]]; then
-        print -f "\n${COLOR[GREEN]}  UPDATE COMPLETE${COLOR[RESET]}\n\n"
+    if [[ $EXIT_CODE -eq 0 ]]; then
+        print "\n${COLOR[GREEN]}  UPDATE COMPLETE${COLOR[RESET]}\n"
     else
-        print -f "\n${COLOR[RED]}  MERGE CONFLICT / ERROR${COLOR[RESET]}\n"
-        print -f "${COLOR[DIM]}Check the output above for details.${COLOR[RESET]}\n\n"
+        print "\n${COLOR[RED]}  MERGE CONFLICT / ERROR${COLOR[RESET]}"
+        print "${COLOR[DIM]}   Check the output above for details.${COLOR[RESET]}\n"
     fi
 
-    return $exit_code
+    return $EXIT_CODE
 }
 
-# ── module: status ───────────────────────────────────────────────────────────
-
-function _git_status() {
-    if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
-        exit 1
+# ── Branch Management ─────────────────────────────────────────────────────────
+# Function: __clone
+# Logic:
+#   - Displays a visual header with the repository source and destination directory.
+#   - Executes 'git clone' with progress, colorizing and formatting the output in real-time.
+#   - Provides a clear visual summary of the cloning status.
+# -----------------------------------------------------------------------------
+function __clone() {
+    if is_in_git_repo; then
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Inside a git repository."
+        return 1
     fi
 
-    git status -sb | awk '
-BEGIN {
-    # ─── COLORS ───
-    C_RESET   = "\033[0m"
-    C_BOLD    = "\033[1m"
-    C_DIM     = "\033[2m"
-    C_RED     = "\033[31m"
-    C_GREEN   = "\033[32m"
-    C_YELLOW  = "\033[33m"
-    C_BLUE    = "\033[34m"
-    C_MAGENTA = "\033[35m"
-    C_CYAN    = "\033[36m"
+    # Smart Argument Parsing
+    local REPO="" TARGET=""
+    local arg
 
-    # ─── ICONS ───
-    I_BRANCH  = ""
-    I_ARROW   = " "
-    I_ADDED   = ""
-    I_MOD     = ""
-    I_DEL     = ""
-    I_UNTRACK = ""
-    I_RENAME  = ""
-    I_FILE    = ""
-    I_CLEAN   = ""
-    I_WARN    = "" # Conflict Icon
+    for arg in "$@"; do
+        # Ignore flags and their immediate values (like the '1' in --depth 1)
+        [[ "$arg" == -* || "$arg" =~ ^[0-9]+$ ]] && continue
 
-    total_files = 0
-}
+        # If it contains typical Git URL markers, it's the repo
+        if [[ "$arg" == http* || "$arg" == git@* || "$arg" == ssh://* || "$arg" == *.git ]]; then
+            REPO="$arg"
+        # If we already have the repo, the next valid string must be the target dir
+        elif [[ -n "$REPO" ]]; then
+            TARGET="$arg"
+        fi
+    done
 
-# ─── HEADERS (Branch Info) ───
-/^##/ {
-    sub(/^## /, "")
-    line = $0
+    # Fallback to pure Zsh manipulation if no target was provided
+    [[ -z "$TARGET" && -n "$REPO" ]] && TARGET="${${REPO:t}%.git}"
 
-    if (line ~ /Initial commit on/ || line ~ /No commits yet on/) {
-        sub(/Initial commit on /, "", line)
-        sub(/No commits yet on /, "", line)
-    }
+    print "\n${COLOR[BLUE]}  CLONING REPOSITORY${COLOR[RESET]}"
+    print "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}"
+    print "Source:  ${COLOR[MAGENTA]}${REPO}${COLOR[RESET]}"
+    print "Dest:    ${COLOR[DIM]}  ${TARGET}${COLOR[RESET]}\n"
 
-    bracket_info = ""
-    if (match(line, /\[.*\]/)) {
-        bracket_info = substr(line, RSTART, RLENGTH)
-        gsub(/ahead/,  C_GREEN  "⇡" C_RESET, bracket_info)
-        gsub(/behind/, C_RED    "⇣" C_RESET, bracket_info)
-        sub(/\[.*\]/, "", line)
-    }
+    command git clone --progress "$@" 2>&1 | sed \
+        -e "s/\(remote:\)/${COLOR[BLUE]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(fatal:\)/${COLOR[RED]}${c_bold}\1${COLOR[RESET]}/g" \
+        -e "s/^\(error:\)/${COLOR[RED]}${c_bold}\1${COLOR[RESET]}/g" \
+        -e "s/^\(warning:\)/${COLOR[YELLOW]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(hint:\)/${COLOR[YELLOW]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Cloning into\)/${COLOR[DIM]}${c_bold}\1${COLOR[RESET]}/g" \
+        -e "s/\(100%\)/${COLOR[GREEN]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Receiving objects:\)/${COLOR[MAGENTA]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Resolving deltas:\)/${COLOR[MAGENTA]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Updating files:\)/${COLOR[CYAN]}\1${COLOR[RESET]}/g" \
+        -e "s/\(Filtering content:\)/${COLOR[DIM]}\1${COLOR[RESET]}/g"
 
-    split(line, branches, "\\.\\.\\.")
-    local_br = branches[1]
-    remote_br = branches[2]
-    gsub(/[[:space:]]+$/, "", local_br)
+    local EXIT_CODE=${pipestatus[1]}
 
-    printf "\n  " C_MAGENTA C_BOLD "%s %s" C_RESET, I_BRANCH, local_br
-
-    if (remote_br != "") {
-        printf " " C_DIM "%s" C_RESET " " C_BLUE "%s" C_RESET, I_ARROW, remote_br
-    }
-    if (bracket_info != "") {
-        printf " %s", bracket_info
-    }
-    printf "\n  " C_DIM "────────────────────────────────────────────" C_RESET "\n"
-    next
-}
-
-# ─── FILE STATUS (The Logic Fix) ───
-{
-    # 1. Capture strict characters (Fixes the whitespace bug)
-    x  = substr($0, 1, 1) # Index Status
-    y  = substr($0, 2, 1) # Worktree Status
-    xy = x y              # Combined Code
-
-    # 2. Get Filename (starts at char 4)
-    #    We trim leading/trailing space just in case, though char 4 is usually standard.
-    filename = substr($0, 4)
-
-    icon  = I_FILE
-    color = C_RESET
-
-    # 3. Status Mapping (Matching your requested features)
-
-    if (xy == "??") {
-        # Untracked
-        icon = I_UNTRACK; color = C_CYAN
-    }
-    else if (xy == "UU" || xy == "AA" || xy == "DD") {
-        # Unmerged / Conflict (RESTORED FEATURE)
-        icon = I_WARN; color = C_RED
-    }
-    else if (x == "A" || xy == "AM" || xy == "AD") {
-        # Added (includes Added-then-Modified)
-        icon = I_ADDED; color = C_GREEN
-    }
-    else if (x == "D" || xy == "RD" || y == "D") {
-        # Deleted (Staged or Unstaged)
-        icon = I_DEL; color = C_RED
-    }
-    else if (x == "R" || xy == "RM") {
-        # Renamed (RESTORED FEATURE: Shows as Magenta, even if also Modified)
-        icon = I_RENAME; color = C_MAGENTA
-    }
-    else if (xy == "M ") {
-        # Modified and Staged (Modified in Index, Clean in Worktree)
-        icon = I_MOD; color = C_GREEN
-    }
-    else {
-        # Everything else is Modified (Unstaged " M", or Both "MM")
-        icon = I_MOD; color = C_YELLOW
-    }
-
-    printf "    %s%s%s  %s\n", color, icon, C_RESET, filename
-    total_files++
-}
-
-# ─── FOOTER ───
-END {
-    if (total_files == 0) {
-        printf "    " C_GREEN "%s" C_RESET "  " C_DIM "No changes. Working tree clean." C_RESET "\n", I_CLEAN
-    } else {
-        printf "\n    " C_DIM "(%d files changed)" C_RESET "\n", total_files
-    }
-    printf "\n"
-}
-'
-}
-
-function _git_log () {
-
-    if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
-        exit 1
+    if [[ $EXIT_CODE -eq 0 ]]; then
+        print "\n${COLOR[GREEN]}  SUCCESS${COLOR[RESET]} Repository ready."
+        print "${COLOR[DIM]}   Run:${COLOR[RESET]}    ${c_bold}\`cd ${TARGET}\`${COLOR[RESET]}\n"
+    else
+        print "\n${COLOR[RED]}  FAILED${COLOR[RESET]} Clone encountered errors.\n"
     fi
 
-    # Check if FZF is installed using the Zsh $+commands hash.
-    if (( $+commands[fzf] )); then
-        command git log "$@"
+    return $EXIT_CODE
+}
+
+# ── Git Log ───────────────────────────────────────────────────────────────────
+# Function: __log
+# Logic:
+#   - Displays a structured git log with a colorized graph and metadata.
+#   - [Enter]: Displays the full commit details and diff.
+#   - [Ctrl-Y]: Copies the selected commit hash to the clipboard.
+#   - [Ctrl-X]: Copies the commit message to the clipboard.
+#   - [Ctrl-O]: Performs a checkout of the selected commit.
+# -----------------------------------------------------------------------------
+function __log () {
+    if ! is_in_git_repo; then
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        return 1
+    fi
+
+    # The %<|(24)%x20 trick forces the first pipe to always land exactly at column 24,
+    # absorbing the wavy left-side graph so your table remains perfectly aligned.
+    local fmt="${COLOR[BOLD]}${COLOR[BLUE]}%h${COLOR[RESET]}%<|(24)%x20${COLOR[DIM]}│${COLOR[RESET]} ${COLOR[DIM]}%<(14,trunc)%ar${COLOR[RESET]} ${COLOR[DIM]}│${COLOR[RESET]} ${COLOR[YELLOW]}%<(15,trunc)%an${COLOR[RESET]} ${COLOR[DIM]}│${COLOR[RESET]}%C(auto)%d${COLOR[RESET]} %s"
+
+    # Fallback to perfectly chopped graph table
+    if ! (( $+commands[fzf] )); then
+        # -c core.pager="less -SR" strictly truncates lines at terminal width (No wrapping!)
+        command git -c core.pager="less -SR" log --graph --color=always --format="$fmt" "$@"
         return 0
     fi
 
-    # ------------------------------------------------------------------------------
-    # 3. Clipboard Detection
-
-    # Automatically identifies the correct system command for clipboard operations.
-    local copy_cmd
-    if        (( $+commands[pbcopy] ));   then copy_cmd="pbcopy"          # macOS
-    elif      (( $+commands[wl-copy] ));  then copy_cmd="wl-copy"         # Wayland (Linux)
-    elif      (( $+commands[xclip] ));    then copy_cmd="xclip -sel c"    # X11 (Linux)
-    elif (( $+commands[clip.exe] )); then copy_cmd="clip.exe"        # WSL (Windows)
-    else                                  copy_cmd="cat"             # Fallback
-    fi
-
-    # ------------------------------------------------------------------------------
-    # 4. Pro Formatting Strategy
-
-    # We define colors using Git's internal %C color syntax.
-    local color_hash="%C(bold blue)"
-    local color_date="%C(dim)"
-    local color_auth="%C(yellow)"
-    local color_pipe="%C(dim)"
-    local reset="%C(reset)"
-
-    # --- Complex Logic: Strict Table Layout ---
-    # We use Git's alignment operators:
-    # %<(N,trunc) : Ensures the field is exactly N characters, truncating if longer.
-    # This keeps the columns perfectly aligned regardless of author name lengths.
-    # Layout: Hash | Date (14ch) | Author (15ch) | Refs + Msg
-    local fmt="${color_hash}%h${reset} ${color_pipe}│${reset} ${color_date}%<(14,trunc)%ar${reset} ${color_pipe}│${reset} ${color_auth}%<(15,trunc)%an${reset} ${color_pipe}│${reset}%C(auto)%d${reset} %s"
-
-    # ------------------------------------------------------------------------------
-    # 5. Semantic Helpers
-
-    # Regex helper to safely extract the 7+ character hex hash from the FZF line.
+    # TUI Headers (Spacing adjusted to match the new column 24 alignment) & Helpers
+    local HEADERS=$'\033[1;4;31mHash\033[0m                     \033[1;4;31mAge\033[0m              \033[1;4;31mAuthor\033[0m            \033[1;4;31mMessage\033[0m\n'
+    local KEYS=$'\033[1;33m• Enter:\033[0m  View      \033[1;33m• Ctrl-Y:\033[0m Copy Hash \n\033[1;33m• Ctrl-X:\033[0m Copy Msg  \033[1;33m• Ctrl-O:\033[0m Checkout\n\n'
     local get_hash="grep -oE '[a-f0-9]{7,}' | head -1"
 
-    # ------------------------------------------------------------------------------
-    # 6. Execution & TUI Logic
-
-    # Define the Column Headings
-    #    Adjust the spaces inside this string to match your specific "$fmt" layout.
-    #    \033[1;4;31m = Bold, Underline, Red
-    HEADERS=$'\033[1;4;31mHash\033[0m       \033[1;4;31mAge\033[0m              \033[1;4;31mAuthor\033[0m            \033[1;4;31mMessage\033[0m\n'
-
-    # Define the Shortcuts Help
-    KEYS=$'\033[1;33m• Enter:\033[0m  View      \033[1;33m• Ctrl-Y:\033[0m Copy Hash \n\033[1;33m• Ctrl-X:\033[0m Copy Msg  \033[1;33m• Ctrl-O:\033[0m Checkout\n\n'
-
-    # Feed into FZF
-    git log --graph --color=always --format="$fmt" "$@" | \
+    command git log --graph --color=always --format="$fmt" "$@" | \
     fzf --ansi --no-sort --reverse --tiebreak=index \
         --height=100% --border --layout=reverse --info=inline \
         --border-label='  Git Log ' \
         --header="${KEYS}${HEADERS}" \
         --preview-window=right:60%:border-left \
-        --preview "print {} | $get_hash | xargs -I % git show --color=always %" \
-        \
-        --bind "enter:execute(print {} | $get_hash | xargs -I % sh -c 'git show --color=always % | less -R')" \
-        \
-        --bind "ctrl-y:execute-silent(print {} | $get_hash | tr -d '\n' | $copy_cmd)+abort" \
-        \
-        --bind "ctrl-x:execute-silent(print {} | $get_hash | xargs git log -1 --format=%s | tr -d '\n' | $copy_cmd)+abort" \
-        \
-        --bind "ctrl-o:execute(print {} | $get_hash | xargs git checkout)"
+        --preview "print -r -- {} | $get_hash | xargs -I % git show --color=always % | $_git_pager" \
+        --bind "enter:execute(print -r -- {} | $get_hash | xargs -I % sh -c 'git show --color=always % | less -R')" \
+        --bind "ctrl-y:execute-silent(print -r -- {} | $get_hash | tr -d '\n' | $_clip)+abort" \
+        --bind "ctrl-x:execute-silent(print -r -- {} | $get_hash | xargs -I @ git log -1 --format=%s @ | tr -d '\n' | $_clip)+abort" \
+        --bind "ctrl-o:execute(print -r -- {} | $get_hash | xargs git checkout)"
+}
 
+# ── Git Status Interface ──────────────────────────────────────────────────────
+# Function: __status
+# Logic:
+#   - Lists modified/untracked files via 'git status -s'.
+#   - Previews 'git diff' for modified files or 'bat/cat' for new files.
+#   - Opens selected files in the system $EDITOR.
+# -----------------------------------------------------------------------------
+function __status() {
+    if ! is_in_git_repo; then
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        return 1
+    fi
+
+    # Added 'command' to bypass aliases
+    command git status -sb | awk '
+    BEGIN {
+        # ─── COLORS ───
+        C_RESET   = "\033[0m"
+        C_BOLD    = "\033[1m"
+        C_DIM     = "\033[2m"
+        C_RED     = "\033[31m"
+        C_GREEN   = "\033[32m"
+        C_YELLOW  = "\033[33m"
+        C_BLUE    = "\033[34m"
+        C_MAGENTA = "\033[35m"
+        C_CYAN    = "\033[36m"
+
+        # ─── ICONS ───
+        I_BRANCH  = ""
+        I_ARROW   = "  "
+        I_CLEAN   = ""
+
+        # ─── PRE-COMPUTED STRINGS (Zero-Cost Concatenation) ───
+        P_UNTRACK = C_CYAN "󱈱" C_RESET
+        P_WARN    = C_RED "" C_RESET
+        P_ADDED   = C_GREEN "" C_RESET
+        P_DEL     = C_RED "" C_RESET
+        P_RENAME  = C_MAGENTA "󰑕" C_RESET
+        P_MOD_STG = C_GREEN "" C_RESET
+        P_MOD_UNS = C_YELLOW "" C_RESET
+
+        # ─── O(1) FAST LOOKUP DICTIONARY ───
+        # Maps exact 2-character Git status codes directly to their pre-built strings
+        dict["??"] = P_UNTRACK
+        dict["UU"] = P_WARN
+        dict["AA"] = P_WARN
+        dict["DD"] = P_WARN
+        dict["M "] = P_MOD_STG
+
+        total_files = 0
+    }
+
+    # ─── HEADERS (Branch Info) ───
+    /^##/ {
+        sub(/^## /, "")
+
+        # Condense regex: strip both "Initial commit" states in one pass
+        sub(/(Initial commit on |No commits yet on )/, "")
+
+        bracket_info = ""
+        if (match($0, /\[.*\]/)) {
+            bracket_info = substr($0, RSTART, RLENGTH)
+            gsub(/ahead/,  C_GREEN  "⇡" C_RESET, bracket_info)
+            gsub(/behind/, C_RED    "⇣" C_RESET, bracket_info)
+            sub(/\[.*\]/, "", $0)
+        }
+
+        split($0, branches, "\\.\\.\\.")
+        local_br = branches[1]
+        remote_br = branches[2]
+        gsub(/[[:space:]]+$/, "", local_br)
+
+        printf "\n  " C_MAGENTA C_BOLD "%s %s" C_RESET, I_BRANCH, local_br
+
+        if (remote_br != "") printf " " C_DIM "%s" C_RESET " " C_BLUE "%s" C_RESET, I_ARROW, remote_br
+        if (bracket_info != "") printf " %s", bracket_info
+
+        printf "\n  " C_DIM "────────────────────────────────────────────" C_RESET "\n"
+        next
+    }
+
+    # ─── FILE STATUS (O(1) Dictionary Lookup) ───
+    {
+        xy = substr($0, 1, 2)
+        filename = substr($0, 4)
+
+        # 1. Fast Path: Check if exact match exists in the dictionary
+        if (xy in dict) {
+            prefix = dict[xy]
+        }
+        # 2. Slow Path: Fallback mapping for partial matches
+        else {
+            x = substr(xy, 1, 1)
+            y = substr(xy, 2, 1)
+
+            if (x == "A" || xy == "AM" || xy == "AD") prefix = P_ADDED
+            else if (x == "D" || xy == "RD" || y == "D") prefix = P_DEL
+            else if (x == "R" || xy == "RM") prefix = P_RENAME
+            else prefix = P_MOD_UNS
+        }
+
+        # Print the pre-computed string directly
+        printf "    %s  %s\n", prefix, filename
+        total_files++
+    }
+
+    # ─── FOOTER ───
+    END {
+        if (total_files == 0) printf "    " C_GREEN "%s" C_RESET "  " C_DIM "No changes. Working tree clean." C_RESET "\n", I_CLEAN
+        else printf "\n  " C_DIM "(%d files changed)" C_RESET "\n", total_files
+    }'
+}
+
+# ── Git Checkout Interface ────────────────────────────────────────────────────
+# Function: __checkout
+# Logic:
+#   - Lists local and remote branches.
+#   - Allows switching branches or checking out specific commits (Detached HEAD).
+#   - Supports deleting local branches.
+# -----------------------------------------------------------------------------
+function __checkout() {
+    if ! is_in_git_repo; then
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        return 1
+    fi
+
+    if [[ "$#" -gt 0 ]]; then
+        command git checkout "$@"
+        return $?
+    fi
+
+    if ! (( $+commands[fzf] )); then
+        command git branch -a
+        return 0
+    fi
+
+    # --- COLOR PIPELINE HELPER ---
+    # We define the sed rules in a variable so we can reuse it for both manual and FZF checkouts
+    local format_checkout=(
+        sed
+        -e "s/^\(Switched to branch \)\('[^']*'\)/${COLOR[GREEN]}\1${COLOR[CYAN]}\2${COLOR[RESET]}/g"
+        -e "s/^\(Switched to a new branch \)\('[^']*'\)/${COLOR[GREEN]}\1${COLOR[CYAN]}\2${COLOR[RESET]}/g"
+        -e "s/^\(Already on \)\('[^']*'\)/${COLOR[DIM]}\1${COLOR[CYAN]}\2${COLOR[RESET]}/g"
+        -e "s/^\(Your branch is up to date with \)\('[^']*'\)/${COLOR[GREEN]}\1${COLOR[CYAN]}\2${COLOR[RESET]}/g"
+        -e "s/^\(Your branch is ahead of \)\('[^']*'\)\(.*\)/${COLOR[BLUE]}\1${COLOR[CYAN]}\2${COLOR[BLUE]}\3${COLOR[RESET]}/g"
+        -e "s/^\(Your branch is behind \)\('[^']*'\)\(.*\)/${COLOR[YELLOW]}\1${COLOR[CYAN]}\2${COLOR[YELLOW]}\3${COLOR[RESET]}/g"
+        -e "s/^\(Your branch and \)\('[^']*'\)\(.*diverged.*\)/${COLOR[RED]}\1${COLOR[CYAN]}\2${COLOR[RED]}\3${COLOR[RESET]}/g"
+        -e "s/^\(and have [0-9]* and [0-9]* different commits each, respectively.\)/${COLOR[RED]}\1${COLOR[RESET]}/g"
+        -e "s/^\(.*use \"git pull\".*\)/${COLOR[DIM]}\1${COLOR[RESET]}/g"
+        -e "s/^\(HEAD is now at \)\([a-f0-9]\{7,\}\)/${COLOR[MAGENTA]}\1${COLOR[CYAN]}\2${COLOR[RESET]}/g"
+    )
+
+    # --- DYNAMIC WIDTH CALCULATION ---
+    local list_width=$(( COLUMNS * 40 / 100 ))
+    (( list_width < 80 )) && list_width=80
+
+    local br_width=30
+    local date_width=16
+    local msg_width=$(( list_width - br_width - date_width - 8 ))
+    (( msg_width < 10 )) && msg_width=10
+
+    # --- MODE 1: Branches (AWK Powered Truncation) ---
+    local h_br=$(printf "%-32s" "Branch")
+    local h_msg=$(printf "%-${msg_width}s" "Latest Commit")
+
+    local keys_br=$'\033[1;33m• Enter:\033[0m Checkout   \033[1;33m• Ctrl-C:\033[0m View Commits   \033[1;33m• Alt-D:\033[0m Delete Branch\n\n'
+
+    # We strip Git colors, let AWK truncate the strings safely by character count, and inject the colors dynamically!
+    local cmd_br="git branch --all --sort=-committerdate --format='%(HEAD)|%(refname:short)|%(contents:subject)|%(committerdate:relative)' | awk -F'|' -v mw=\"$msg_width\" -v bw=\"$br_width\" 'BEGIN { cy=\"\033[33m\"; cm=\"\033[35m\"; cd=\"\033[2m\"; cg=\"\033[32m\"; cr=\"\033[0m\" } { h=\$1; b=\$2; m=\$3; d=\$4; if(length(b)>bw) b=substr(b,1,bw-3)\"...\"; bp=sprintf(\"%-\"bw\"s\",b); if(length(m)>mw) m=substr(m,1,mw-3)\"...\"; mp=sprintf(\"%-\"mw\"s\",m); printf \"%s%2s%s %s%s%s │ %s%s%s │ %s%s%s\\n\", cy,h,cr, cm,bp,cr, cd,mp,cr, cg,d,cr }'"
+
+    # --- MODE 2: Commits (Invisible Graph Grid) ---
+    local keys_com=$'\033[1;33m• Enter:\033[0m Checkout (Detached)   \033[1;33m• Ctrl-B:\033[0m View Branches\n\n'
+    local fmt_com="%C(bold blue)%h%C(reset)%<|(24)%x20 %C(dim)%<(14,trunc)%ar%C(reset)  %C(yellow)%<(15,trunc)%an%C(reset)  %C(auto)%d%C(reset) %s"
+    local cmd_com="git log --all --graph --color=always --format=\"$fmt_com\""
+
+    # --- PREVIEW SCRIPT ---
+    local preview_script="
+        line={}
+        if echo \"\$line\" | grep -q '│'; then
+            branch=\$(echo \"\$line\" | awk -F'│' '{print \$1}' | tr -d ' *')
+            [[ -n \"\$branch\" ]] && git log --oneline --graph --color=always --format='%C(auto)%h%d %s %C(black)%C(bold)%cr' \"\$branch\" | head -200
+        else
+            hash=\$(echo \"\$line\" | grep -oE '\b[a-f0-9]{7,}\b' | head -1)
+            [[ -n \"\$hash\" ]] && git show --color=always \"\$hash\"
+        fi
+    "
+
+    # --- EXECUTE FZF (Notice the use of Square Brackets [] in the binds to prevent parenthesis crashes!) ---
+    local selected
+    selected=$(eval "$cmd_br" | fzf --ansi --no-sort --reverse --tiebreak=index \
+        --height=100% --border --layout=reverse --info=inline \
+        --prompt="Branches > " \
+        --border-label='  Git Checkout ' \
+        --header="${keys_br}" \
+        --preview-window=right:60%:border-left \
+        --preview "$preview_script" \
+        --bind "ctrl-c:change-prompt[Commits > ]+reload[$cmd_com]+change-header[${keys_com}]" \
+        --bind "ctrl-b:change-prompt[Branches > ]+reload[$cmd_br]+change-header[${keys_br}]" \
+        --bind "alt-d:execute-silent[
+            if echo {q} | grep -q '│'; then
+                branch=\$(echo {q} | awk -F'│' '{print \$1}' | tr -d ' *' | sed -e 's#^origin/##' -e 's#^upstream/##' -e 's#^remotes/[^/]*/##')
+                git branch -D \"\$branch\"
+            fi
+        ]+reload[$cmd_br]"
+    )
+
+    # --- EXTRACTION & CHECKOUT LOGIC ---
+    if [[ -n "$selected" ]]; then
+        print "\n${COLOR[BLUE]}  CHECKING OUT${COLOR[RESET]}"
+        print "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}"
+
+        local target
+        if echo "$selected" | grep -q '│'; then
+            target=$(echo "$selected" | awk -F'│' '{print $1}' | tr -d ' *' | sed -e 's#^origin/##' -e 's#^upstream/##' -e 's#^remotes/[^/]*/##')
+            print "Target:  ${COLOR[MAGENTA]}$target${COLOR[RESET]}\n"
+        else
+            target=$(echo "$selected" | grep -oE '\b[a-f0-9]{7,}\b' | head -1)
+            print "Target:  ${COLOR[BLUE]}$target${COLOR[RESET]}"
+            print "${COLOR[YELLOW]}  Note:${COLOR[RESET]} Checking out a raw commit places you in a 'Detached HEAD' state.\n"
+        fi
+
+        # Execute checkout and pipe through our colorizer
+        if [[ -n "$target" ]]; then
+            command git checkout "$target" 2>&1 | "${format_checkout[@]}"
+            print
+        fi
+    fi
+}
+
+# ── Git Add Interface ─────────────────────────────────────────────────────────
+# Function: __add
+# Logic:
+#   - Stages files interactively using fzf.
+#   - Supports multi-selection and provides a diff preview.
+#   - Falls back to standard 'git add' if arguments are provided.
+# -----------------------------------------------------------------------------
+function __add() {
+    if ! is_in_git_repo; then
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        return 1
+    fi
+
+    if [[ "$#" -gt 0 ]]; then
+        command git add "$@"
+        return $?
+    fi
+
+    if ! (( $+commands[fzf] )); then
+        command git status -s
+        return 0
+    fi
+
+    local KEYS=$'\033[1;33m• Space:\033[0m Toggle Selection   \033[1;33m• Ctrl-A:\033[0m Select All   \033[1;33m• Enter:\033[0m Stage current/selected Files\n\n'
+
+    local cmd_status="git -c core.quotePath=false status -s | awk '
+        BEGIN {
+            c_rst = \"\033[0m\"; c_red = \"\033[31m\"; c_grn = \"\033[32m\"
+            c_ylw = \"\033[33m\"; c_mag = \"\033[35m\"; c_cyn = \"\033[36m\"
+        }
+        {
+            xy = substr(\$0, 1, 2)
+            y  = substr(\$0, 2, 1)
+
+            # MAGIC FIX: If the worktree status is empty, it is 100% staged already. Skip it!
+            if (y == \" \") next
+
+            file = substr(\$0, 4)
+
+            icon = \"\"; color = c_ylw
+            if (xy == \"??\") { icon = \"\"; color = c_cyn }
+            else if (xy ~ /U/ || xy == \"AA\" || xy == \"DD\") { icon = \"\"; color = c_red }
+            else if (xy ~ /^A/ || xy == \"AM\" || xy == \"AD\") { icon = \"\"; color = c_grn }
+            else if (xy ~ /D/) { icon = \"\"; color = c_red }
+            else if (xy ~ /R/) { icon = \"\"; color = c_mag }
+
+            printf \"%s%s %s%s │ %s\\n\", color, icon, xy, c_rst, file
+        }
+    '"
+
+    local preview_script="
+        line={}
+        # Extract filename and cleanly strip renamed file pointers (old -> new)
+        file=\$(echo \"\$line\" | awk -F'│' '{print \$2}' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*\$//')
+        file=\"\${file##*-> }\"
+
+        if echo \"\$line\" | grep -q '??'; then
+            # Untracked files aren't in Git yet, so we diff them against empty space to show the whole file
+            git diff --color=always --no-index /dev/null \"\$file\" | $_git_pager
+        else
+            # By omitting HEAD, we diff the worktree against the index, showing ONLY unstaged changes
+            git diff --color=always -- \"\$file\" | $_git_pager
+        fi
+    "
+
+    local selected
+    selected=$(eval "$cmd_status" | fzf -m --ansi --no-sort --tiebreak=index \
+        --height=40% --border --layout=reverse --info=inline \
+        --prompt="Stage > " \
+        --border-label='  Git Add ' \
+        --header="${KEYS}${HEADERS}" \
+        --preview-window=right:60%:border-left \
+        --preview "$preview_script" \
+        --bind "ctrl-a:select-all"
+    )
+
+    if [[ -n "$selected" ]]; then
+        local files_to_stage=()
+
+        # Read FZF output line-by-line to securely handle filenames with spaces
+        while IFS= read -r line; do
+            local file=$(echo "$line" | awk -F'│' '{print $2}' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+            # If it's a rename (R old -> new), Git add only needs the target
+            file="${file##*-> }"
+            files_to_stage+=("$file")
+        done <<< "$selected"
+
+        if [[ ${#files_to_stage[@]} -gt 0 ]]; then
+            print "\n${COLOR[BLUE]}  STAGING FILES${COLOR[RESET]}"
+            print "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}"
+
+            # Stage everything simultaneously in one command
+            command git add -- "${files_to_stage[@]}"
+
+            for f in "${files_to_stage[@]}"; do
+                print "  ${COLOR[GREEN]}✓${COLOR[RESET]} $f"
+            done
+            print "\n${COLOR[GREEN]}  SUCCESS${COLOR[RESET]} Staged ${#files_to_stage[@]} file(s).\n"
+        fi
+    else
+        print "\n${COLOR[YELLOW]}  Aborted:${COLOR[RESET]} No files selected.\n"
+    fi
 }
 
 
-# ── wrapper engine ───────────────────────────────────────────────────────────
+## ── Wrapper Engine ─────────────────────────────────────────────────────────────
+## ------------------------------------------------------------------------------
 
-# 1. TTY Guard (Don't mess with pipes)
-if [[ ! -t 1 ]]; then
+# TTY & Empty Guard (Don't mess with pipes, allow plain 'git')
+if [[ ! -t 1 || -z "$1" ]]; then
     command git "$@"
     return
 fi
 
-# 2. Command Interceptor
+# Command Interceptor
 local cmd="$1"
+shift   # Remove the sub-command so $@ contains ONLY the target arguments
 
 case "$cmd" in
-    status|st|state)
-        _git_status
-        ;;
-    clone|down)
-        shift
-        _git_clone "$@"
-        ;;
-    pull|up)
-        shift
-        _git_pull "$@"
-        ;;
-    log)
-        shift
-        _git_log "$@"
-        ;;
-    *)
-        command git "$@"
-        ;;
-esac
+    status|st|state) __status "$@" ;; #DONE
+    clone|down)      __clone "$@" ;; #DONE
+    checkout)        __checkout "$@" ;; #DONE
+    pull|up)         __pull "$@" ;; #DONE
+    log)             __log "$@" ;; #DONE
+    add)             __add "$@" ;; #DONE
+    # diff)            __diff "$@" ;;
+    # stash)           __stash "$@" ;;
+    # tag)             __tag "$@" ;;
+    # branch)          __branch "$@" ;;
+    # remote)          __remote "$@" ;;
+    # merge)           __merge "$@" ;;
+    # reset)           __reset "$@" ;;
+    # commit)          __commit "$@" ;;
 
+    # Fallback to raw Git
+    *)               command git "$cmd" "$@" ;;
+esac
