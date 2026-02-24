@@ -233,6 +233,11 @@ function __log () {
         return 1
     fi
 
+    if [[ "$#" -gt 0 ]]; then
+        command git log "$@"
+        return $?
+    fi
+
     # The %<|(24)%x20 trick forces the first pipe to always land exactly at column 24,
     # absorbing the wavy left-side graph so your table remains perfectly aligned.
     local fmt="${COLOR[BOLD]}${COLOR[BLUE]}%h${COLOR[RESET]}%<|(24)%x20${COLOR[DIM]}│${COLOR[RESET]} ${COLOR[DIM]}%<(14,trunc)%ar${COLOR[RESET]} ${COLOR[DIM]}│${COLOR[RESET]} ${COLOR[YELLOW]}%<(15,trunc)%an${COLOR[RESET]} ${COLOR[DIM]}│${COLOR[RESET]}%C(auto)%d${COLOR[RESET]} %s"
