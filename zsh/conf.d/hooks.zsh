@@ -166,7 +166,7 @@ magic_enter() {
             git status -sb
         else
             # Clean State
-            print "${COLOR[GREEN]}::: Git Status (Clean) :::${COLOR[RESET]}"
+            print "${COLOR[GREEN]}::: Git Status (Clean) :::${COLOR[RESET]}\n"
             git log -n 3 --oneline --color=always
         fi
         print "\n"

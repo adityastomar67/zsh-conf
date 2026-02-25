@@ -15,10 +15,10 @@
 #          stream and reconstruct it visually.
 #
 # Sub-Modules:
-#    _clone  : Adds a clean header, dynamic progress bars, and post-clone instructions.
-#    _pull   : Visualizes branch states, fast-forwards, and conflicts cleanly.
-#    _status : Parses `git status -sb` to build an icon-based file tree.
-#    _log    : Replaces the standard log with a fully interactive, searchable
+#    __clone  : Adds a clean header, dynamic progress bars, and post-clone instructions.
+#    __pull   : Visualizes branch states, fast-forwards, and conflicts cleanly.
+#    __status : Parses `git status -sb` to build an icon-based file tree.
+#    __log    : Replaces the standard log with a fully interactive, searchable
 #               FZF interface, complete with quick-copy shortcuts and a split-pane preview.
 #
 # Features:
@@ -29,9 +29,9 @@
 #
 # Dependencies:
 #    git  : Required for core functionality.
-#    awk  : Required for advanced string parsing in `_status`.
+#    awk  : Required for advanced string parsing in `__status`.
 #    sed  : Required for stream manipulation.
-#    fzf  : Required for the interactive `_log` dashboard.
+#    fzf  : Required for the interactive `__log` dashboard.
 # ------------------------------------------------------------------------------
 
 
