@@ -88,15 +88,24 @@ Config::init() {
     # Directory Definitions
     # --------------------------------------------------------------------------
     # The root directory where the configuration will live
-    CONFIG_PATHS[REPO]="${ZDOTDIR:-$HOME/.config/zsh-conf}"
+    CONFIG_PATHS[REPO]="${HOME}/.config/zsh-conf"
     CONFIG_PATHS[CACHE]="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-cache"
 
     # Target files
-    CONFIG_PATHS[RC]="${CONFIG_PATHS[REPO]}/.zshrc"
-    CONFIG_PATHS[ENV]="${CONFIG_PATHS[REPO]}/.zshenv"
+    if [[ -f "${CONFIG_PATHS[REPO]}/.zshrc" ]]; then
+        CONFIG_PATHS[RC]="${CONFIG_PATHS[REPO]}/.zshrc"
+    else
+        CONFIG_PATHS[RC]="${HOME}/.zshrc"
+    fi
+
+    if [[ -f "${CONFIG_PATHS[REPO]}/.zshenv" ]]; then
+        CONFIG_PATHS[ENV]="${CONFIG_PATHS[REPO]}/.zshenv"
+    else
+        CONFIG_PATHS[ENV]="${HOME}/.zshenv"
+    fi
+
     CONFIG_PATHS[CONF]="${CONFIG_PATHS[REPO]}/user.conf"
     CONFIG_PATHS[HIST]="${CONFIG_PATHS[CACHE]}/zhistory"
-    CONFIG_PATHS[DUMP]="${CONFIG_PATHS[CACHE]}/.zcompdump"
 
     # Backup location (Time-stamped)
     CONFIG_PATHS[BACKUP]="${CONFIG_PATHS[REPO]}_backups/$(date +%Y-%m-%d)"
@@ -487,7 +496,7 @@ FileSystem::atomic_backup() {
     local file="$1"
     [[ ! -f "$file" ]] && return
 
-    mkdir -p "${CONFIG_PATHS[BACKUP]}"
+    mkdir -p "${CONFIG_PATHS[BACKUP]}" >/dev/null 2>&1
     local timestamp=$(date +%H%M%S)
 
     # -a: Archive mode (preserve attributes)
@@ -737,7 +746,7 @@ Installer::main() {
     FileSystem::atomic_backup "${CONFIG_PATHS[RC]}"
     FileSystem::atomic_backup "${CONFIG_PATHS[ENV]}"
     FileSystem::atomic_backup "${CONFIG_PATHS[CONF]}"
-    mkdir -p "${CONFIG_PATHS[CACHE]}" 2>/dev/null
+    mkdir -p "${CONFIG_PATHS[CACHE]}"  >| /dev/null 2>&1
 
     # 5b. Migrate PATH exports from existing local .zshrc (if any)
     Installer::migrate_user_path
