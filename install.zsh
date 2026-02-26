@@ -590,7 +590,7 @@ Installer::ensure_zsh_shell() {
     fi
 
     # 2. Set as Default Shell
-    if [[ $SHELL != "/usr/bin/zsh" ]] && [[ $SHELL != "/bin/zsh" ]]; then
+    if [[ "${SHELL:-}" != "/usr/bin/zsh" ]] && [[ "${SHELL:-}" != "/bin/zsh" ]]; then
         Interface::print_banner
         Logger::warn "Changing shell to Zsh (Requires Root). Reboot required."
         if Interface::prompt_confirm "Change default shell to Zsh?"; then
@@ -607,11 +607,11 @@ Installer::migrate_user_path() {
     local marker_begin="# >>> zsh-conf: migrated PATH from ~/.zshrc >>>"
     local marker_end="# <<< zsh-conf: migrated PATH from ~/.zshrc <<<"
 
-    [[ -f "$source_rc" ]] || return
-    [[ "$source_rc:A" != "${CONFIG_PATHS[RC]:A}" ]] || return
+    [[ ! -f "$source_rc" ]] && return 0
+    [[ "$source_rc:A" == "${CONFIG_PATHS[RC]:A}" ]] && return 0
 
     if [[ -f "$override_file" ]] && grep -qF "$marker_begin" "$override_file"; then
-        return
+        return 0
     fi
 
     local path_lines
@@ -620,7 +620,7 @@ Installer::migrate_user_path() {
         if ($0 ~ /^[[:space:]]*PATH=.*export[[:space:]]+PATH/) {print; next}
     }' "$source_rc")"
 
-    [[ -n "$path_lines" ]] || return
+    [[ -n "$path_lines" ]] || return 0
 
     print -r -- '# ------------------------------------------------------------------------------
 # USER OVERRIDES & SECRETS
@@ -760,8 +760,9 @@ Installer::main() {
     if [[ -d "${CONFIG_PATHS[REPO]}" ]]; then
         mkdir -p "${CONFIG_PATHS[BACKUP]}"
         mv "${CONFIG_PATHS[REPO]}" "${CONFIG_PATHS[BACKUP]}/zsh-conf"
+    else
+        mkdir -p "${CONFIG_PATHS[REPO]}" 
     fi
-
     # Parallel Cloning
     {
         local temp_dir="/tmp/zsh_bin_${TIMESTAMP}"
