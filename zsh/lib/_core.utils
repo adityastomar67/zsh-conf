@@ -27,8 +27,6 @@
 #   - Depends on `_ui.color` for colored output.
 # ------------------------------------------------------------------------------
 
-## Check for minimal mode
-[[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]] && return
 
 # Initialization & Autoloads
 # ───────────────────────────────────────────────────────────────────────
@@ -39,6 +37,12 @@ autoload -Uz compinit
 
 # Load color definitions (UI helpers)
 autoload -Uz _ui.color && _ui.color
+
+# Add custom binaries to PATH
+export PATH="$PATH:$ZSH_CONFIG_ROOT/bin"
+
+## Check for minimal mode
+[[ "${ENABLE_MINIMAL_MODE:l}" == "yes" ]] && return
 
 # Load the 'Defer' utility if available (Lazy Loading)
 # Note: Ensure a file named 'zsh-defer' or 'Defer' exists in your $fpath
@@ -57,7 +61,6 @@ if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
     autoload -Uz PrettyAlias
 fi
 
-export PATH="$PATH:$ZSH_CONFIG_ROOT/bin"
 
 
 # Plugin Manager (Plug)
