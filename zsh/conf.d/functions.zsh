@@ -344,13 +344,15 @@ if [[ -d "$HOME/.nvm" ]]; then
         [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
         # Execution: Run the command that triggered this function
-        # "$0" is the command name (e.g., 'npm'), "$@" are the args
-        exec "$0" "$@"
+        # "$1" is the command name (e.g., 'npm'), "$@" are the args
+        local cmd="$1"
+        shift
+        "$cmd" "$@"
     }
 
     # 3. Create the dummy triggers
     for cmd in $nvm_triggers; do
-        eval "function $cmd() { _nvm_lazy_load \"\$@\"; }"
+        eval "function $cmd() { _nvm_lazy_load \"$cmd\" \"\$@\"; }"
     done
 fi
 
@@ -386,8 +388,10 @@ _pyenv_lazy_load() {
     fi
 
     # Re-run: Execute the command the user actually typed
-    # "$0" is the function name (e.g., python), "$@" are the args
-    exec "$0" "$@"
+    # "$1" is the function name (e.g., python), "$@" are the args
+    local cmd="$1"
+    shift
+    "$cmd" "$@"
 }
 
 # 3. Create the triggers
@@ -395,7 +399,7 @@ _pyenv_lazy_load() {
 if [[ -d "$HOME/.pyenv" ]] || (( $+commands[pyenv] )); then
     for cmd in $_pyenv_triggers; do
         # Define a function for each trigger that calls the loader
-        eval "function $cmd() { _pyenv_lazy_load \"\$@\"; }"
+        eval "function $cmd() { _pyenv_lazy_load \"$cmd\" \"\$@\"; }"
     done
 fi
 
