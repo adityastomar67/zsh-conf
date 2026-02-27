@@ -326,7 +326,7 @@ function kubectl() {
 #   Usage: nvm, node, npm, npx, pnpm, yarn
 # ------------------------------------------------------------------------------
 # 1. Define the commands that trigger loading
-local nvm_triggers=(nvm node npm npx pnpm yarn)
+_NVM_TRIGGERS=(nvm node npm npx pnpm yarn)
 
 # 2. Check if NVM exists before setting up triggers
 if [[ -d "$HOME/.nvm" ]]; then
@@ -334,7 +334,8 @@ if [[ -d "$HOME/.nvm" ]]; then
     # The "Worker" function
     _nvm_lazy_load() {
         # Cleanup: Unset the dummy functions
-        unset -f _nvm_lazy_load $nvm_triggers
+        unset -f _nvm_lazy_load
+        for c in $_NVM_TRIGGERS; do unset -f $c 2>/dev/null; done
 
         # Setup: Load NVM
         export NVM_DIR="$HOME/.nvm"
@@ -351,7 +352,7 @@ if [[ -d "$HOME/.nvm" ]]; then
     }
 
     # 3. Create the dummy triggers
-    for cmd in $nvm_triggers; do
+    for cmd in $_NVM_TRIGGERS; do
         eval "function $cmd() { _nvm_lazy_load \"$cmd\" \"\$@\"; }"
     done
 fi
@@ -365,13 +366,13 @@ fi
 # Check if pyenv is in path OR installed in home
 # 1. Define the trigger command list
 # Add any other pyenv-managed commands here (e.g., pytest, jupyter)
-local _pyenv_triggers=(pyenv python pip poetry)
+_PYENV_TRIGGERS=(pyenv python pip poetry python3)
 
 # 2. The single "Worker" function
 _pyenv_lazy_load() {
     # Cleanup: Remove the dummy functions/aliases so they don't loop
     unset -f _pyenv_lazy_load
-    for cmd in $_pyenv_triggers; do unset -f $cmd; done
+    for c in $_PYENV_TRIGGERS; do unset -f $c 2>/dev/null; done
 
     # Setup: Add pyenv to PATH if it's not there (Standard Install)
     [[ -d "$HOME/.pyenv/bin" ]] && export PATH="$HOME/.pyenv/bin:$PATH"
@@ -397,7 +398,7 @@ _pyenv_lazy_load() {
 # 3. Create the triggers
 # We check if pyenv exists roughly (directory or binary) before setting traps
 if [[ -d "$HOME/.pyenv" ]] || (( $+commands[pyenv] )); then
-    for cmd in $_pyenv_triggers; do
+    for cmd in $_PYENV_TRIGGERS; do
         # Define a function for each trigger that calls the loader
         eval "function $cmd() { _pyenv_lazy_load \"$cmd\" \"\$@\"; }"
     done
