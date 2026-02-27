@@ -26,7 +26,7 @@
 
 
 # Shared Utilities
-# ───────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────
 ## Helper functions used across multiple themes to avoid code duplication.
 
 # Enable dynamic expansion within the prompt string.
@@ -162,7 +162,7 @@ function _git_engine() {
     zle -F "$fd" _git_async_callback
 }
 
-# ── FD Handler ──────────────────────────────────────
+# ── FD Handler ─────────────────────────────────────────────────────────
 # Triggered when the background worker has finished data
 function _git_async_callback() {
     local fd=$1
@@ -175,7 +175,7 @@ function _git_async_callback() {
     if ! read -r content <&"$fd"; then
         # If read fails, cleanup safely
         zle -F "$fd"
-        exec {fd}<&- 2>/dev/null
+        { exec {fd}<&- ; } 2>/dev/null
         _GIT_ASYNC_FD=0
         _GIT_ASYNC_LOCK=0
         return
@@ -183,7 +183,7 @@ function _git_async_callback() {
 
     # Clean up FD immediately
     zle -F "$fd"
-    exec {fd}<&- 2>/dev/null
+    { exec {fd}<&- ; } 2>/dev/null
     _GIT_ASYNC_FD=0
     _GIT_ASYNC_PID=0
 
@@ -239,7 +239,7 @@ function _register_prompt_hook() {
     _CURRENT_PROMPT_HOOK="$hook_name"
 }
 
-# ── Random Symbol ───────────────────────────────────────────────────
+# ── Random Symbol ──────────────────────────────────────────────────────
 # Returns a random "ignition" symbol from a curated list.
 function get_random_prompt_symbol() {
     local -a symbols=(
@@ -286,13 +286,12 @@ function get_random_prompt_symbol() {
 }
 
 
-# ── THEMES ───────────────────────────────────────────────────
+# ── THEMES ─────────────────────────────────────────────────────────────
 
 # Theme: 'Z'
 # ───────────────────────────────────────────────────────────────────────
 ## A minimalist theme optimized for speed.
 ## Uses the shared _git_engine to reduce code duplication.
-
 function theme_z() {
 
     # The View Logic (Updater)
@@ -365,7 +364,6 @@ function theme_z() {
 # ───────────────────────────────────────────────────────────────────────
 ## A sleek, modern prompt using purely native Zsh features.
 ## No dependencies. Ultra-fast Git plumbing. Self-contained.
-
 function theme_gh0st() {
     typeset -g _GH0ST_GIT_MSG=""
 
@@ -409,7 +407,6 @@ function theme_gh0st() {
 # Theme: 'Orbit'
 # ───────────────────────────────────────────────────────────────────────
 ## A two-line prompt with connecting lines, resembling a spaceship HUD.
-
 function theme_orbit() {
     typeset -g _ORBIT_GIT_MSG=""
 
@@ -451,7 +448,6 @@ function theme_orbit() {
 # ───────────────────────────────────────────────────────────────────────
 ## A prompt with a timer, git status, and window title.
 ## No dependencies. Ultra-fast Git plumbing. Self-contained.
-
 function theme_10k() {
     # 1. Execution Timer Hook
     function _10k_record_start() {
@@ -520,7 +516,7 @@ function theme_10k() {
 }
 
 
-# ── Initialization Logic ────────────────────────────────────────────
+# ── Initialization Logic ──────────────────────────────────────────────
 ## Selects the theme based on the environment variable.
 
 case "$PROMPT_THEME" in
