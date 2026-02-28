@@ -108,8 +108,8 @@ alias which='type -a' # 'type -a' is more robust in Zsh than 'which'
 
 # ------------------------------------------------------------------------------
 # Quick Jumps
-alias -- ~="cd ~"       # Go Home
-alias -- -="cd -"       # Go to Previous Directory
+alias -- ~="cd ~"       # ~ Go Home
+alias -- -="cd -"       # - Go to Previous Directory
 
 # Numbered Shortcuts (Zsh Directory Stack)
 # Create aliases .1 through .100 to jump back in the directory stack.

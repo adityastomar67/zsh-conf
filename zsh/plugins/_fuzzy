@@ -24,29 +24,7 @@
 # Usage Notes
 #   - Requires: `fzf` (Binary).
 #   - Optional: `bat`, `eza`, `fd`, `rg`, `delta` for enhanced visuals.
-#
-
 # ------------------------------------------------------------------------------
-
-
-# ── initialization & dependencies ────────────────────────────────────────────
-
-# ------------------------------------------------------------------------------
-# Clipboard Detection
-# ------------------------------------------------------------------------------
-local CLIP_CMD=""
-
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    CLIP_CMD="pbcopy" # macOS
-elif [[ -n "$WAYLAND_DISPLAY" ]] && (( $+commands[wl-copy] )); then
-    CLIP_CMD="wl-copy" # Wayland
-elif (( $+commands[xclip] )); then
-    CLIP_CMD="xclip -selection clipboard" # X11 xclip
-elif (( $+commands[xsel] )); then
-    CLIP_CMD="xsel --clipboard --input" # X11 xsel
-else
-    CLIP_CMD="cat" # Fallback to stdout
-fi
 
 
 # ── custom completion engines ────────────────────────────────────────────────
@@ -214,7 +192,7 @@ export FZF_DEFAULT_OPTS="
     --bind 'ctrl-j:preview-down'
     --bind 'ctrl-k:preview-up'
     --bind 'ctrl-a:select-all'
-    --bind 'ctrl-y:execute-silent(print {+} | $CLIP_CMD)'
+    --bind 'ctrl-y:execute-silent(print {+} | $_clip)'
     --bind 'ctrl-e:execute(print {+} | xargs -o nvim)'
     --bind 'ctrl-v:execute(code {+})'
     --bind 'tab:down,shift-tab:up'

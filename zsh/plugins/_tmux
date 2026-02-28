@@ -101,8 +101,6 @@ fi
 #   The user can select a session to attach to OR type a new name to create one.
 # ------------------------------------------------------------------------------
 
-
-
 # Configure FZF layout options
 local fzf_opts=(
     --height=40%

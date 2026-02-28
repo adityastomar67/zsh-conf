@@ -11,52 +11,41 @@
 # Usage:
 #   Source this file during the Zsh initialization sequence (usually in .zshrc).
 #   Ensure $ZSH_CONFIG_ROOT is defined.
-#
-
 # ───────────────────────────────────────────────────────────────────────────────────────
 
-# ── core plugin installation ─────────────────────────────────────────────────
 
+# ── core plugin installation ─────────────────────────────────────────────────
 # Execute the plugin installation utility.
 #   This function (defined in _core.utils) iterates over the global $ZPLUGINS
-#   array and installs missing dependencies.
+#   array in the $ZDOTDIR/user.conf file and installs missing dependencies.
 plug
 
-# ── conditional modules ──────────────────────────────────────────────────────
 
-# Load the Fuzzy Finder integration only if prerequisites are met.
-#
-# Logic:
-#   1. Check if the 'fzf' binary is available in $PATH (via is_installed).
-#   2. Check if the configuration file '_fuzzy' exists in our plugins directory.
-if (( $+commands[fzf] )); then
-    source "$ZSH_CONFIG_ROOT/plugins/_fuzzy"
+# ── conditional modules ──────────────────────────────────────────────────────
+# Load Fuzzy Finder only if the binary exists AND the config file is present
+local _fuzzy_file="$ZSH_CONFIG_ROOT/plugins/_fuzzy"
+if (( $+commands[fzf] )) && [[ -f "$_fuzzy_file" ]]; then
+    source "$_fuzzy_file"
 fi
 
+
 # ── autoload registration ────────────────────────────────────────────────────
-
-#region Annex Loading
-
 # Add the 'annexes' directory to the Zsh function search path ($fpath).
 #   We prepend it to ensure our custom functions take precedence over system defaults.
 fpath=("$ZSH_CONFIG_ROOT/plugins/annexes" $fpath)
 
 # Dynamically mark all scripts in the annex directory for autoloading.
-#
 # Flags:
 #   -U : Mark functions as undefined (load on first use).
 #   -z : Force Zsh style autoloading (ignores KSH_AUTOLOAD).
-#
 # Glob Modifiers:
 #   (N) : Null Glob. If no files match, return an empty list instead of erroring.
 #   (:t): Tail. Extracts the filename (basename) from the full path.
 local digest="$ZSH_CONFIG_ROOT/plugins/annexes.zwc"
 if [[ -f "$digest" ]]; then
-    # Load from the compiled digest (Fastest)
+    # -w: Load from the compiled digest (Fastest)
     autoload -w "$digest"
 else
     # Fallback: Load individual files
     autoload -Uz "$ZSH_CONFIG_ROOT/plugins/annexes/"*(N:t)
 fi
-
-#endregion
