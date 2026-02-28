@@ -38,7 +38,7 @@
 if ! docker ps > /dev/null 2>&1; then
     # Use zle -M to print a message below the current command line
     # without disrupting the prompt.
-    zle -M "⚠️  Docker is not running."
+    zle -M "  Docker is not running."
     return
 fi
 
@@ -54,7 +54,7 @@ local final_command
 # 3. Show a preview window with logs (trying 'bat' for color, falling back to 'tail').
 selected_line=$(docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}" | \
     fzf --header-lines=1 \
-        --prompt="🐳 Container > " \
+        --prompt="  Container > " \
         --height=80% \
         --preview "docker logs --tail 50 {1} 2>&1 | bat --color=always --style=numbers --language=log 2>/dev/null || docker logs --tail 50 {1}" \
         --preview-window="bottom:50%:wrap" \
@@ -75,14 +75,14 @@ if [[ -n "$container_id" ]]; then
     # Define the menu map.
     # Format: "Display Label : Command String"
     local menu_options=(
-        "📜 Logs (Follow)   : docker logs -f"
-        "💻 Attach (Bash)   : docker exec -it /bin/bash"
-        "🐚 Attach (Sh)     : docker exec -it /bin/sh"
-        "▶️  Start          : docker start"
-        "yw  Stop           : docker stop"
-        "🔄 Restart         : docker restart"
-        "🗑️  Remove         : docker rm"
-        "🔍 Inspect         : docker inspect"
+        "  Logs (Follow)   : docker logs -f"
+        "  Attach (Bash)   : docker exec -it /bin/bash"
+        "  Attach (Sh)     : docker exec -it /bin/sh"
+        "  Start           : docker start"
+        "  Stop            : docker stop"
+        "󰜉  Restart         : docker restart"
+        "󰚃  Remove          : docker rm"
+        "󰱼  Inspect         : docker inspect"
     )
 
     # Pipe options to fzf.

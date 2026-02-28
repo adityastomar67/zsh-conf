@@ -48,7 +48,7 @@ detected_os=$(uname -s)
 # ───────────────────────────────────────────────────────────────────────
 ## Wrappers for administrative commands and safety features.
 # Admin Helpers
-alias _="sudo"        # Quick sudo shorthand
+alias -- _="sudo"        # Quick sudo shorthand
 
 # ------------------------------------------------------------------------------
 # Auto-Sudo (Linux Only)
@@ -65,7 +65,7 @@ fi
 # Map 'history' to the underlying 'fc' command with a custom format
 # -l: list
 # -t: time format (takes the string arguments)
-alias history="fc -l -t '%Y/%m/%d %H:%M:%S:   '"
+alias history="fc -l -t '%Y-%m-%d %H:%M:%S' 1 | awk '{num=\$1; date=\$2; time=\$3; sub(/^[ \t]*[0-9]+[ \t]+[^ \t]+[ \t]+[^ \t]+[ \t]+/, \"\"); printf \"\033[2m%7s\033[0m │ \033[36m%s\033[0m \033[33m%s\033[0m │ %s\n\", num, date, time, \$0}' | less -R -S -F -X -K"
 
 # ----------------------------------------------------------------------------
 # Man Page Fuzzy Finder

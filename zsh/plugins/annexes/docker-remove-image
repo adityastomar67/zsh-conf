@@ -59,7 +59,7 @@ local -a image_ids
 selected_rows=$(docker images --format "table {{.ID}}\t{{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" | \
     fzf --multi \
         --header-lines=1 \
-        --prompt="💾 Rm Image > " \
+        --prompt="  Remove Image > " \
         --height=60% \
         --preview-window="right:65%:wrap:nohidden" \
         --preview 'docker history {1} | head -n 20 | bat --color=always --style=plain --language=dockerfile 2>/dev/null || docker inspect {1}'

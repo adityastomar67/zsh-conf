@@ -74,7 +74,7 @@ function _zsh_debug_startup() {
 
     # 4. User Feedback
     clear
-    print "${COLOR[YELLOW]}🚧 Starting Zsh Debugger...${COLOR[RESET]}"
+    print "${COLOR[YELLOW]}  Starting Zsh Debugger...${COLOR[RESET]}"
     print "   • Debug Log:   ${COLOR[UNDERLINE]}$debug_log${COLOR[RESET]}"
 
     if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
@@ -297,7 +297,7 @@ function kubectl() {
 
         # 3. Guard PRODUCTION keywords
         if [[ "$current_ctx" =~ "prod|production|live|main" ]]; then
-            print "\n${COLOR[BOLD]}${COLOR[RED]}[K8S GUARD] 🛑 WARNING: Targeting PRODUCTION ($current_ctx)${COLOR[RESET]}"
+            print "\n${COLOR[BOLD]}${COLOR[RED]}[K8S GUARD]  WARNING: Targeting PRODUCTION ($current_ctx)${COLOR[RESET]}"
             print "Command: ${COLOR[YELLOW]}kubectl $cmd_args${COLOR[RESET]}"
             print -n "Are you sure? [y/N] "
 

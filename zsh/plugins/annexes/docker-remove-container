@@ -60,7 +60,7 @@ local -a container_ids
 selected_rows=$(docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Image}}" | \
     fzf --multi \
         --header-lines=1 \
-        --prompt="🐳 Rm Container > " \
+        --prompt="  Remove Container > " \
         --height=60% \
         --preview-window="right:65%:wrap:nohidden" \
         --preview 'docker logs --tail 50 {1} 2>&1 | bat --color=always --style=numbers --language=log 2>/dev/null || tail -n 50'
