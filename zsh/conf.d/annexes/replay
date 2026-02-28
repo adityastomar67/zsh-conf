@@ -1,54 +1,145 @@
-replay() {
-  emulate -L zsh
-  setopt localoptions no_notify no_bg_nice
+#!/usr/bin/env zsh
 
-  # 1. Help & Usage
-  if (( $# == 0 )); then
-    print -P "%F{yellow}Usage:%f replay [-s speed] <command>"
-    return 1
-  fi
+# ------------------------------------------------------------------------------
+# Function/Module: Animated Command Replay
+# Description:
+#   Executes a given shell command in a pseudo-terminal (PTY) and visually
+#   "replays" its output character-by-character at a specified speed.
+#   This simulates a typing or slow-rendering effect for terminal outputs.
+#
+# How it works:
+#       1. Validates the presence of the zsh/zpty module.
+#       2. Parses arguments to extract the optional playback speed.
+#       3. Sets up a trap to ensure pseudo-terminal cleanup on exit.
+#       4. Spawns the target command inside a newly created PTY.
+#       5. Reads the PTY output and prints it char-by-char with a sleep delay.
+#
+# Sub-Modules / Components:
+#    PTY Manager : Handles the lifecycle (creation, reading, destruction) of the PTY.
+#    Output Loop : Iterates over strings character-by-character to apply delays.
+#
+# Features:
+#    Custom Speed : Allows configuring the delay between characters.
+#    Color Support: Preserves ANSI escape codes by passing the TERM environment.
+#    Safe Cleanup : Uses traps to prevent orphaned PTY processes.
+#
+# Dependencies:
+#    zsh/zpty : Core Zsh module required to spawn pseudo-terminals.
+#    sleep    : External command used for introducing the playback delay.
+#
+# Usage:
+#    replay <command>
+#    replay -s <speed> <command>
+#
+# Examples:
+#    replay ls -la
+#    replay -s 0.05 ls -la
+# ------------------------------------------------------------------------------
 
-  # 2. Dependency Check
-  if ! zmodload -e zsh/zpty; then
-    zmodload -i zsh/zpty || { print "zsh/zpty module failed to load"; return 1; }
-  fi
+## ── Terminal Animation Utilities ─────────────────────────────────────────────
+## ------------------------------------------------------------------------------
 
-  # 3. Argument Parsing
-  local speed=0.01
-  if [[ "$1" == "-s" ]]; then
-    speed="$2"
+# ── Command Execution & Visuals ───────────────────────────────────────────────
+# Function: animated_command_replay
+# Logic:
+#   - Enforces safe local Zsh options (emulate, setopt).
+#   - Loads the zpty module if not already loaded in the session.
+#   - Parses flags to extract and validate the delay speed (defaults to 0.01s).
+#   - Establishes a trap to clean up the PTY session on unexpected termination.
+#   - Executes the requested command in a PTY, preserving the TERM variable.
+#   - Reads output chunks, strips carriage returns, and prints them slowly.
+#   - Cleans up the PTY and restores terminal state upon completion.
+# -----------------------------------------------------------------------------
+
+
+# --- ENVIRONMENT ISOLATION ---
+# Ensure standard Zsh behavior for this function regardless of user settings.
+emulate -L zsh
+
+# no_notify: Don't print background job status changes immediately.
+# no_bg_nice: Don't run background jobs at a lower priority.
+setopt localoptions no_notify no_bg_nice
+
+# --- DEPENDENCY VERIFICATION ---
+# Check if the required pseudo-terminal module is loaded.
+# ---- NOTE: 'zmodload -i' is deprecated in modern Zsh, so we check (-e) first.
+if ! zmodload -e zsh/zpty; then
+    zmodload zsh/zpty || {
+        print -P "${COLOR[RED]} [ERROR]${COLOR[RESET]} zsh/zpty module failed to load."
+        return 1
+    }
+fi
+
+# --- ARGUMENT PARSING & VALIDATION ---
+local playback_delay=0.01
+
+if [[ "$1" == "-s" || "$1" == "--speed" ]]; then
+
+    # ---- SAFE: Input Validation
+    # Prevent 'sleep' from crashing if the user passes text instead of a number.
+    if [[ ! "$2" =~ ^[0-9]*\.?[0-9]+$ ]]; then
+        print -P "${COLOR[RED]} [ERROR]${COLOR[RESET]} Speed must be a numeric value (e.g., 0.05)."
+        return 1
+    fi
+
+    playback_delay="$2"
     shift 2
-  fi
+fi
 
-  local pty_name="replay_pts_$$"
-  local data
-  local char
+# Ensure a command was actually provided after flag parsing.
+if (( $# == 0 )); then
+    print -P "${COLOR[YELLOW]}Usage:${COLOR[RESET]} animated_command_replay [-s speed] <command>"
+    return 1
+fi
 
-  # 4. Cleanup Trap (Critical)
-  trap "zpty -d $pty_name 2>/dev/null; return" INT TERM EXIT
+# Initialize variables for the PTY session and data stream.
+local pseudo_terminal_name="replay_pts_$$"
+local raw_output_chunk
+local single_character
 
-  # 5. Visual Header
-  print -P "%F{green}➜ Replaying:%f %B$*%b"
-  print -P "%F{grey}────────────────────────────────────────%f"
+# --- PTY LIFECYCLE MANAGEMENT ---
+# !!! CRITICAL: Cleanup Trap
+# We trap Interrupt (INT), Terminate (TERM), and normal EXIT.
+# We do NOT use 'return' inside the trap because it masks exit codes
+# and can destabilize the surrounding shell context.
+trap "zpty -d $pseudo_terminal_name 2>/dev/null" INT TERM EXIT
 
-  # 6. Spawn PTY (Blocking Mode)
-  #    FIX: Removed '-b'. Now it waits for output properly.
-  zpty "$pty_name" "$@"
+# Render the UI header.
+print -P "${COLOR[GREEN]}➜ Replaying:${COLOR[RESET]} ${COLOR[BOLD]}$*${COLOR[RESET]}"
+print -P "${COLOR[DIM]}────────────────────────────────────────${COLOR[RESET]}"
 
-  # 7. Read Loop
-  #    zpty -r will now wait until data arrives or the command finishes.
-  while zpty -r "$pty_name" data; do
+# --- COMMAND EXECUTION ---
+# Spawn the target command inside the pseudo-terminal.
+# - Using 'zsh -c "$*"' allows executing complex pipelines (e.g., "ls | grep log").
+# - Passing 'env TERM=$TERM' ensures the command still prints its native ANSI colors.
+zpty "$pseudo_terminal_name" env TERM="$TERM" "$@"
 
-    # Split the chunk into characters and type them out
-    for char in ${(s::)data}; do
-        print -nr -- "$char"
-        sleep "$speed"
+# --- CHARACTER RENDER LOOP ---
+# Continuously read data from the PTY into our chunk variable.
+while zpty -r "$pseudo_terminal_name" raw_output_chunk; do
+
+    # ---- SAFE: TTY Glitch Fix
+    # PTYs output raw terminal data using \r\n (Carriage Return + Linefeed).
+    # If we print \r character-by-character, the cursor snaps to the start of the line
+    # and aggressively overwrites existing text. This substitution strips the \r.
+    raw_output_chunk="${raw_output_chunk//$'\r'/}"
+
+    # Iterate over the chunk, splitting it into individual characters.
+    # ${(s::)var} is a Zsh parameter expansion flag that splits a string by character.
+    for single_character in ${(s::)raw_output_chunk}; do
+
+        # Print the character without a trailing newline (-n) and process raw escapes (-r).
+        # The '--' prevents character strings like "-e" from being evaluated as print flags.
+        print -nr -- "$single_character"
+
+        sleep "$playback_delay"
     done
+done
 
-  done
+# --- FINAL CLEANUP ---
+# Remove the trap to avoid redundant execution, then safely delete the PTY.
+trap - INT TERM EXIT
+zpty -d "$pseudo_terminal_name" 2>/dev/null
 
-  # 8. Final Cleanup
-  trap - INT TERM EXIT
-  zpty -d "$pty_name" 2>/dev/null
-  print "" # Restore cursor position
-}
+# Print a final newline to restore the cursor position properly for the next prompt.
+print ""

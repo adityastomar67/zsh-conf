@@ -1,149 +1,185 @@
-#!/usr/bin/env zsh
-
-#    ░█▀▄░█▄█░░░█▀█░█▀█░▀█▀░▀█▀░█▀▀░█▀▄░█▀█
-#    ░█▀▄░█░█░░░█▀▀░█▀█░░█░░░█░░█▀▀░█▀▄░█░█
-#    ░▀░▀░▀░▀░▀░▀░░░▀░▀░░▀░░░▀░░▀▀▀░▀░▀░▀░▀
-
 # ------------------------------------------------------------------------------
-# File Purpose
-#   Provides a safe, interactive wrapper for pattern-based file deletion.
+# Function/Module: Interactive Pattern Remover
+# Description:
+#   A safe, interactive utility to recursively find and delete files matching
+#   a specific glob pattern. It features a dynamically sized UI dashboard,
+#   strict safety guards against catastrophic deletions, and an interactive
+#   review mode using FZF or less.
 #
-# Problems Solved
-#   - Prevents accidental "mass-deletion" by forcing a review of matched files.
-#   - Blocks "Fat Finger" disasters by blacklisting overly broad patterns (/, *, .).
-#   - Provides a TUI (Terminal User Interface) to view the full list of targets
-#     before committing to the 'delete' operation.
+# How it works:
+#       1. Validates the input pattern against a strict safety blacklist.
+#       2. Uses native Zsh recursive globbing to find all matching files.
+#       3. Renders a dynamic dashboard showing match counts and previews.
+#       4. Prompts the user to delete, abort, or visually review the matches.
+#       5. Executes the deletion using `find` to prevent argument overflow.
 #
-# Features / Responsibilities
-#   - Pattern Validation: Rejects dangerous root or wildcard-only inputs.
-#   - Match Analysis: Uses 'find' to perform a fast scan and item count.
-#   - Interactive Dashboard: Shows a summary and a "Top 3" preview of matches.
-#   - Review Mode: Integrates with 'fzf' for a searchable target list.
+# Sub-Modules / Components:
+#    Safety Engine : Blocks destructive patterns (e.g., /*, .*, /).
+#    Search Engine : Uses Zsh native globbing for high-performance scanning.
+#    Dashboard UI  : Calculates string lengths to draw a responsive UI box.
+#    Interactive   : Handles user input and delegates to FZF/less for review.
 #
-# Usage Notes
-#   - Syntax: pattern-remove "*.tmp"
-#   - Keybinds: [y] to delete, [v] to view full list, [N] to abort.
+# Features:
+#    Zero Lag     : Native Zsh globbing and array slicing without external forks.
+#    Safety First : Hardcoded blacklist for dangerous system-wide wildcards.
+#    Review Mode  : Seamless integration with FZF for interactive list inspection.
+#
+# Dependencies:
+#    COLOR        : Global associative array for terminal colors.
+#    fzf          : Optional dependency for the interactive review screen.
 # ------------------------------------------------------------------------------
 
+## ── File Management Utilities ────────────────────────────────────────────────
+## ------------------------------------------------------------------------------
 
-# ── pattern deletion engine ──────────────────────────────────────────────────
+# ── Interactive File Deletion ─────────────────────────────────────────────────
+# Function: interactive_pattern_remove
+# Logic:
+#   - Sets local Zsh options to ensure predictable globbing and pipeline behavior.
+#   - Validates the input pattern to prevent accidental mass deletion.
+#   - Gathers matching files using recursive Zsh globbing (**/).
+#   - Enters a while loop to display the UI and await user instructions.
+#   - Calculates optimal padding for the terminal UI box.
+#   - Provides a menu to confirm deletion, view the list, or cancel.
+# -----------------------------------------------------------------------------
 
 
-
-
-# ------------------------------------------------------------------------------
-# 1. Environment Sandbox
-
-# emulate -L zsh: Restricts shell option changes to this function's scope.
-# pipefail: Ensures that if 'find' fails, the error propagates through the pipe.
+# --- ENVIRONMENT ISOLATION ---
+# Ensure standard Zsh behavior for this function regardless of user settings.
 emulate -L zsh
 setopt localoptions no_xtrace pipefail
 
-# ------------------------------------------------------------------------------
-# 2. Input Validation
-
 local search_pattern="$1"
 
-# Check for empty input
+# --- INPUT VALIDATION ---
+# Ensure the user provided a pattern to search for.
 if [[ -z "$search_pattern" ]]; then
-    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Usage: pattern-remove ${COLOR[WHITE]}<filename_pattern>${COLOR[RESET]}"
-    print "        Example: pattern-remove '*.log'"
+    print -P "${COLOR[RED]} [ERROR]${COLOR[RESET]} Usage: interactive_pattern_remove ${COLOR[WHITE]}<filename_pattern>${COLOR[RESET]}"
+    print -P "        Example: interactive_pattern_remove '*.log'"
     return 1
 fi
 
-# !!! CRITICAL: Safety Blacklist
-# We explicitly block patterns that could wipe the root, current, or parent
-# directories to prevent catastrophic data loss.
-if [[ "$search_pattern" == "/" || "$search_pattern" == "." || "$search_pattern" == ".." || "$search_pattern" == "*" ]]; then
-    print "${COLOR[RED]}[FATAL]${COLOR[RESET]} Pattern '${COLOR[BOLD]}$search_pattern${COLOR[RESET]}' is too broad/dangerous."
+# --- CRITICAL SAFETY BLACKLIST ---
+# !!! CRITICAL: Block root, current, parent, global wildcard, and hidden global wildcard.
+# This prevents catastrophic system/directory deletion if a user accidentally types '*'.
+if [[ "$search_pattern" == "/" || "$search_pattern" == "/*" || "$search_pattern" == "." || "$search_pattern" == ".." || "$search_pattern" == "*" || "$search_pattern" == ".*" ]]; then
+    print -P "${COLOR[RED]} [FATAL]${COLOR[RESET]} Pattern '${COLOR[BOLD]}$search_pattern${COLOR[RESET]}' is too broad/dangerous."
     return 1
 fi
 
-# ------------------------------------------------------------------------------
-# 3. State Machine Loop
+# --- NATIVE ZSH SEARCH ENGINE ---
+# We use native Zsh globbing instead of external commands (like `find`) for speed.
+print -n -P "${COLOR[BLUE]}::${COLOR[RESET]} Scanning for '${COLOR[BOLD]}$search_pattern${COLOR[RESET]}'...";
 
-# We use a 'while true' loop so the user can jump to the [V]iewer
-# and return to the dashboard without exiting the function.
+# ---- NOTE: Glob Modifiers
+# ** = Recursive search
+# ${~var}   = Forces Zsh to evaluate the wildcard characters in the variable
+# (D.N)     = D: Dotfiles included, .: Plain files only, N: Nullglob (no error if empty)
+local -a matched_files
+matched_files=( **/${~search_pattern}(D.N) )
+
+local total_matches=${#matched_files[@]}
+
+# Clear the "Scanning..." text line using terminal escape sequences (\e[K)
+print -n -f "\r\e[K"
+
+# --- EMPTY STATE HANDLING ---
+if (( total_matches == 0 )); then
+    print -P "${COLOR[GREEN]}✔${COLOR[RESET]} No files found matching '${COLOR[BOLD]}$search_pattern${COLOR[RESET]}'."
+    return 0
+fi
+
+# --- STATE MACHINE LOOP ---
+# Keep the user in the interactive prompt until they make a definitive choice.
 while true; do
-    print -n "${COLOR[BLUE]}::${COLOR[RESET]} Scanning for '${COLOR[BOLD]}$search_pattern${COLOR[RESET]}'..."
 
-    # Calculate exact number of matches
-    local match_count
-    match_count=$(find . -type f -name "$search_pattern" 2>/dev/null | wc -l | xargs)
+    # --- DYNAMIC BOX WIDTH CALCULATION ---
+    # Calculate the string lengths to draw a perfectly sized UI box.
+    local title_length   = 32                                # Visual width of the title string
+    local pattern_length = $(( 11 + ${#search_pattern} ))    # "  Pattern: " = 11 chars
+    local matches_length = $(( 17 + ${#total_matches} ))     # "  Matches: [X] files" = 17 chars
 
-    # Clear the "Scanning..." line using terminal escape codes
-    # \r (return to start) and \e[K (clear to end of line)
-    print -f "\r\e[K"
+    # Find the longest line to set the inner box width
+    local inner_width=$title_length
+    (( pattern_length > inner_width )) && inner_width=$pattern_length
+    (( matches_length > inner_width )) && inner_width=$matches_length
 
-    # Exit if no targets are found
-    if [[ "$match_count" -eq 0 ]]; then
-        print "${COLOR[GREEN]}✔${COLOR[RESET]} No files found matching '${COLOR[BOLD]}$search_pattern${COLOR[RESET]}'."
-        return 0
-    fi
+    # Native Zsh Padding (No loops! Instantly creates repeated characters)
+    # (pl:width::char:) pads the string to the left up to 'width' using 'char'
+    local border_line     = ${(pl:inner_width::─:)}
+    local title_padding   = ${(pl:inner_width - title_length:: :)}
+    local pattern_padding = ${(pl:inner_width - pattern_length:: :)}
+    local matches_padding = ${(pl:inner_width - matches_length:: :)}
 
-    # ------------------------------------------------------------------------------
-    # 4. Dashboard UI
+    # --- DASHBOARD UI ---
+    # Render the borders and content utilizing the calculated padding.
+    print -P "${COLOR[RED]}╭─${border_line}─╮${COLOR[RESET]}"
+    print -P "${COLOR[RED]}│${COLOR[RESET]}     󱐖  DELETE PATTERN MATCHES${title_padding}   ${COLOR[RED]} │${COLOR[RESET]}"
+    print -P "${COLOR[RED]}├─${border_line}─┤${COLOR[RESET]}"
+    print -P "${COLOR[RED]}│${COLOR[RESET]}  Pattern: ${COLOR[DIM]}${search_pattern}${pattern_padding} ${COLOR[RESET]} ${COLOR[RED]}│${COLOR[RESET]}"
+    print -P "${COLOR[RED]}│${COLOR[RESET]}  Matches: ${COLOR[DIM]}${total_matches} files${matches_padding} ${COLOR[RESET]} ${COLOR[RED]}│${COLOR[RESET]}"
+    print -P "${COLOR[RED]}╰─${border_line}─╯${COLOR[RESET]}"
 
-    print "${COLOR[RED]}╭──────────────────────────────────────╮${COLOR[RESET]}"
-    print "${COLOR[RED]}│      🗑  DELETE PATTERN MATCHES      │${COLOR[RESET]}"
-    print "${COLOR[RED]}├──────────────────────────────────────┤${COLOR[RESET]}"
-    print "${COLOR[RED]}│${COLOR[RESET]}  Pattern: ${COLOR[WHITE]}$search_pattern${COLOR[RESET]}"
-    print "${COLOR[RED]}│${COLOR[RESET]}  Matches: ${COLOR[WHITE]}$match_count files${COLOR[RESET]}"
-    print "${COLOR[RED]}╰──────────────────────────────────────╯${COLOR[RESET]}"
-
-    # Render a mini-preview of the first 3 files to give immediate context.
-    print "${COLOR[GREY]}Preview:${COLOR[RESET]}"
-    find . -type f -name "$search_pattern" 2>/dev/null | head -n 3 | while read -r file; do
-        print "  ${COLOR[RED]}×${COLOR[RESET]} $file"
+    # --- TOP 3 PREVIEW ---
+    # Native array slicing for previewing the first few matches.
+    for (( i=1; i<=3 && i<=total_matches; i++ )); do
+        print -P "  ${COLOR[RED]}×${COLOR[RESET]} ${matched_files[i]}"
     done
 
-    if (( match_count > 3 )); then
-        print "  ${COLOR[GREY]}...and $((match_count - 3)) more.${COLOR[RESET]}"
+    # Indicate if there are more files truncated from the preview.
+    if (( total_matches > 3 )); then
+        print -P "  ${COLOR[DIM]}...and $((total_matches - 3)) more.${COLOR[RESET]}"
     fi
 
-    print "\n${COLOR[YELLOW]}⚠  Warning:${COLOR[RESET]} This will ${COLOR[BOLD]}permanently delete${COLOR[RESET]} these files."
+    print -P "\n${COLOR[YELLOW]}⚠  Warning:${COLOR[RESET]} This will ${COLOR[BOLD]}permanently delete${COLOR[RESET]} these files."
 
-    # ------------------------------------------------------------------------------
-    # 5. Interactive Input
+    # --- INTERACTIVE INPUT ---
+    # Zsh 'read' allows putting the prompt directly in the command.
+    # -k 1 reads exactly one character without waiting for Return.
+    local user_input_key
+    read -k 1 "user_input_key?   [y]es  [N]o  [v]iew full list > "
+    print "" # Print trailing newline to move off the prompt line
 
-    print -n "   [y]es  [N]o  [v]iew full list > "
+    # Evaluate the key pressed (converted to lowercase via (L))
+    case "${(L)user_input_key}" in
 
-    local user_key
-    read -k 1 user_key
-    print # Newline after keypress
+        # --- EXECUTE DELETION ---
+        y)
+            print -n -P "${COLOR[BLUE]}::${COLOR[RESET]} Deleting..."
 
-    case "$user_key" in
-        [yY])
-            # --- Execution Path ---
-            print -n "${COLOR[BLUE]}::${COLOR[RESET]} Deleting..."
-            find . -type f -name "$search_pattern" -delete
-            print "\r\e[K   ${COLOR[GREEN]}✔${COLOR[RESET]} Successfully deleted ${COLOR[BOLD]}$match_count${COLOR[RESET]} files."
+            # ---- SAFE: Scalable Deletion
+            # We use 'find -delete' here instead of passing the array to 'rm'.
+            # If total_matches is massive, passing a huge array to 'rm' might
+            # trigger an "Argument list too long" OS-level error.
+            command find . -type f -name "$search_pattern" -delete 2>/dev/null
+
+            print -P "\r\e[K   ${COLOR[GREEN]}✔${COLOR[RESET]} Successfully deleted ${COLOR[BOLD]}$total_matches${COLOR[RESET]} files."
             return 0
             ;;
 
-        [vV])
-            # --- View Mode ---
-            # Logic: If fzf is available, provide an interactive searchable list.
-            # Otherwise, fallback to 'less' for basic scrolling.
+        # --- REVIEW MODE ---
+        v)
+            # Dump the array into FZF natively if installed, else fallback to 'less'
             if (( $+commands[fzf] )); then
-                find . -type f -name "$search_pattern" | \
-                fzf --header="Files matching: $search_pattern (ESC to return)" \
+                print -l "${matched_files[@]}" | fzf \
                     --prompt="Review > " \
                     --info=inline \
                     --layout=reverse \
-                    --color="header:red"
+                    --border \
+                    --border-label=" $search_pattern " \
+                    --header=$'\033[31mPress ESC to return to dashboard\033[0m\n'
             else
-                find . -type f -name "$search_pattern" | less
+                print -l "${matched_files[@]}" | less
             fi
 
-            # Refresh the dashboard after returning from the viewer
+            # Clear the screen after exiting the viewer to redraw the dashboard cleanly
             clear
             continue
             ;;
 
+        # --- ABORT OPERATION ---
         *)
-            # ---- SAFE: Abort on any other key (Default to No)
-            print "   ${COLOR[GREY]}Operation aborted.${COLOR[RESET]}"
+            print -P "   ${COLOR[DIM]}Operation aborted.${COLOR[RESET]}"
             return 0
             ;;
     esac

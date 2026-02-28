@@ -1,63 +1,123 @@
-function pwd() {
-    # 1. Script Safety: Bypass UI if piped or captured in a variable
-    if [[ ! -t 1 ]]; then
-        command pwd "$@"
-        return $?
-    fi
+#!/usr/bin/env zsh
 
-    # 2. Argument Parsing (Auto-Copy feature)
-    local copy=false
-    if [[ "$1" == "-c" || "$1" == "--copy" ]]; then
-        copy=true
-    elif [[ "$#" -gt 0 ]]; then
-        command pwd "$@"
-        return $?
-    fi
+# ------------------------------------------------------------------------------
+# Function/Module: Enhanced PWD (Print Working Directory)
+# Description:
+#   Replaces the standard 'pwd' command with a visually rich, context-aware
+#   breadcrumb trail. It provides immediate feedback on directory status,
+#   such as read-only locks, Git repository presence, and file counts.
+#
+# How it works:
+#       1. Validates execution context to bypass UI if piped to another command.
+#       2. Parses arguments to detect the copy-to-clipboard flag.
+#       3. Evaluates directory context (permissions, git state, contents).
+#       4. Formats the current path into a stylized breadcrumb string.
+#       5. Prints the UI and optionally copies the raw path to the clipboard.
+#
+# Sub-Modules / Components:
+#    Context Detection : Checks permissions, git status, and directory contents.
+#    Path Formatter    : Slices the path and injects visual separators.
+#    Clipboard Handler : Interfaces with system clipboard via $_clip.
+#
+# Features:
+#    Smart Context: Displays specific icons for Git repos and read-only dirs.
+#    Auto-Copy    : Supports -c/--copy flag to send path to the clipboard.
+#    Zero Lag     : Uses native Zsh globbing for instantaneous file counting.
+#
+# Dependencies:
+#    is_in_git_repo : External function to check git status.
+#    COLOR          : Global associative array for terminal colors.
+#    $_clip         : Global variable containing the system clipboard command.
+# ------------------------------------------------------------------------------
 
-    local raw_path=$(command pwd)
-    local pretty_path="${raw_path/#$HOME/~}"
+## ── Directory Navigation & UI ────────────────────────────────────────────────
+## ------------------------------------------------------------------------------
 
-    # 3. Smart Context Detection (The "Pro" Upgrades)
-    local prefix_icon=""
-    local prefix_color="${COLOR[YELLOW]}"
-    local lock_status=""
+# ── Terminal Output Enhancements ──────────────────────────────────────────────
+# Function: enhanced_pwd
+# Logic:
+#   - Intercepts pwd calls to provide a stylized, informative output.
+#   - Checks if output is piped; if so, reverts to standard pwd output safely.
+#   - Detects read-only and git repository states for dynamic icon switching.
+#   - Formats the current path into a colored breadcrumb structure.
+#   - Executes a cross-platform clipboard copy if the specific flag is passed.
+# -----------------------------------------------------------------------------
 
-    # Check 1: Is it Read-Only? (Native Zsh check)
-    if [[ ! -w "$raw_path" ]]; then
-        lock_status=" ${COLOR[RED]}${COLOR[RESET]}"
-        prefix_color="${COLOR[RED]}"
-    fi
 
-    # Check 2: Are we in a Git repository?
-    # Sending stderr to /dev/null ensures it fails silently if not in a repo
-    if is_in_git_repo; then
-        prefix_icon=""
-        prefix_color="${COLOR[MAGENTA]}"
-    fi
+# --- SCRIPT SAFETY ---
+# Bypass UI if the output is piped or captured in a variable
+# -t 1 checks if file descriptor 1 (stdout) is open and refers to a terminal
+if [[ ! -t 1 ]]; then
+    command pwd "$@"
+    return $?
+fi
 
-    # Check 3: How many files are here? (Native Zsh Globbing = ZERO lag)
-    local -a items
-    items=(*(ND)) # N = Nullglob (no error if empty), D = Dotglob (include hidden files)
-    local count=${#items[@]}
-    local count_ui=" ${COLOR[DIM]} ${count}${COLOR[RESET]}"
+# --- ARGUMENT PARSING ---
+# Handle the auto-copy feature flags (-c or --copy)
+local copy=false
+if [[ "$1" == "-c" || "$1" == "--copy" ]]; then
+    copy=true
+elif [[ "$#" -gt 0 ]]; then
+    # If any other arguments are passed, fallback to standard pwd
+    command pwd "$@"
+    return $?
+fi
 
-    # 4. Breadcrumb Path Formatting
-    local formatted_path=""
-    if [[ "$pretty_path" == "/" || "$pretty_path" == "~" ]]; then
-        formatted_path="${COLOR[BLUE]}${COLOR[BOLD]}${pretty_path}${COLOR[RESET]}"
-    else
-        local head="${pretty_path:h}"
-        local tail="${pretty_path:t}"
-        local sep=" ${COLOR[DIM]}❯${COLOR[RESET]} "
-        local head_fmt="${head//\//$sep}"
+local raw_path=$(command pwd)
+local pretty_path="${raw_path/#$HOME/~}"
 
-        formatted_path="${COLOR[WHITE]}${head_fmt}${sep}${COLOR[BLUE]}${COLOR[BOLD]}${tail}${COLOR[RESET]}"
-    fi
+# --- SMART CONTEXT DETECTION ---
+# Determine the correct prefix icon and color based on directory state
+local prefix_icon=""
+local prefix_color="${COLOR[YELLOW]}"
+local lock_status=""
 
-    # 5. Output the UI
-    print "\n  ${prefix_color}${prefix_icon}${COLOR[RESET]}  ${formatted_path}${lock_status}${count_ui}"
+# Check 1: Is it Read-Only? (Native Zsh check)
+if [[ ! -w "$raw_path" ]]; then
+    lock_status="${COLOR[RED]} ${COLOR[RESET]}"
+    prefix_color="${COLOR[RED]}"
+fi
 
-        print -n "$raw_path" | eval "$_clip"
-        print "  ${COLOR[GREEN]}✓${COLOR[RESET]} ${COLOR[DIM]}Path copied to clipboard!${COLOR[RESET]}"
-    fi
-}
+# Check 2: Are we in a Git repository?
+# Sending stderr to /dev/null ensures it fails silently if not in a repo
+if is_in_git_repo; then
+    prefix_icon=""
+    prefix_color="${COLOR[MAGENTA]}"
+fi
+
+# Check 3: How many files are here?
+# Using native Zsh Globbing for zero lag.
+# N = Nullglob (no error if empty), D = Dotglob (include hidden files)
+local -a items
+items=(*(ND))
+
+local count=${#items[@]}
+local count_ui=" ${COLOR[DIM]} ${count}${COLOR[RESET]}"
+
+# --- BREADCRUMB PATH FORMATTING ---
+# Split the path and inject stylized separators
+local formatted_path=""
+
+if [[ "$pretty_path" == "/" || "$pretty_path" == "~" ]]; then
+    formatted_path="${COLOR[BLUE]}${COLOR[BOLD]}${pretty_path}${COLOR[RESET]}"
+else
+    # :h extracts the head (dirname), :t extracts the tail (basename)
+    local head="${pretty_path:h}"
+    local tail="${pretty_path:t}"
+    local sep=" ${COLOR[DIM]}❯${COLOR[RESET]} "
+    local head_fmt="${head//\//$sep}"
+
+    formatted_path="${COLOR[WHITE]}${head_fmt}${sep}${COLOR[BLUE]}${COLOR[BOLD]}${tail}${COLOR[RESET]}"
+fi
+
+# --- OUTPUT THE UI ---
+# Print the fully assembled stylized path string
+print "\n  ${prefix_color}${prefix_icon}${COLOR[RESET]}  ${formatted_path}${lock_status}${count_ui}"
+
+# --- CROSS-PLATFORM CLIPBOARD EXECUTION ---
+# Send the raw path to the clipboard utility if the copy flag was true
+if $copy; then
+    print -n "$raw_path" | eval "$_clip"
+    print "  ${COLOR[GREEN]}✓${COLOR[RESET]} ${COLOR[DIM]}Path copied to clipboard!${COLOR[RESET]}"
+fi
+
