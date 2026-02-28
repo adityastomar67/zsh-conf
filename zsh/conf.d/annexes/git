@@ -76,7 +76,8 @@ fi
 # Description: Checks if the current directory is within a Git work tree.
 is_in_git_repo() {
     # Ultra-Fast Path: Pure Zsh upward traversal (No forks!)
-    local d="$PWD"
+    # Resolve the absolute physical path to handle symlinked directories
+    local d="${PWD:A}"
     while [[ "$d" != "/" ]]; do
         # Check for .git directory (standard) or file (worktrees)
         [[ -e "$d/.git" ]] && return 0
@@ -103,7 +104,7 @@ is_in_git_repo() {
 # -----------------------------------------------------------------------------
 function __pull() {
     if ! is_in_git_repo; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
         return 1
     fi
 
@@ -164,7 +165,7 @@ function __pull() {
 # -----------------------------------------------------------------------------
 function __clone() {
     if is_in_git_repo; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Inside a git repository."
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Inside a git repository."
         return 1
     fi
 
@@ -229,7 +230,7 @@ function __clone() {
 # -----------------------------------------------------------------------------
 function __log () {
     if ! is_in_git_repo; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
         return 1
     fi
 
@@ -276,7 +277,7 @@ function __log () {
 # -----------------------------------------------------------------------------
 function __status() {
     if ! is_in_git_repo; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
         return 1
     fi
 
@@ -389,7 +390,7 @@ function __status() {
 # -----------------------------------------------------------------------------
 function __checkout() {
     if ! is_in_git_repo; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
         return 1
     fi
 
@@ -505,7 +506,7 @@ function __checkout() {
 # -----------------------------------------------------------------------------
 function __add() {
     if ! is_in_git_repo; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
         return 1
     fi
 

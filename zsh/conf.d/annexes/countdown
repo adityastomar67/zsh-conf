@@ -81,14 +81,14 @@ fi
 # ── terminal setup ─────────────────────────────────────────────────────────
 
 # !!! CRITICAL: UI state management
-# Hide cursor and stop the terminal from printing user keystrokes (print).
+# Hide cursor and stop the terminal from echoing user keystrokes (-echo).
 # We use tput civis for broader terminal compatibility.
 print -f "\e[?25l"
-stty -print
+stty -echo
 tput civis 2>/dev/null
 
 # ---- SAFE: Restore terminal state on any exit condition
-trap 'stty print; print -f "\e[?25h"; tput cnorm 2>/dev/null; return' INT TERM EXIT
+trap 'stty echo; print -f "\e[?25h"; tput cnorm 2>/dev/null; return' INT TERM EXIT
 
 # Initialize timing variables using $EPOCHREALTIME (float) for accuracy.
 local start_time=$EPOCHREALTIME
@@ -100,6 +100,7 @@ clear
 
 # ── main execution loop ────────────────────────────────────────────────────
 
+local key=""
 while true; do
     # ------------------------------------------------------------------------------
     # Complex Logic: Dynamic Elapsed Time
@@ -156,27 +157,27 @@ while true; do
     # By overwriting the same lines instead of clearing, we eliminate flicker.
     print -f "\e[H"
 
-    local status_color=" COLOR[GREEN]"
+    local status_color="${COLOR[GREEN]}"
     local status_text="RUNNING"
 
     if (( is_paused )); then
-        status_color="$COLOR[YELLOW]"
+        status_color="${COLOR[YELLOW]}"
         status_text="PAUSED "
     elif (( remaining < 10 )); then
-        status_color="$COLOR[RED]"
+        status_color="${COLOR[RED]}"
         status_text="CRITICAL"
     fi
 
     # Draw the TUI Container.
     print "${COLOR[BLUE]}╭──────────────────────────────────────╮${COLOR[RESET]}"
-    print "${COLOR[BLUE]}│         ${status_color}⏳  $status_text                 ${COLOR[BLUE]}│${COLOR[RESET]}"
+    print "${COLOR[BLUE]}│             ${status_color}  $status_text               ${COLOR[BLUE]}│${COLOR[RESET]}"
 
     # Format the time numbers into fixed-width slots for stability.
-    print -f "${COLOR[BLUE]}│         ${COLOR[B_WHITE]}%02d:%02d:%02d${COLOR[GREY]}.%02d               ${COLOR[BLUE]}│${COLOR[RESET]}\n" $h $m $s $ms
+    print -f "${COLOR[BLUE]}│             ${COLOR[B_WHITE]}%02d:%02d:%02d${COLOR[GREY]}.%02d              ${COLOR[BLUE]}│${COLOR[RESET]}\n" $h $m $s $ms
 
-    print "${COLOR[BLUE]}│   ${status_color}${bar_fill}${COLOR[GREY]}${bar_empty}${COLOR[RESET]}   ${COLOR[BLUE]}│${COLOR[RESET]}"
+    print "${COLOR[BLUE]}│    ${status_color}${bar_fill}${COLOR[GREY]}${bar_empty}${COLOR[RESET]}    ${COLOR[BLUE]}│${COLOR[RESET]}"
     print "${COLOR[BLUE]}├──────────────────────────────────────┤${COLOR[RESET]}"
-    print "${COLOR[BLUE]}│ ${COLOR[GREY]}[SPACE] Pause   [Q] Quit             ${COLOR[BLUE]}│${COLOR[RESET]}"
+    print "${COLOR[BLUE]}│       ${COLOR[GREY]}[SPACE] Pause   [Q] Quit       ${COLOR[BLUE]}│${COLOR[RESET]}"
     print "${COLOR[BLUE]}╰──────────────────────────────────────╯${COLOR[RESET]}"
 
 
@@ -191,7 +192,7 @@ while true; do
     # Complex Logic: Input Handling
     # read -sk 1: Reads 1 char silently.
     # -t 0.05: Blocks for only 50ms, allowing the clock to update 20 times per second.
-    local key=""
+    key=""
     read -sk 1 -t 0.05 key 2>/dev/null
 
     case "$key" in
@@ -215,13 +216,10 @@ done
 # ── finalization ───────────────────────────────────────────────────────────
 
 clear
-print "$ COLOR[GREEN]}"
+print "${COLOR[GREEN]}"
 print "  ╭──────────────────────╮"
 print "  │      TIME IS UP!     │"
 print "  ╰──────────────────────╯"
 print "${COLOR[RESET]}"
 
-# macOS specific notification logic via AppleScript.
-if (( $+commands[osascript] )); then
-    osascript -e 'display notification "Timer Finished" with title "Countdown"' 2>/dev/null
-fi
+notify_user "Countdown" "Timer Finished"

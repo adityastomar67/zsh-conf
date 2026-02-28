@@ -145,4 +145,7 @@ if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
         print -f "${COLOR[YELLOW]}Total startup time: ${COLOR[CYAN]}%6.2f ${COLOR[YELLOW]}ms${COLOR[RESET]}\n\n" \
             ${total_duration_ms}
     fi
+else
+    # ---- SAFE: Fallback if benchmarking is disabled
+    clear
 fi

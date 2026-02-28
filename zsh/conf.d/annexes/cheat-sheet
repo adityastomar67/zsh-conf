@@ -10,7 +10,7 @@
 #   It allows users to quickly look up syntax, code snippets, and command usage
 #   without leaving the command line.
 #
-#   How it works:
+# How it works:
 #   1. Displays a searchable menu of languages/tools using FZF.
 #   2. Accepts a query (e.g., "reverse list" or "commit").
 #   3. Fetches the result from cheat.sh via cURL.
@@ -33,13 +33,13 @@
 # ------------------------------------------------------------------------------
 
 
-# 0. Safety & Environment Setup
+# Safety & Environment Setup
 # --------------------------------------------------------------------------
 # emulate -L zsh : Ensures the function runs with standard Zsh options, regardless
 #                  of the user's global config (prevents word-splitting issues).
 # no_notify      : Prevents "Job finished" messages from cluttering the UI.
 emulate -L zsh
-# setopt localoptions no_notify no_monitor
+setopt localoptions no_notify no_monitor
 
 # Check for critical dependencies before starting
 if ! (( $+commands[fzf] )); then
@@ -53,9 +53,8 @@ if ! (( $+commands[curl] )); then
 fi
 
 # --------------------------------------------------------------------------
-# 1. Configuration & Data
+# Configuration & Data
 # --------------------------------------------------------------------------
-
 # Icon Map: Associates languages with Nerd Font icons.
 # To add a new language, simply add "name" "icon" to this list.
 typeset -A icons
@@ -75,12 +74,14 @@ local state="MENU"
 local clean_selected=""
 local url_sep="/"
 
-# Trap Ctrl+C (INT) to exit the function cleanly,
-# rather than killing the entire shell session.
-trap "return" INT
+# Trap Ctrl+C (INT) to ignore it at the shell level,
+# allowing our script's `if [[ -z "$selection" ]]`
+# and `q|quit|exit|""` gracefully handle the empty returns
+# and naturally print "Goodbye!" without weird traceback output.
+trap '' INT
 
 # --------------------------------------------------------------------------
-# 2. The Main Loop
+# The Main Loop
 # --------------------------------------------------------------------------
 while true; do
 
@@ -99,18 +100,18 @@ while true; do
         # Launch FZF
         # -k2 : Sort by the 2nd column (the text name, not the icon)
         local selection
-        selection=$(print -e "$list_content" | sort -k2 | fzf \
+        selection=$(print "$list_content" | sort -k2 | fzf \
             --ansi \
             --info=hidden \
             --height=45% --layout=reverse --border --margin=1 --padding=1 \
+            --border-label=' Cht.sh - [Esc] Exit' \
             --prompt="   " \
-            --header="  [Esc] Exit " \
             --color='header:blue,prompt:yellow,pointer:red,marker:green,bg+:236' \
         )
 
         # Handle User Exit (Esc or Ctrl+C in FZF)
         if [[ -z "$selection" ]]; then
-            print -e "${COLOR[GREY]}Goodbye!${COLOR[RESET]}"
+            print "${COLOR[CYAN]}Goodbye!${COLOR[RESET]}"
             return 0
         fi
 
@@ -141,11 +142,11 @@ while true; do
         local icon="${icons[$clean_selected]:-$default_icon}"
 
         # UI Header: Shows current context (e.g., Python)
-        print -e "${COLOR[GREY]}╭─ ${COLOR[BLUE]}${icon}  ${clean_selected:u} ${COLOR[GREY]}──────────────────────────────────${COLOR[RESET]}"
+        print "${COLOR[GREY]}╭─ ${COLOR[BLUE]}${icon}  ${clean_selected:u} ${COLOR[GREY]}──────────────────────────────────${COLOR[RESET]}"
 
         # Read Input
         # Using 'read' with a custom manually constructed prompt for better styling
-        print -ne "${COLOR[GREY]}╰─${COLOR[GREEN]}${COLOR[RESET]} Query ${COLOR[GREY]}([b]ack/[q]uit):${COLOR[RESET]} "
+        print -n "${COLOR[GREY]}╰─${COLOR[GREEN]}${COLOR[RESET]} Query ${COLOR[GREY]}([b]ack/[q]uit):${COLOR[RESET]} "
         read query
 
         # Handle Navigation Commands
@@ -155,29 +156,29 @@ while true; do
                 continue
                 ;;
             q|quit|exit|"")
-                print -e "${COLOR[GREY]}Goodbye!${COLOR[RESET]}"
+                print "${COLOR[CYAN]}Goodbye!${COLOR[RESET]}"
                 return 0
                 ;;
         esac
 
         # URL Construction
-        # 1. Convert spaces to '+' (e.g., "reverse list" -> "reverse+list")
-        # 2. Build full URL: cht.sh/lang/query
+        #   1. Convert spaces to '+' (e.g., "reverse list" -> "reverse+list")
+        #   2. Build full URL: cht.sh/lang/query
         local safe_query=$(print "$query" | tr ' ' '+')
         local url="cht.sh/${clean_selected}${url_sep}${safe_query}"
 
-        print -e "   ${COLOR[GREY]}  Fetching...${COLOR[RESET]}"
+        print "   ${COLOR[GREY]}  Fetching...${COLOR[RESET]}"
 
         # Output Handling & Paging
         if (( $+commands[bat] )); then
             # Option A: 'bat' (Preferred)
-            # We append '?T' to the URL to tell cheat.sh to send plain text (no ANSI),
-            # allowing 'bat' to apply its own superior syntax highlighting.
+            #   We append '?T' to the URL to tell cheat.sh to send plain text (no ANSI),
+            #   allowing 'bat' to apply its own superior syntax highlighting.
             curl -s "$url?T" | bat --style=grid --color=always --language="$clean_selected" --paging=always
         else
             # Option B: 'less' (Fallback)
-            # We do NOT use '?T', allowing cheat.sh to send its default ANSI colors.
-            # 'less -R' allows those raw color codes to be displayed.
+            #   We do NOT use '?T', allowing cheat.sh to send its default ANSI colors.
+            #   'less -R' allows those raw color codes to be displayed.
             curl -s "$url" | less -R
         fi
     fi
