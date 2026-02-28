@@ -19,9 +19,9 @@
 # [1] CONFIGURATION
 # ==============================================================================
 
-typeset -r REPO_USER="adityastomar67"
-typeset -r REPO_NAME="Wallpapers"
-typeset -r BRANCH="main"
+typeset -r REPO_USER="${WALLPAPER_REPO_USER:-adityastomar67}"
+typeset -r REPO_NAME="${WALLPAPER_REPO_NAME:-Wallpapers}"
+typeset -r BRANCH="${WALLPAPER_REPO_BRANCH:-main}"
 
 typeset -r API_URL="https://api.github.com/repos/${REPO_USER}/${REPO_NAME}/git/trees/${BRANCH}?recursive=1"
 typeset -r RAW_BASE="https://raw.githubusercontent.com/${REPO_USER}/${REPO_NAME}/${BRANCH}"

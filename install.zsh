@@ -761,7 +761,7 @@ Installer::main() {
         mkdir -p "${CONFIG_PATHS[BACKUP]}"
         mv "${CONFIG_PATHS[REPO]}" "${CONFIG_PATHS[BACKUP]}/zsh-conf"
     else
-        mkdir -p "${CONFIG_PATHS[REPO]}" 
+        mkdir -p "${CONFIG_PATHS[REPO]}"
     fi
     # Parallel Cloning
     {

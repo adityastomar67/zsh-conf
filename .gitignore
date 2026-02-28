@@ -155,3 +155,4 @@ zsh-profiler.log
 /temp.zsh
 Tools
 test*
+install_fast.zsh

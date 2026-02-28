@@ -211,18 +211,8 @@ zstyle ':completion:*:*:*:*:warnings' format \
 # Tool Initialization
 # ───────────────────────────────────────────────────────────────────────
 
-# Define your tools configuration
-#    Format: "Binary : Command : Mode"
-local -a init_tools=(
-    "starship  : starship init zsh   : immediate" # Prompt
-    "dircolors : dircolors -b        : immediate" # Colors
-    "zoxide    : zoxide init zsh     : defer"     # Smart cd
-    "atuin     : atuin init zsh      : defer"     # Shell History
-    "but       : but completions zsh : defer"     # GitButler
-)
-
-# Iterate and Execute
-for entry in "${init_tools[@]}"; do
+# Iterate and Execute tools defined in user.conf
+for entry in "${INIT_TOOLS[@]}"; do
     # Zsh Magic: Split the string by ':' into an array (@s/:/)
     local parts=("${(@s/:/)entry}")
 
