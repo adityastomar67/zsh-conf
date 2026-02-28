@@ -61,13 +61,29 @@ if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
     autoload -Uz PrettyAlias
 fi
 
+# Clipboard Abstraction (Cross-Platform)
+#   - Detects the correct clipboard command based on OS.
+export _clip="cat" # Default fallback prevents crashes on headless servers
+
+if [[ "$OSTYPE" == darwin* ]]; then
+    _clip="pbcopy"
+elif [[ "$OSTYPE" == linux* ]]; then
+    # 1. Catch WSL (Windows Subsystem for Linux)
+    if [[ -n "$WSL_DISTRO_NAME" ]] && (( $+commands[clip.exe] )); then
+        _clip="clip.exe"
+    # 2. Catch native Wayland
+    elif (( $+commands[wl-copy] )); then
+        _clip="wl-copy"
+    # 3. Catch native X11
+    elif (( $+commands[xclip] )); then
+        _clip="xclip -selection clipboard"
+    fi
+fi
 
 
 # Plugin Manager (Plug)
 # ───────────────────────────────────────────────────────────────────────
 ## A lightweight function to clone and source Zsh plugins from GitHub.
-
-
 
 # ------------------------------------------------------------------------------
 # Function: plug
@@ -238,6 +254,25 @@ _eval_cache() {
 }
 
 
+# Function: is_in_git_repo
+# Description: Checks if the current directory is within a Git work tree.
+function is_in_git_repo() {
+    # Ultra-Fast Path: Pure Zsh upward traversal (No forks!)
+    # Resolve the absolute physical path to handle symlinked directories
+    local d="${PWD:A}"
+    while [[ "$d" != "/" ]]; do
+        # Check for .git directory (standard) or file (worktrees)
+        [[ -e "$d/.git" ]] && return 0
+
+        # Zsh magic: ':h' strips the last directory level (like 'dirname')
+        d="${d:h}"
+    done
+
+    # Final check for root
+    [[ -e "/.git" ]] && return 0
+    return 1
+}
+
 # Path Construction
 # ───────────────────────────────────────────────────────────────────────
 ## We construct the system $PATH and $FPATH here.
@@ -336,7 +371,7 @@ function _safe_edit() {
 #   $1 (title) : The title of the notification.
 #   $2 (msg)   : The message of the notification.
 # ------------------------------------------------------------------------------
-notify_user() {
+function notify_user() {
     local title="$1"
     local msg="$2"
     case "$(uname -s)" in

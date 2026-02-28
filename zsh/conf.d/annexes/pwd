@@ -1,0 +1,63 @@
+function pwd() {
+    # 1. Script Safety: Bypass UI if piped or captured in a variable
+    if [[ ! -t 1 ]]; then
+        command pwd "$@"
+        return $?
+    fi
+
+    # 2. Argument Parsing (Auto-Copy feature)
+    local copy=false
+    if [[ "$1" == "-c" || "$1" == "--copy" ]]; then
+        copy=true
+    elif [[ "$#" -gt 0 ]]; then
+        command pwd "$@"
+        return $?
+    fi
+
+    local raw_path=$(command pwd)
+    local pretty_path="${raw_path/#$HOME/~}"
+
+    # 3. Smart Context Detection (The "Pro" Upgrades)
+    local prefix_icon=""
+    local prefix_color="${COLOR[YELLOW]}"
+    local lock_status=""
+
+    # Check 1: Is it Read-Only? (Native Zsh check)
+    if [[ ! -w "$raw_path" ]]; then
+        lock_status=" ${COLOR[RED]}${COLOR[RESET]}"
+        prefix_color="${COLOR[RED]}"
+    fi
+
+    # Check 2: Are we in a Git repository?
+    # Sending stderr to /dev/null ensures it fails silently if not in a repo
+    if is_in_git_repo; then
+        prefix_icon=""
+        prefix_color="${COLOR[MAGENTA]}"
+    fi
+
+    # Check 3: How many files are here? (Native Zsh Globbing = ZERO lag)
+    local -a items
+    items=(*(ND)) # N = Nullglob (no error if empty), D = Dotglob (include hidden files)
+    local count=${#items[@]}
+    local count_ui=" ${COLOR[DIM]} ${count}${COLOR[RESET]}"
+
+    # 4. Breadcrumb Path Formatting
+    local formatted_path=""
+    if [[ "$pretty_path" == "/" || "$pretty_path" == "~" ]]; then
+        formatted_path="${COLOR[BLUE]}${COLOR[BOLD]}${pretty_path}${COLOR[RESET]}"
+    else
+        local head="${pretty_path:h}"
+        local tail="${pretty_path:t}"
+        local sep=" ${COLOR[DIM]}❯${COLOR[RESET]} "
+        local head_fmt="${head//\//$sep}"
+
+        formatted_path="${COLOR[WHITE]}${head_fmt}${sep}${COLOR[BLUE]}${COLOR[BOLD]}${tail}${COLOR[RESET]}"
+    fi
+
+    # 5. Output the UI
+    print "\n  ${prefix_color}${prefix_icon}${COLOR[RESET]}  ${formatted_path}${lock_status}${count_ui}"
+
+        print -n "$raw_path" | eval "$_clip"
+        print "  ${COLOR[GREEN]}✓${COLOR[RESET]} ${COLOR[DIM]}Path copied to clipboard!${COLOR[RESET]}"
+    fi
+}

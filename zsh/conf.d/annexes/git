@@ -44,25 +44,6 @@ setopt localoptions no_xtrace pipefail
 
 local BOLD=$'\033[1m'
 
-# Clipboard Abstraction (Cross-Platform)
-#   - Detects the correct clipboard command based on OS.
-local _clip="cat" # Default fallback prevents crashes on headless servers
-
-if [[ "$OSTYPE" == darwin* ]]; then
-    _clip="pbcopy"
-elif [[ "$OSTYPE" == linux* ]]; then
-    # 1. Catch WSL (Windows Subsystem for Linux)
-    if [[ -n "$WSL_DISTRO_NAME" ]] && (( $+commands[clip.exe] )); then
-        _clip="clip.exe"
-    # 2. Catch native Wayland
-    elif (( $+commands[wl-copy] )); then
-        _clip="wl-copy"
-    # 3. Catch native X11
-    elif (( $+commands[xclip] )); then
-        _clip="xclip -selection clipboard"
-    fi
-fi
-
 # Smart Pager Selection
 #   - Use 'delta' for beautiful, side-by-side diffs if installed.
 #   - Otherwise, fallback to 'cat' for raw text.
@@ -71,25 +52,6 @@ if (( $+commands[delta] )); then
     # Escaping both variables ensures FZF calculates width dynamically at runtime!
     _git_pager="delta --side-by-side --width \${FZF_PREVIEW_COLUMNS:-\$COLUMNS}"
 fi
-
-# Function: is_in_git_repo
-# Description: Checks if the current directory is within a Git work tree.
-is_in_git_repo() {
-    # Ultra-Fast Path: Pure Zsh upward traversal (No forks!)
-    # Resolve the absolute physical path to handle symlinked directories
-    local d="${PWD:A}"
-    while [[ "$d" != "/" ]]; do
-        # Check for .git directory (standard) or file (worktrees)
-        [[ -e "$d/.git" ]] && return 0
-
-        # Zsh magic: ':h' strips the last directory level (like 'dirname')
-        d="${d:h}"
-    done
-
-    # Final check for root
-    [[ -e "/.git" ]] && return 0
-    return 1
-}
 
 
 ## ── Initialization Functions ───────────────────────────────────────────────────
