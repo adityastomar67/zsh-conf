@@ -760,28 +760,26 @@ Installer::main() {
     if [[ -d "${CONFIG_PATHS[REPO]}" ]]; then
         mkdir -p "${CONFIG_PATHS[BACKUP]}"
         mv "${CONFIG_PATHS[REPO]}" "${CONFIG_PATHS[BACKUP]}/zsh-conf"
-    else
-        mkdir -p "${CONFIG_PATHS[REPO]}"
     fi
+    
     # Parallel Cloning
     {
         local temp_dir="/tmp/zsh_bin_${TIMESTAMP}"
-
+    
         # Start both clones concurrently
         git clone -b remastered --single-branch --depth=1 --quiet "https://github.com/adityastomar67/zsh-conf.git" "${CONFIG_PATHS[REPO]}" &
-        local pid_repo=$!
-
         git clone --depth=1 --quiet "$BIN_SOURCE_REPO" "$temp_dir" &
-        local pid_bin=$!
-
-        # Wait for both config and binary clones to finish
-        wait $pid_repo
-        wait $pid_bin
-
-        # Now safely copy the binary dependencies (since repo clone is done)
+    
+        # A bare 'wait' pauses the script until ALL background '&' tasks finish!
+        wait
+    
+        # Fast Move (Assuming BIN_TARGET_DIR is inside the newly cloned REPO)
         mkdir -p "$BIN_TARGET_DIR"
-        cp -a "$temp_dir/." "$BIN_TARGET_DIR/"
-        rm -rf "$temp_dir"
+    
+        # Use Zsh native dotglob (D) to cleanly move all files and hidden files
+        # without spawning 'cp' and 'rm' separately.
+        mv "$temp_dir"/*(D) "$BIN_TARGET_DIR/"
+        rmdir "$temp_dir" # Clean up the 'now-empty' temp folder
     } &
 
     Interface::spinner $! "Cloning repository..."

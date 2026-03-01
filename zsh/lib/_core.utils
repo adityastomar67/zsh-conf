@@ -389,9 +389,9 @@ function notify_user() {
     case "$(uname -s)" in
         Darwin*) osascript -e "display notification \"$msg\" with title \"$title\"" ;;
         Linux*)
-            if command -v dunstify >/dev/null 2>&1; then
+            if (( $+commands[dunstify] )); then
                 dunstify -u low -r 9912 "$title" "$msg"
-            elif command -v notify-send >/dev/null 2>&1; then
+            elif (( $+commands[notify-send] )); then
                 notify-send "$title" "$msg"
             else
                 print ":: $title - $msg"
