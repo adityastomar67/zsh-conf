@@ -283,26 +283,35 @@ function is_in_git_repo() {
 #  Dynamic Path Injection
 #  Iterate through USER_PATH_ENTRIES defined in env.zsh
 # Ensure PATH does not contain duplicates (Built-in Zsh feature)
-typeset -U path
+typeset -gU path
 
 # ── Path Builder Engine ───────────────────────────────────────────────
 # Usage: _build_path "dir1" "dir2" ...
 function _build_path() {
-    # 1. Guard: Stop if no arguments passed
+    # Guard: Stop if no arguments passed
     (( $# )) || return
 
     local -a _raw_paths=("${@}")
     local -a _expanded_paths
     local entry
 
-    # 2. Fast Expansion: Prepend $HOME to relative paths
+    # Fast Expansion: Prepend $HOME to relative paths
     for entry in "${_raw_paths[@]}"; do
-        # If entry does not start with /, prepend $HOME/
-        [[ "$entry" != /* ]] && entry="$HOME/$entry"
-        _expanded_paths+=("$entry")
+        # Expand literal tildes safely (turns "~/bin" into "/home/user/bin")
+        entry=${~entry}
+
+        # Smart Home Routing: a bare word like "bin" or ".local/bin"
+        #   (doesn't start with / and doesn't start with ./)
+        if [[ "$entry" != /* && "$entry" != .* ]]; then
+            entry="$HOME/$entry"
+        fi
+
+        # Native Absolute Resolution (turns "./scripts" into "$PWD/scripts")
+        #   The ':a' modifier natively resolves any relative paths flawlessly!
+        _expanded_paths+=("${entry:a}")
     done
 
-    # 3. Bulk Existence Check & Injection (The "Magic")
+    # Bulk Existence Check & Injection (The "Magic")
     #    $^var  -> "Distribute" the modifier to every element in the array
     #    (N-/)  -> N: Null glob (remove if not found)
     #              -: Follow symlinks (ensure the target exists)
