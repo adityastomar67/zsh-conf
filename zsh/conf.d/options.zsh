@@ -80,7 +80,7 @@ setopt HIST_REDUCE_BLANKS        # Remove superfluous blanks
 setopt HIST_VERIFY               # Show command with substitutions before executing
 
 # Paths & Limits
-HISTFILE="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-cache/zhistory"
+HISTFILE="${ZSH_CACHE:-$HOME/.cache/zsh-cache}/zhistory"
 HISTSIZE=50000
 SAVEHIST=50000
 export HISTORY_IGNORE="(zsh|clear|ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)"

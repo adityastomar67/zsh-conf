@@ -44,7 +44,7 @@ setopt localoptions no_xtrace pipefail
 # Attempting to run display-popup outside of a Tmux client will fail.
 # We check $TMUX to ensure we are attached to a session.
 if [[ -z "$TMUX" ]]; then
-    print -P "${COLOR[RED]}[ERROR]${COLOR[RESET]} This function only works inside a Tmux session."
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} This function only works inside a Tmux session."
     return 1
 fi
 
@@ -60,7 +60,7 @@ if [[ $# -gt 0 ]]; then
     title=" ⚡ $1 "       # Use the binary name as the title
 else
     target_cmd="$SHELL"
-    title=" 🐚 Shell "
+    title="  Shell "
 fi
 
 # ------------------------------------------------------------------------------

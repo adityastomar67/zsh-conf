@@ -145,7 +145,7 @@ if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
             "${COLOR[YELLOW]}Total startup time: ${COLOR[CYAN]}%6.2f ${COLOR[YELLOW]}ms${COLOR[RESET]}\n\n" \
             ${total_duration_ms}
     fi
-else
+elif [[ "${ENABLE_FANCY_STARTUP:l}" == "no" ]]; then
     # ---- SAFE: Fallback if benchmarking is disabled
     clear
 fi
