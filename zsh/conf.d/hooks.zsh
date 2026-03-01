@@ -325,34 +325,62 @@ git_fzf_fixup() {
         return 1
     fi
 
-    local selected
-    selected=$(command git log -n 50 --oneline --color=always | \
+    local output
+    output=$(command git log -n 50 --oneline --color=always | \
         fzf --ansi --no-sort \
             --height=80% \
             --layout=reverse \
             --border \
-            --border-label="   Fixup Target " \
+            --border-label="   Commit Fixup Target " \
             --prompt="Commit > " \
             --info=inline \
             --preview="command git show --color=always {1} | less -R" \
             --preview-window="right:65%:border-left" \
-            --header=$'\033[1;33m• Enter:\033[0m Create Fixup   \033[1;33m• Esc:\033[0m Cancel\n'
+            --expect=ctrl-s,ctrl-e \
+            --header=$'\033[1;33m• Enter:\033[0m Fixup (Skip Msg)   \033[1;33m• Ctrl-S:\033[0m Squash (Add Msg)   \033[1;33m• Ctrl-E:\033[0m Amend (Rewrite Msg)\n'
     )
 
-    if [[ -n "$selected" ]]; then
-        # NATIVE ZSH SPLIT: Instantly grabs the first word (the hash) without spawning awk
-        local hash="${selected[(w)1]}"
-
-        # SAFETY FIX: Removed '-a'. You should stage exactly what you want
-        # using our `git_add` function first, THEN run this widget!
-        LBUFFER="git commit --no-verify --fixup=$hash"
-
-        # Accept the line to execute it instantly
-        zle accept-line
-    else
-        # If the user aborts, cleanly redraw the command line prompt
+    # 1. Abort if user pressed Escape
+    if [[ -z "$output" ]]; then
         zle redisplay
+        return 0
     fi
+
+    # 2. Parse FZF's multi-line output natively into a Zsh array
+    local -a lines=( "${(@f)output}" )
+    local key="${lines[1]}"
+    local selected="${lines[2]}"
+
+    # Abort if no commit was highlighted
+    if [[ -z "$selected" ]]; then
+        zle redisplay
+        return 0
+    fi
+
+    local hash="${selected[(w)1]}"
+
+    # 3. Execution Router based on the key you pressed
+    case "$key" in
+        ctrl-s)
+            # SQUASH: Opens the editor. When you rebase, Git will COMBINE
+            # this new message with the original target's message.
+            LBUFFER="git commit --no-verify --squash=$hash"
+            ;;
+        ctrl-e)
+            # AMEND: Opens the editor pre-filled with the target's message.
+            # When you rebase, this will COMPLETELY REWRITE the target's message.
+            # (Requires Git 2.32+)
+            LBUFFER="git commit --no-verify --fixup=amend:$hash"
+            ;;
+        *)
+            # ENTER: Standard Fixup. Skips the editor entirely.
+            # The message is discarded during rebase.
+            LBUFFER="git commit --no-verify --fixup=$hash"
+            ;;
+    esac
+
+    # Execute instantly (which will pop open your Vim/Nano editor for Ctrl-S and Ctrl-E)
+    zle accept-line
 }
 zle -N git_fzf_fixup
 

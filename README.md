@@ -19,7 +19,7 @@ This configuration is designed for speed, modularity, and a beautiful terminal e
 
 - **🚀 Blazing Fast Startup**: Optimized with lazy-loading and bytecode compilation. Includes a built-in benchmark tool (`ZSH_BENCHMARK`).
 - **🧩 Modular Architecture**: Clean separation between core logic, plugins, and user-specific config.
-- **🔌 Plugin Management**: Supports **Zap** (default), **Zinit**, or **Oh-My-Zsh**.
+- **🔌 Plugin Management**: Done by own core module.
 - **🎨 Visual Excellence**:
   - Integrated **Starship** prompt support.
   - Syntax Highlighting & Auto-suggestions.
