@@ -72,7 +72,7 @@ export HOMEBREW_NO_ENV_HINTS=1
 # ------------------------------------------------------------------------------
 # Sudo Prompt
 # Custom prompt when asking for root password (displays username).
-export SUDO_PROMPT="${COLOR[RED]}[NOTE]${COLOR[RESET]} Deploying root access for ${COLOR[YELLOW]}${COLOR[BOLD]}%u${COLOR[RESET]}, Password please: "
+export SUDO_PROMPT=$'\n\033[1;31m╭─  PRIVILEGE ESCALATION\033[0m\n\033[1;31m╰─\033[0m \033[1;36m%u\033[0m \033[2mpassword:\033[0m '
 
 # ------------------------------------------------------------------------------
 # Manpager (Manual Page Viewer)

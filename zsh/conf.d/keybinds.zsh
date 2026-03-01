@@ -40,16 +40,13 @@ zmodload zsh/complist
 
 
 # ── key code definitions ───────────────────────────────────────────────
-
-#
-
 # Define a global associative array to map human-readable key names
 # to their specific terminal codes.
 typeset -g -A key_map
 
 # Logic:
-# 1. Try to get the code from 'terminfo' (best practice for portability).
-# 2. If 'terminfo' fails (returns empty), fallback (':-') to standard ANSI codes.
+#   - Try to get the code from 'terminfo' (best practice for portability).
+#   - If 'terminfo' fails (returns empty), fallback (':-') to standard ANSI codes.
 key_map[Up]="${terminfo[kcuu1]:-^[[A}"
 key_map[Down]="${terminfo[kcud1]:-^[[B}"
 key_map[Left]="${terminfo[kcub1]:-^[[D}"
@@ -64,8 +61,8 @@ key_map[Ctrl-Right]="${terminfo[kRIT5]:-^[[1;5C}"
 
 
 # ── standard editing fixes ─────────────────────────────────────────────
-
 # Standard Backspace logic (delete character to the left).
+
 # We use the $DEL variable (defined in zle.zsh) which handles autopair logic.
 bindkey "^?" "$DEL"
 bindkey "^H" "$DEL"
@@ -102,6 +99,7 @@ bindkey '^I' complete-word
 [[ -n "${key_map[Ctrl-Left]}" ]]  && bindkey -- "${key_map[Ctrl-Left]}"  backward-word
 [[ -n "${key_map[Ctrl-Right]}" ]] && bindkey -- "${key_map[Ctrl-Right]}" forward-word
 
+
 # ------------------------------------------------------------------------------
 # Line Navigation
 
@@ -114,7 +112,6 @@ bindkey '^I' complete-word
 
 # Deletion Logic
 # ───────────────────────────────────────────────────────────────────────
-
 # Delete the character under the cursor (Forward Delete)
 [[ -n "${key_map[Delete]}" ]] && bindkey -- "${key_map[Delete]}" delete-char
 

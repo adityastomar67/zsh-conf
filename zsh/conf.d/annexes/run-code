@@ -28,13 +28,8 @@
 # ------------------------------------------------------------------------------
 
 
-# ── execution engine ─────────────────────────────────────────────────────────
-
-
-
-
 # ------------------------------------------------------------------------------
-# 1. Environment Sandbox
+# Environment Sandbox
 
 # emulate -L zsh: Restricts configuration changes to this local function scope.
 # zmodload: Loads high-precision timing and mathematical function modules.
@@ -44,17 +39,17 @@ zmodload zsh/datetime
 zmodload zsh/mathfunc
 
 # ------------------------------------------------------------------------------
-# 2. Input Validation
+# Input Validation
 
 local file="$1"
 
 if [[ -z "$file" ]]; then
-    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} No file provided."
+    print "${COLOR[RED]} [ERROR]${COLOR[RESET]} No file provided."
     return 1
 fi
 
 if [[ ! -f "$file" ]]; then
-    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} File '${COLOR[BOLD]}$file${COLOR[RESET]}' not found."
+    print "${COLOR[RED]} [ERROR]${COLOR[RESET]} File '${COLOR[BOLD]}$file${COLOR[RESET]}' not found."
     return 1
 fi
 
@@ -62,7 +57,7 @@ fi
 shift
 
 # ------------------------------------------------------------------------------
-# 3. Path & UI Initialization
+# Path & UI Initialization
 
 local file_ext="${file:e}"          # File extension (e.g., rs)
 local file_base="${file:t:r}"       # Filename without extension (e.g., main)
@@ -73,7 +68,7 @@ local file_base="${file:t:r}"       # Filename without extension (e.g., main)
 local bin_path="/tmp/zsh_run_${file_base}_$$_${EPOCHSECONDS}"
 
 # ------------------------------------------------------------------------------
-# 4. Cleanup Strategy
+# Cleanup Strategy
 
 # ---- SAFE: Ensure temp binary is removed even if the user hits Ctrl+C
 trap 'rm -f "$bin_path" 2>/dev/null; print "\n${COLOR[RED]}::${COLOR[RESET]} Execution cancelled."; return 130' INT TERM
@@ -85,7 +80,7 @@ local exit_status=0
 local is_compiled=0
 
 # ------------------------------------------------------------------------------
-# 5. Language Decision Matrix
+# Language Decision Matrix
 
 case "$file_ext" in
     # --- COMPILED LANGUAGES ---
@@ -179,7 +174,7 @@ case "$file_ext" in
 esac
 
 # ------------------------------------------------------------------------------
-# 6. Post-Run Cleanup & Benchmarking
+# Post-Run Cleanup & Benchmarking
 
 # Remove binary immediately after execution to keep /tmp clean
 if (( is_compiled )) && [[ -f "$bin_path" ]]; then
@@ -194,7 +189,7 @@ print
 if (( exit_status == 0 )); then
     print "${COLOR[GREEN]}✔${COLOR[RESET]} Finished in ${COLOR[GREEN]}${duration_fmt}s${COLOR[RESET]}"
 else
-    print "${COLOR[RED]}✘${COLOR[RESET]} Failed (Exit: $exit_status) in ${COLOR[RED]}${duration_fmt}s${COLOR[RESET]}"
+    print "${COLOR[RED]} ${COLOR[RESET]} Failed (Exit: $exit_status) in ${COLOR[RED]}${duration_fmt}s${COLOR[RESET]}"
 fi
 
 # Release the trap and return the original exit code

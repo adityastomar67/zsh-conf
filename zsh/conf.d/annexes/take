@@ -1,210 +1,247 @@
 #!/usr/bin/env zsh
 
-#    ░▀█▀░█▀█░█░█░█▀▀
-#    ░░█░░█▀█░█▀▄░█▀▀
-#    ░░▀░░▀░▀░▀░▀░▀▀▀
-
-# ------------------------------------------------------------------------------
-# File Purpose
-#   A "Universal Ingress" utility that acquires resources (URLs, Git repos,
-#   shorthands) or creates directories and immediately moves the shell into them.
+# ─────────────────────────────────────────────────────────────────────────────
+# Function/Module: Smart Take (Directory Acquisition & Navigation)
+# Description:
+#   A heavily upgraded version of the traditional 'take' or 'mkcd' command.
+#   It accepts local paths, URLs, or GitHub shorthands, automatically
+#   creates or clones the resource, handles conflicts, navigates into the
+#   new directory, and presents a visual breadcrumb and content preview.
 #
-# Problems Solved
-#   - Eliminates the context switch between cloning/downloading and 'cd'-ing.
-#   - Standardizes "acquisition" logic for Git repos, GitHub shorthands,
-#     and compressed archives (.zip, .tar.gz).
-#   - Automates directory scaffolding if the target doesn't exist.
-#   - Handles folder conflicts interactively (Enter, Overwrite, or Cancel).
+# How it works:
+#       1. Validates input and detects if it's a local path, URL, or shorthand.
+#       2. Normalizes the target directory name (stripping extensions/URLs).
+#       3. Checks for existing directories and prompts for conflict resolution.
+#       4. Acquires the resource (mkdir, git clone, or curl archive).
+#       5. Navigates into the target and visualizes the location/contents.
 #
-# Features / Responsibilities
-#   - Shorthand Expansion: Detects "user/repo" and expands to GitHub URLs.
-#   - Archive Handling: Automatically downloads and extracts archives via curl.
-#   - Shallow Cloning: Uses '--depth 1' for rapid Git acquisition.
-#   - Visual Breadcrumbs: Renders a path hierarchy and content preview on landing.
+# Sub-Modules / Components:
+#    Input Parser      : Uses regex to classify the input source.
+#    Resource Fetcher  : Handles Git clones and HTTP archive downloads.
+#    Visualizer        : Renders an ASCII breadcrumb tree and directory preview.
 #
-# Usage Notes
-#   - `take https://github.com/zsh-users/zsh-autosuggestions`
-#   - `take ohmyzsh/ohmyzsh` (GitHub shorthand)
-#   - `take my_new_project` (Local directory creation)
-# ------------------------------------------------------------------------------
+# Features:
+#    Shorthand Syntax : Expands 'user/repo' into full GitHub URLs automatically.
+#    Archive Extraction: Streams remote tarballs directly to disk memory-efficiently.
+#    Interactive UI    : Prompts the user before overwriting existing directories.
+#
+# Dependencies:
+#    git    : Required for cloning repositories.
+#    curl   : Required for downloading archives.
+#    tar/unzip : Required for extracting downloaded archives.
+#    COLOR  : Global associative array for terminal colors.
+#
+# Usage:
+#    take <url|directory|shorthand> [target_directory]
+# ─────────────────────────────────────────────────────────────────────────────
+
+## ── Directory Acquisition & Navigation ───────────────────────────────────────
+## ------------------------------------------------------------------------------
+
+# ── Interactive Directory Management ──────────────────────────────────────────
+# Function: smart_take
+# Logic:
+#   - Sets local Zsh options for safe execution and pipeline error handling.
+#   - Validates input and categorizes it using regular expressions.
+#   - Sanitizes the target path to ensure clean folder creation.
+#   - Prompts for user input if the target directory already exists.
+#   - Fetches or creates the directory contents.
+#   - Changes the current working directory and displays a structured summary.
+# -----------------------------------------------------------------------------
 
 
-# ── ingress engine ───────────────────────────────────────────────────────────
-
-
-
-
-# ------------------------------------------------------------------------------
-# 1. Environment Sandbox
-
+# --- ENVIRONMENT ISOLATION ---
 # emulate -L zsh: Restricts configuration changes to this local scope.
-# pipefail: Ensures errors in curl | tar pipelines are caught.
+# pipefail: Ensures errors in curl | tar pipelines are caught properly.
 emulate -L zsh
 setopt localoptions no_xtrace pipefail
 
-# UI Color Palette (High-fidelity Zsh formatting)
-local c_blue="%F{39}"
-local c_green="%F{46}"
-local c_red="%F{196}"
-local c_yellow="%F{226}"
-local c_grey="%F{240}"
-local c_reset="%f"
-local c_bold="%B"
-local c_unbold="%b"
+local source_uri="$1"
+local target_directory="$2"
 
-local input_source="$1"
-local input_target="$2"
-
-# Validation: Ensure at least a source is provided
-if [[ -z "$input_source" ]]; then
-    print -P "${c_red}[ERROR]${c_reset} Usage: take <url|directory|shorthand>"
+# --- INPUT VALIDATION ---
+# Ensure the user provided at least a source argument.
+if [[ -z "$source_uri" ]]; then
+    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Usage: smart_take <url|directory|shorthand>"
     return 1
 fi
 
-# ------------------------------------------------------------------------------
-# 2. Intelligent Source Detection
+# --- INPUT CLASSIFICATION ---
 
-# regex for various network protocols (git, ssh, http, etc.)
-local protocol_regex='^(https?|git|ssh|ftps?|rsync)://|^[a-zA-Z0-9]+@'
-# regex for GitHub "user/repo" style shorthand
-local github_shorthand_regex='^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$'
+# Define regular expressions for identifying protocols and shorthands.
+local network_protocol_regex='^(https?|git|ssh|ftps?|rsync)://|^[a-zA-Z0-9]+@'
+local github_repo_regex='^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$'
 
-local is_url=0
-local action_type=""
+local is_remote_url=0
+local execution_action=""
 
-if [[ "$input_source" =~ $protocol_regex ]]; then
-    is_url=1
-elif [[ "$input_source" =~ $github_shorthand_regex ]] && [[ ! -d "$input_source" ]]; then
-    # --- Complex Logic: Shorthand Expansion ---
-    # If the input looks like user/repo and isn't a local folder, assume GitHub.
-    print -P "${c_blue}ℹ${c_reset}  Detected GitHub shorthand. Expanding..."
-    input_source="https://github.com/${input_source}.git"
-    is_url=1
+# Evaluate the source string against our known patterns.
+if [[ "$source_uri" =~ $network_protocol_regex ]]; then
+    is_remote_url=1
+elif [[ "$source_uri" =~ $github_repo_regex ]] && [[ ! -d "$source_uri" ]]; then
+
+    # ---- NOTE: Shorthand Expansion
+    # If the input looks like user/repo and isn't already a local folder,
+    # we assume it is a GitHub repository shorthand and expand it.
+    print "${COLOR[BLUE]}ℹ${COLOR[RESET]}  Detected GitHub shorthand. Expanding..."
+
+    source_uri="https://github.com/${source_uri}.git"
+    is_remote_url=1
 fi
 
-# ------------------------------------------------------------------------------
-# 3. Target Path Normalization
+# --- TARGET SANITIZATION ---
 
-if (( is_url )); then
-    if [[ -z "$input_target" ]]; then
-        # --- Complex Logic: URL Sanitization ---
-        # Extract a clean folder name from a URL by stripping .git and parameters.
-        input_target=$(basename "${input_source%%.git}")
-        input_target="${input_target%%\?*}"
-        input_target="${input_target%%#*}"
+if (( is_remote_url )); then
+    # If no explicit target was provided, we must derive it from the URL.
+    if [[ -z "$target_directory" ]]; then
 
-        # Strip archive extensions from the folder name
-        if [[ "$input_target" =~ \.(zip|tar\.|tgz|tbz) ]]; then
-            input_target="${input_target%.*}"
-            input_target="${input_target%.tar}"
+        # ---- SAFE: URL Sanitization
+        # Extract a clean folder name from a URL by stripping .git,
+        # query parameters, and URL fragments.
+        target_directory=$(basename "${source_uri%%.git}")
+        target_directory="${target_directory%%\?*}"
+        target_directory="${target_directory%%#*}"
+
+        # Strip common archive extensions from the derived folder name.
+        if [[ "$target_directory" =~ \.(zip|tar\.|tgz|tbz) ]]; then
+            target_directory="${target_directory%.*}"
+            target_directory="${target_directory%.tar}"
         fi
     fi
-    action_type="clone"
+    execution_action="clone"
 else
-    input_target="$input_source"
-    action_type="create"
+    # If it's a local path, the target is the source itself.
+    target_directory="$source_uri"
+    execution_action="create"
 fi
 
-# ------------------------------------------------------------------------------
-# 4. Conflict Resolution
+# --- INTERACTIVE CONFLICT HANDLING ---
 
-if [[ -d "$input_target" ]]; then
-    print -P "${c_yellow}⚠${c_reset}  Target '${c_bold}$input_target${c_unbold}' already exists."
-    print -P -n "   [e]nter  [o]verwrite  [c]ancel > "
-    local key_press
-    read -k 1 key_press
-    print
-    case "$key_press" in
-        [eE]) action_type="enter" ;;
+# Check if the derived target directory already exists.
+if [[ -d "$target_directory" ]]; then
+    print "${COLOR[YELLOW]}⚠${COLOR[RESET]}  Target '${COLOR[BOLD]}$target_directory${COLOR[RESET]}' already exists."
+    print -n "   [e]nter  [o]verwrite  [c]ancel > "
+
+    local user_confirmation_key
+    read -k 1 user_confirmation_key
+    print # Print trailing newline
+
+    case "$user_confirmation_key" in
+        [eE])
+            execution_action="enter"
+            ;;
         [oO])
-            print -P "   ${c_red}🗑${c_reset}  Cleaning old directory..."
-            rm -rf "$input_target"
-            ;; # Proceed to re-create or re-acquire
-        *) return 1 ;;
+            # !!! CRITICAL: Destructive Operation
+            # Removing the old directory to make way for the new acquisition.
+            print "   ${COLOR[RED]}🗑${COLOR[RESET]}  Cleaning old directory..."
+            rm -rf "$target_directory"
+            ;;
+        *)
+            # Abort execution if user cancels or presses an invalid key.
+            return 1
+            ;;
     esac
 fi
 
-# ------------------------------------------------------------------------------
-# 5. Resource Acquisition
+# --- RESOURCE ACQUISITION ROUTINES ---
 
-
-
-if [[ "$action_type" == "enter" ]]; then
-    true # No action needed, proceed to navigation
-elif [[ "$action_type" == "create" ]]; then
-    mkdir -p "$input_target"
-elif [[ "$action_type" == "clone" ]]; then
-    print -P "${c_blue}⬇${c_reset}  Acquiring resource..."
+if [[ "$execution_action" == "enter" ]]; then
+    # No structural action needed, proceed directly to navigation phase.
+    true
+elif [[ "$execution_action" == "create" ]]; then
+    # Create standard local directory hierarchy.
+    mkdir -p "$target_directory"
+elif [[ "$execution_action" == "clone" ]]; then
+    print "${COLOR[BLUE]}⬇${COLOR[RESET]}  Acquiring resource..."
 
     # Logic Branch: Archive Download vs Git Clone
-    if [[ "$input_source" =~ \.(zip|tar\.gz|tgz|tar\.bz2|tbz|tar\.xz)$ ]]; then
-        mkdir -p "$input_target"
-        print -P "   Downloading archive..."
+    if [[ "$source_uri" =~ \.(zip|tar\.gz|tgz|tar\.bz2|tbz|tar\.xz)$ ]]; then
+        mkdir -p "$target_directory"
+        print "   Downloading archive..."
 
-        # Use curl | tar pipeline for memory efficiency (no temp file)
-        if curl -L "$input_source" | tar xz -C "$input_target" --strip-components=1 2>/dev/null; then
-                true
+        # ---- SAFE: Memory Efficient Pipeline
+        # We stream the download directly into tar for extraction, preventing
+        # the need to store large temporary files on the disk if possible.
+        if curl -L "$source_uri" | tar xz -C "$target_directory" --strip-components=1 2>/dev/null; then
+            true
         else
-                # Fallback: mktemp for pure .zip files (which tar cannot handle natively)
-                local tmp_download=$(mktemp)
-                curl -L "$input_source" -o "$tmp_download"
-                if unzip -q "$tmp_download" -d "$input_target"; then
-                    rm "$tmp_download"
-                else
-                    print -P "${c_red}[ERROR]${c_reset} Extraction failed."
-                    rm "$tmp_download"
-                    rmdir "$input_target"
-                    return 1
-                fi
+            # Fallback: We use a temporary file for pure .zip files because
+            # standard 'tar' cannot stream-extract them natively.
+            local temporary_archive_file=$(mktemp)
+            curl -L "$source_uri" -o "$temporary_archive_file"
+
+            if unzip -q "$temporary_archive_file" -d "$target_directory"; then
+                rm "$temporary_archive_file"
+            else
+                print "${COLOR[RED]}[ERROR]${COLOR[RESET]} Extraction failed."
+                rm "$temporary_archive_file"
+                rmdir "$target_directory"
+                return 1
+            fi
         fi
     else
-        # Default to Shallow Git Clone for speed
-        git clone "$input_source" "$input_target" --depth 1
+        # Default to Shallow Git Clone for speed and minimal disk usage.
+        git clone "$source_uri" "$target_directory" --depth 1
     fi
 fi
 
-# ------------------------------------------------------------------------------
-# 6. Navigation & Breadcrumb Visualization
+# --- BREADCRUMB UI RENDERING ---
 
+# Attempt to enter the target directory using the Zsh builtin 'cd'.
+if builtin cd "$target_directory"; then
 
+    # Replace the literal home directory path with a tilde for prettier display.
+    local formatted_current_path="${PWD/#$HOME/~}"
 
-if builtin cd "$input_target"; then
-    local current_display_path="${PWD/#$HOME/~}"
+    print "\n${COLOR[GREEN]}✔${COLOR[RESET]}  Landed in: ${COLOR[BOLD]}$target_directory${COLOR[RESET]}"
 
-    print -P "\n${c_green}✔${c_reset}  Landed in: ${c_bold}$input_target${c_unbold}"
+    # --- Sub-Section: Location Visualization ---
+    print "${COLOR[BLUE]}📍 LOCATION:${COLOR[RESET]}"
 
-    # --- Section: Location Visualization ---
-    print -P "${c_blue}📍 LOCATION:${c_reset}"
-    local indent_spacer=""
-    local path_segments=("${(@s:/:)current_display_path}")
+    local breadcrumb_indent=""
 
-    if [[ "$current_display_path" == "/" ]]; then
-            print -P "  /"
+    # Split the path into an array using the slash '/' separator.
+    # ${(@s:/:)var} is a Zsh-specific array splitting syntax.
+    local directory_segments=("${(@s:/:)formatted_current_path}")
+
+    if [[ "$formatted_current_path" == "/" ]]; then
+        print "  /"
     else
-            if [[ "$current_display_path" == ~* ]]; then
-                print -P "  ~"
-                [[ -z "${path_segments[1]}" ]] && shift path_segments
-            fi
-            # Render the ASCII breadcrumb tree
-            for segment in "${path_segments[@]}"; do
-                [[ -z "$segment" ]] && continue
-                if [[ "$segment" == "~" ]] && continue
-                print -P "  $indent_spacer└── $segment"
-                indent_spacer="$indent_spacer    "
-            done
-            print -P "  $indent_spacer    ${c_green}⬆ (You are here)${c_reset}"
+        # Handle standard home directory paths gracefully
+        if [[ "$formatted_current_path" == ~* ]]; then
+            print "  ~"
+            # Remove the empty first segment generated by the leading slash
+            [[ -z "${directory_segments[1]}" ]] && shift directory_segments
+        fi
+
+        # Render the ASCII breadcrumb tree
+        local segment
+        for segment in "${directory_segments[@]}"; do
+            [[ -z "$segment" ]] && continue
+            if [[ "$segment" == "~" ]] && continue
+
+            print "  $breadcrumb_indent└── $segment"
+            breadcrumb_indent="$breadcrumb_indent    "
+        done
+        print "  $breadcrumb_indent    ${COLOR[GREEN]}⬆ (You are here)${COLOR[RESET]}"
     fi
 
-    # --- Section: Content Preview ---
+    # --- Sub-Section: Content Preview ---
+
+    # Check if the directory is not empty
     if [[ -n "$(ls -A . 2>/dev/null)" ]]; then
-            print -P "\n${c_blue}📂 CONTENTS:${c_reset}"
-            # head -n 5: Limit preview to prevent terminal flooding
-            ls -F --color=auto 2>/dev/null | head -n 5 | sed 's/^/  ├── /'
-            local total_items=$(ls -A | wc -l)
-            (( total_items > 5 )) && print -P "  ... ($((total_items-5)) more)"
+        print "\n${COLOR[BLUE]} CONTENTS:${COLOR[RESET]}"
+
+        # Limit the preview to 5 lines to prevent terminal flooding in large repos.
+        ls -F --color=auto 2>/dev/null | head -n 5 | sed 's/^/  ├── /'
+
+        local total_item_count=$(ls -A | wc -l)
+        if (( total_item_count > 5 )); then
+            print "  ... ($((total_item_count - 5)) more)"
+        fi
     fi
 else
-    print -P "\n${c_red}[FATAL]${c_reset} Failed to enter directory."
+    print "\n${COLOR[RED]}[FATAL]${COLOR[RESET]} Failed to enter directory."
     return 1
 fi
 

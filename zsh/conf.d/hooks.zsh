@@ -40,7 +40,6 @@ zle -N down-line-or-beginning-search
 # Custom Editor Widgets
 # ───────────────────────────────────────────────────────────────────────
 ## Advanced macros to speed up command line editing.
-
 # ------------------------------------------------------------------------------
 # Widget: Pop-Command
 # Description:
@@ -97,7 +96,6 @@ zle -N magic_dot_expansion
 # Interactive User Assistance
 # ───────────────────────────────────────────────────────────────────────
 ## Widgets that provide context-aware information when the line is empty.
-
 # ------------------------------------------------------------------------------
 # Widget: Abbreviation Expansion (Fish-like behavior)
 # Description: When you type an alias and press space, it expands to the full command.
@@ -244,7 +242,6 @@ fi
 
 # Productivity & UI Enhancements
 # ───────────────────────────────────────────────────────────────────────
-
 # ------------------------------------------------------------------------------
 # Widget: Fancy Ctrl-Z
 # Description: Toggles between backgrounding and foregrounding jobs.
@@ -265,36 +262,15 @@ zle -N fancy_ctrl_z
 # Widget: Copy Buffer to Clipboard
 # Description: Cross-platform command line copying.
 # ------------------------------------------------------------------------------
-# PRE-CALCULATE: Find the clipboard tool ONCE at startup.
-#    We use an array to safely handle arguments like '-selection clipboard'.
-typeset -a _copy_cmd_list
-
-if [[ "$OSTYPE" == darwin* ]]; then
-    _copy_cmd_list=(pbcopy)
-elif (( $+commands[wl-copy] )); then
-    _copy_cmd_list=(wl-copy)
-elif (( $+commands[xclip] )); then
-    _copy_cmd_list=(xclip -selection clipboard)
-elif (( $+commands[xsel] )); then
-    _copy_cmd_list=(xsel --clipboard --input)
-elif (( $+commands[clip.exe] )); then
-    # Support for WSL (Windows Subsystem for Linux)
-    _copy_cmd_list=(clip.exe)
-fi
-
-# 2. EXECUTE: The widget simply uses the pre-found command.
+# EXECUTE: The widget simply uses the pre-found command.
 copy_buffer_to_clipboard() {
     emulate -L zsh
 
-    # Safety check: Do we have a command?
-    if (( ${#_copy_cmd_list} == 0 )); then
-        zle -M "Error: No clipboard utility found."
-        return 1
-    fi
-
-    # Optimization: Use 'print -rn --' instead of 'print -n'.
-    # It prevents Zsh from interpreting flags like '-e' inside your buffer.
-    print -rn -- "$BUFFER" | "${_copy_cmd_list[@]}"
+    # Execution: The "Pro" Word-Split Expansion
+    #   The '=' sign inside the curly braces tells Zsh to safely split the
+    #   string by spaces so flags are passed correctly to the binary.
+    #   The ':-cat' ensures a safe fallback even if _clip was accidentally unset.
+    print -rn -- "$BUFFER" | ${=_clip:-cat}
 
     zle -M "✓ Copied buffer to clipboard."
 }
@@ -339,26 +315,42 @@ add-zle-hook-widget line-finish _transient_finish
 
 # Integration Widgets (External Tools)
 # ───────────────────────────────────────────────────────────────────────
-
 # ------------------------------------------------------------------------------
 # Widget: Git FZF Fixup
 # Description: Interactively select a commit to fixup via FZF.
 # ------------------------------------------------------------------------------
 git_fzf_fixup() {
-    if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+    if ! is_in_git_repo; then
         zle -M "Not in a git repository."
-        return
+        return 1
     fi
 
-    local commit
-    commit=$(git log -n 50 --oneline --color=always | \
-        fzf --ansi --no-sort --height=40% --layout=reverse --prompt="🛠️ Fixup Commit > " | \
-        awk '{print $1}')
+    local selected
+    selected=$(command git log -n 50 --oneline --color=always | \
+        fzf --ansi --no-sort \
+            --height=80% \
+            --layout=reverse \
+            --border \
+            --border-label="   Fixup Target " \
+            --prompt="Commit > " \
+            --info=inline \
+            --preview="command git show --color=always {1} | less -R" \
+            --preview-window="right:65%:border-left" \
+            --header=$'\033[1;33m• Enter:\033[0m Create Fixup   \033[1;33m• Esc:\033[0m Cancel\n'
+    )
 
-    if [[ -n "$commit" ]]; then
-        LBUFFER="git commit -a --no-verify --fixup=$commit"
+    if [[ -n "$selected" ]]; then
+        # NATIVE ZSH SPLIT: Instantly grabs the first word (the hash) without spawning awk
+        local hash="${selected[(w)1]}"
+
+        # SAFETY FIX: Removed '-a'. You should stage exactly what you want
+        # using our `git_add` function first, THEN run this widget!
+        LBUFFER="git commit --no-verify --fixup=$hash"
+
+        # Accept the line to execute it instantly
         zle accept-line
     else
+        # If the user aborts, cleanly redraw the command line prompt
         zle redisplay
     fi
 }
@@ -392,4 +384,3 @@ docker_connect_widget() {
     zle redisplay
 }
 zle -N docker_connect_widget
-

@@ -26,13 +26,8 @@
 # ------------------------------------------------------------------------------
 
 
-# ── deduplication engine ─────────────────────────────────────────────────────
-
-
-
-
 # ------------------------------------------------------------------------------
-# 1. Environment Sandbox
+# Environment Sandbox
 
 # emulate -L zsh: Restricts configuration changes to this local function scope.
 # pipefail: Ensures that if 'sort' fails in a pipe, the whole command returns
@@ -41,7 +36,7 @@ emulate -L zsh
 setopt localoptions no_xtrace pipefail
 
 # ------------------------------------------------------------------------------
-# 2. Input Validation
+# Input Validation
 
 local source_file="$1"
 
@@ -63,7 +58,7 @@ if [[ ! -s "$source_file" ]]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 3. Pre-Processing Analysis
+# Pre-Processing Analysis
 
 print -n "${COLOR[BLUE]}::${COLOR[RESET]} Analyzing..."
 
@@ -76,7 +71,7 @@ lines_before=$(wc -l < "$source_file" | tr -d ' ')
 print -f "\r\e[K"
 
 # ------------------------------------------------------------------------------
-# 4. Sorting Logic
+# Sorting Logic
 
 # !!! CRITICAL: Atomic Operation
 # We write results to a temp file first. If the sort fails (e.g., out of disk space),
@@ -101,7 +96,7 @@ lines_after=$(wc -l < "$tmp_output" | tr -d ' ')
 print -f "\r\e[K"
 
 # ------------------------------------------------------------------------------
-# 5. Logic Check
+# Logic Check
 
 # Calculate the number of redundant lines removed
 local removed_count=$(( lines_before - lines_after ))
@@ -114,7 +109,7 @@ if (( removed_count == 0 )); then
 fi
 
 # ------------------------------------------------------------------------------
-# 6. Applying Changes
+# Applying Changes
 
 # ---- SAFE: Backup creation
 # Before overwriting, we create a fallback file.
@@ -122,7 +117,7 @@ cp "$source_file" "$source_file.bak"
 mv "$tmp_output" "$source_file"
 
 # ------------------------------------------------------------------------------
-# 7. Dashboard Report
+# Dashboard Report
 
 # Calculate percentage of data reduction
 local reclaim_pct=$(( (removed_count * 100) / lines_before ))

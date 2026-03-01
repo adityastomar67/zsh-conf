@@ -145,16 +145,16 @@ if [[ ! -f "$ZSH_COMPLETION_DUMP" || -n "$ZSH_COMPLETION_DUMP"(#qN.mh+24) ]]; th
     #   -i: Ignore insecure directories
     #   -u: Use insecure directories (silently)
     #   -d: Dump path
-    compinit -i -u -d "$ZSH_COMPLETION_DUMP"
+    compinit -i -u -d "${ZSH_COMPLETION_DUMP}"
 
     # Touch the cache file to reset the 24-hour expiration timer
     # since compinit doesn't update the mtime if no new completion files are found.
-    touch "$ZSH_COMPLETION_DUMP"
+    touch "${ZSH_COMPLETION_DUMP}"
 else
     # Scenario B: Cache is fresh. Fast Load.
     #   -C: Skip ALL security checks, trust the dump file
     #   -d: Dump path
-    compinit -C -d "$ZSH_COMPLETION_DUMP"
+    compinit -C -d "${ZSH_COMPLETION_DUMP}"
 fi
 
 

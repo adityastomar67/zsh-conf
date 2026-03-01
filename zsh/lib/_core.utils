@@ -68,15 +68,18 @@ export _clip="cat" # Default fallback prevents crashes on headless servers
 if [[ "$OSTYPE" == darwin* ]]; then
     _clip="pbcopy"
 elif [[ "$OSTYPE" == linux* ]]; then
-    # 1. Catch WSL (Windows Subsystem for Linux)
+    # Catch WSL (Windows Subsystem for Linux)
     if [[ -n "$WSL_DISTRO_NAME" ]] && (( $+commands[clip.exe] )); then
         _clip="clip.exe"
-    # 2. Catch native Wayland
+    # Catch native Wayland
     elif (( $+commands[wl-copy] )); then
         _clip="wl-copy"
-    # 3. Catch native X11
+    # Catch native X11
     elif (( $+commands[xclip] )); then
         _clip="xclip -selection clipboard"
+    # Catch native X11 (fallback)
+    elif (( $+commands[xsel] )); then
+        _clip="xsel --clipboard --input"
     fi
 fi
 
