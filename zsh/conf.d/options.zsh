@@ -226,5 +226,5 @@ for entry in "${INIT_TOOLS[@]}"; do
     if (( $+commands[$bin] )) then
         _eval_cache "$bin" "$cmd" "$mode"
     fi
+    unset bin cmd mode
 done
-

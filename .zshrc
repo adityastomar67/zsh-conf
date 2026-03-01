@@ -92,25 +92,27 @@ fi
 ## Randomly selects between color scripts or motivational quotes if enabled.
 
 if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
-    # Disable benchmark during visuals
-    ZSH_BENCHMARK="No"
+    ZSH_BENCHMARK="No"  # Disable benchmark during visuals
 
-    local -a available_visual_commands=()
+    # Filter out commands that are not installed on the system
+    local -a valid_commands=()
+    local cmd cmd_name
+    for cmd in "${available_visual_commands[@]}"; do
+        cmd_name=${${(z)cmd}[1]}
+        if type "$cmd_name" >/dev/null 2>&1; then
+            valid_commands+=( "$cmd" )
+        fi
+    done
 
-    # Check for installed visualization tools
-    (( $+commands[ColorScript] )) && available_visual_commands+=( "ColorScript --random" )
-    (( $+commands[motivate] ))    && available_visual_commands+=( "motivate" )
-
-    # Select and execute a random visual if any are found
-    if (( ${#available_visual_commands} > 0 )); then
+    # Select and execute a random visual if any valid ones are found
+    if (( ${#valid_commands} > 0 )); then
         # Pick random index (1-based indexing)
-        local random_idx=$(( RANDOM % ${#available_visual_commands} + 1 ))
-
-        # Execute the command
+        local random_idx=$(( RANDOM % ${#valid_commands} + 1 ))
         clear
-        ${=available_visual_commands[$random_idx]}
+        ${=valid_commands[$random_idx]}     # Execute the command
         print
     fi
+    unset valid_commands cmd cmd_name random_idx
 fi
 
 
@@ -146,6 +148,7 @@ if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
             "${COLOR[YELLOW]}Total startup time: ${COLOR[CYAN]}%6.2f ${COLOR[YELLOW]}ms${COLOR[RESET]}\n\n" \
             ${total_duration_ms}
     fi
+    unset total_duration_ms _startup_timer
 elif [[ "${ENABLE_FANCY_STARTUP:l}" == "no" ]]; then
     # ---- SAFE: Fallback if benchmarking is disabled
     clear
