@@ -107,6 +107,7 @@ if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
         local random_idx=$(( RANDOM % ${#available_visual_commands} + 1 ))
 
         # Execute the command
+        clear
         ${=available_visual_commands[$random_idx]}
         print
     fi
