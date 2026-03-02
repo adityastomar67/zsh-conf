@@ -339,8 +339,9 @@ function __status() {
     # ─── FOOTER ───
     END {
         if (total_files == 0) printf "    " C_GREEN "%s" C_RESET "  " C_DIM "No changes. Working tree clean." C_RESET "\n", I_CLEAN
-        else printf "\n  " C_DIM "(%d files changed)" C_RESET "\n", total_files
+        else printf "\n  " C_DIM "(%d files changed)" C_RESET, total_files
     }'
+    print
 }
 
 # ── Git Checkout Interface ────────────────────────────────────────────────────
