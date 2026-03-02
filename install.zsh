@@ -105,6 +105,7 @@ Config::init() {
 
     CONFIG_PATHS[CONF]="${CONFIG_PATHS[REPO]}/user.conf"
     CONFIG_PATHS[HIST]="${CONFIG_PATHS[CACHE]}/zhistory"
+    CONFIG_PATHS[CUSTOM]="${HOME}/User-Overrides.zsh"
 
     # Backup location (Time-stamped)
     CONFIG_PATHS[BACKUP]="${CONFIG_PATHS[REPO]}_backups/$(date +%Y-%m-%d)"
@@ -435,8 +436,8 @@ System::is_tool_installed() {
 
 System::cleanup() {
     # 1. Determine Source vs Destination
-    local current_script_path="${(%):-%x}"
-    local source_dir="${current_script_path:A:h}" # Absolute path of this script's dir
+    local current_script_path="${INSTALLER_SCRIPT_PATH:-${(%):-%x}}"
+    local source_dir="${INSTALLER_SOURCE_DIR:-${current_script_path:A:h}}" # Absolute path of this script's dir
     local dest_dir="${CONFIG_PATHS[REPO]:A}"      # Absolute path of install target
 
     Logger::info "Cleaning up..."
@@ -455,7 +456,7 @@ System::cleanup() {
     # If the user ran the installer from outside the target directory (~/.config/zsh-conf)
     if [[ "$source_dir" != "$dest_dir" ]]; then
         # Check if the source directory is a full repository clone or zip extraction
-        if [[ -d "$source_dir/zsh" && -f "$source_dir/README.md" ]]; then
+        if [[ -d "$source_dir/zsh" || -f "$source_dir/README.md" || -d "$source_dir/.git" ]]; then
             Logger::warn "Installer ran from a cloned repository at: $source_dir"
 
             # Safety: Prevent deletion of Home or Root
@@ -560,7 +561,7 @@ Installer::check_dependencies() {
 
             if System::is_tool_installed "$package"; then
                 Logger::success "Installed $package"
-                $installed_pkgs+=("$package")
+                installed_pkgs+=("$package")
             else
                 Logger::error "Failed to install $package"
             fi
@@ -711,9 +712,13 @@ Installer::configure_user_features() {
 }
 
 Installer::main() {
+    # Capture absolute path of this script before changing directories
+    typeset -g INSTALLER_SCRIPT_PATH="${${(%):-%x}:A}"
+    typeset -g INSTALLER_SOURCE_DIR="${INSTALLER_SCRIPT_PATH:h}"
+
     cd /tmp
     local DATE=$(date +%Y-%m-%d)
-    local TIMESTAMP=$(date +%s)
+    local TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
     # 1. Initialization
     Theme::init
@@ -744,6 +749,7 @@ Installer::main() {
     FileSystem::atomic_backup "${CONFIG_PATHS[RC]}"
     FileSystem::atomic_backup "${CONFIG_PATHS[ENV]}"
     FileSystem::atomic_backup "${CONFIG_PATHS[CONF]}"
+    FileSystem::atomic_backup "${CONFIG_PATHS[CUSTOM]}"
     mkdir -p "${CONFIG_PATHS[CACHE]}"  >| /dev/null 2>&1
 
     # 5b. Migrate PATH exports from existing local .zshrc (if any)
@@ -756,8 +762,7 @@ Installer::main() {
 
     # Handle Directory Collision (Back up existing folder)
     if [[ -d "${CONFIG_PATHS[REPO]}" ]]; then
-        mkdir -p "${CONFIG_PATHS[BACKUP]}"
-        mv "${CONFIG_PATHS[REPO]}" "${CONFIG_PATHS[BACKUP]}/zsh-conf"
+        mv "${CONFIG_PATHS[REPO]}" "${CONFIG_PATHS[BACKUP]}/zsh-conf_${TIMESTAMP}"
     fi
 
     # Parallel Cloning
@@ -803,8 +808,8 @@ Installer::main() {
 
 export ZDOTDIR="$HOME/.config/zsh-conf"
 EOF
-    Logger::success "ZDOTDIR configured in $HOME/.zshenv"
     sleep 1
+    Logger::success "ZDOTDIR configured in $HOME/.zshenv"
 
 
     # 8. Dependencies & Features
@@ -867,6 +872,7 @@ EOF
     sleep 2
 
     if Interface::prompt_confirm "Launch new shell now?"; then
+        cd $HOME
         exec zsh
     else
         print
