@@ -1,3 +1,5 @@
+#!/usr/bin/env zsh
+
 # ------------------------------------------------------------------------------
 # Function/Module: Interactive Pattern Remover
 # Description:
@@ -143,10 +145,12 @@ while true; do
     print -P "\n${COLOR[YELLOW]}⚠  Warning:${COLOR[RESET]} This will ${COLOR[BOLD]}permanently delete${COLOR[RESET]} these files."
 
     # --- INTERACTIVE INPUT ---
-    # Zsh 'read' allows putting the prompt directly in the command.
-    # -k 1 reads exactly one character without waiting for Return.
+    # We print the prompt explicitly to avoid Zsh 'read ?' syntax quirks
+    # which can sometimes echo variable assignments visually on screen.
+    # -sk 1 reads exactly one character silently (no terminal echo).
     local user_input_key
-    read -k 1 "user_input_key?   [y]es  [N]o  [v]iew full list > "
+    print -n "   [y]es  [N]o  [v]iew full list > "
+    read -sk 1 user_input_key
     print "" # Print trailing newline to move off the prompt line
 
     # Evaluate the key pressed (converted to lowercase via (L))
@@ -176,12 +180,13 @@ while true; do
                     --layout=reverse \
                     --border \
                     --border-label=" $search_pattern " \
-                    --header=$'\033[31mPress ESC to return to dashboard\033[0m\n'
+                    --header=$'\033[31mPress ESC to return to dashboard\033[0m\n' > /dev/null
             else
                 print -l "${matched_files[@]}" | less
             fi
 
             # Clear the screen after exiting the viewer to redraw the dashboard cleanly
+            unset user_input_key
             clear
             continue
             ;;
