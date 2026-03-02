@@ -94,22 +94,31 @@ fi
 while true; do
 
     # --- DYNAMIC BOX WIDTH CALCULATION ---
-    # Calculate the string lengths to draw a perfectly sized UI box.
-    local title_length   = 32                                # Visual width of the title string
-    local pattern_length = $(( 11 + ${#search_pattern} ))    # "  Pattern: " = 11 chars
-    local matches_length = $(( 17 + ${#total_matches} ))     # "  Matches: [X] files" = 17 chars
+    local title_length=32
+    local pattern_length=$(( 11 + ${#search_pattern} ))
+    local matches_length=$(( 17 + ${#total_matches} ))
 
-    # Find the longest line to set the inner box width
     local inner_width=$title_length
     (( pattern_length > inner_width )) && inner_width=$pattern_length
     (( matches_length > inner_width )) && inner_width=$matches_length
 
-    # Native Zsh Padding (No loops! Instantly creates repeated characters)
-    # (pl:width::char:) pads the string to the left up to 'width' using 'char'
-    local border_line     = ${(pl:inner_width::─:)}
-    local title_padding   = ${(pl:inner_width - title_length:: :)}
-    local pattern_padding = ${(pl:inner_width - pattern_length:: :)}
-    local matches_padding = ${(pl:inner_width - matches_length:: :)}
+    local t_pad_len=$(( inner_width - title_length ))
+    local p_pad_len=$(( inner_width - pattern_length ))
+    local m_pad_len=$(( inner_width - matches_length ))
+
+    # 1. Initialize empty strings
+    local border_line=""
+    local title_padding=""
+    local pattern_padding=""
+    local matches_padding=""
+
+    # 2. Native Zsh Repetition (100% safe for UTF-8 and multibyte characters)
+    repeat $inner_width border_line+="─"
+
+    # Only pad if the length is greater than 0
+    (( t_pad_len > 0 )) && repeat $t_pad_len title_padding+=" "
+    (( p_pad_len > 0 )) && repeat $p_pad_len pattern_padding+=" "
+    (( m_pad_len > 0 )) && repeat $m_pad_len matches_padding+=" "
 
     # --- DASHBOARD UI ---
     # Render the borders and content utilizing the calculated padding.
