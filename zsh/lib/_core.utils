@@ -403,7 +403,7 @@ function notify_user() {
     typeset override_file="$HOME/User-Overrides.zsh"
 
     # Check if the file exists and is non-empty. If not, create it with template content.
-    if [[ ! -s "$override_file" ]]; then
+    if [[ "${LOAD_PRIVATE_CONFIG:l}" == "yes" ]] && [[ ! -s "$override_file" ]]; then
 
     # Write directly using Zsh's built-in print. No 'cat', no heredocs.
     print -r -- '# ------------------------------------------------------------------------------
@@ -441,5 +441,3 @@ function notify_user() {
 if [[ "${ENABLE_WALLPAPER_SYNC:l}" == "yes" ]]; then
     zsh-defer eval 'RandomWall >/dev/null 2>&1 &!'
 fi
-
-

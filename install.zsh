@@ -23,9 +23,8 @@
 #   Or curl-pipe: sh -c "$(curl -fsSL ...)"
 # ------------------------------------------------------------------------------
 
-#
 
-# 0. Setup & Safety Initialization
+# Setup & Safety Initialization
 # ───────────────────────────────────────────────────────────────────────
 ## Establish a predictable execution environment to prevent side effects.
 
@@ -42,7 +41,7 @@ setopt ERR_EXIT NO_UNSET PIPE_FAIL
 setopt NO_CLOBBER
 
 
-# 1. Class: Theme
+# Class: Theme
 # ───────────────────────────────────────────────────────────────────────
 ## Defines the visual palette, colors, and unicode symbols used
 ## throughout the installation process.
@@ -76,7 +75,7 @@ Theme::init() {
 }
 
 
-# 2. Class: Config
+# Class: Config
 # ───────────────────────────────────────────────────────────────────────
 ## Holds global state, file paths, and dependency lists.
 
@@ -184,7 +183,7 @@ Config::calibrate_fonts() {
 }
 
 
-# 3. Class: Logger
+# Class: Logger
 # ───────────────────────────────────────────────────────────────────────
 ## Standardized output wrappers to ensure consistent formatting.
 
@@ -209,11 +208,9 @@ Logger::package() {
 }
 
 
-# 4. Class: UserInterface (UI)
+# Class: UserInterface (UI)
 # ───────────────────────────────────────────────────────────────────────
 ## Handles widgets, animations, and user prompts.
-
-#
 
 Interface::typewriter() {
     local text="$1"
@@ -281,7 +278,7 @@ Interface::print_banner() {
 }
 
 
-# 5. Class: System
+# Class: System
 # ───────────────────────────────────────────────────────────────────────
 ## Abstraction layer for OS-specific commands (Package Managers).
 
@@ -445,7 +442,7 @@ System::cleanup() {
     Logger::info "Cleaning up..."
 
     # 2. Remove Install Artifacts inside the Destination
-    local artifacts=("install.zsh" "README.md" "LICENSE")
+    local artifacts=("install.zsh" "README.md" "LICENSE" "zhistory")
 
     for item in "${artifacts[@]}"; do
         local target="${CONFIG_PATHS[REPO]}/$item"
@@ -488,7 +485,7 @@ System::cleanup() {
 }
 
 
-# 6. Class: FileSystem
+# Class: FileSystem
 # ───────────────────────────────────────────────────────────────────────
 ## Helpers for File I/O, patching, and backups.
 
@@ -518,7 +515,7 @@ FileSystem::create_symlink() {
 }
 
 
-# 7. Class: Installer (Controller)
+# Class: Installer (Controller)
 # ───────────────────────────────────────────────────────────────────────
 ## Main business logic orchestration.
 
@@ -563,6 +560,7 @@ Installer::check_dependencies() {
 
             if System::is_tool_installed "$package"; then
                 Logger::success "Installed $package"
+                $installed_pkgs+=("$package")
             else
                 Logger::error "Failed to install $package"
             fi
@@ -630,25 +628,24 @@ Installer::migrate_user_path() {
 #
 # USAGE:
 #   1. Add this filename to your .gitignore (if syncing dotfiles).
-#   2. Define API keys, work-specific aliases, or hardware-specific overrides here.
+#   2. Define work-specific aliases, or hardware-specific overrides here.
 #   3. Or just remove comment from any example below and modify it.
 #
-# vim: ft=zsh
 # ------------------------------------------------------------------------------
 
-# ── 1. Local Aliases ──────────────────────────────────────────────────
+# ── Local Aliases ──────────────────────────────────────────────────
 # alias ssh-work="ssh user@192.168.1.xx"
 # alias myip="curl -s http://ipecho.net/plain; print"
 
-# ── 2. Path Additions ─────────────────────────────────────────────────
+# ── Path Additions ─────────────────────────────────────────────────
 # path+=("$HOME/my-custom-bin")
 
-# ── 3. Function Overrides ─────────────────────────────────────────────
+# ── Function Overrides ─────────────────────────────────────────────
 # function work_vpn() {
 #     sudo tailscale up --exit-node=work-pc
 # }
 
-# ── 4. User Paths ─────────────────────────────────────────────────────
+# ── User Paths ─────────────────────────────────────────────────────
 # path+=("$HOME/my-custom-bin")' > "$override_file"
 
     {
@@ -662,7 +659,7 @@ Installer::migrate_user_path() {
         print "$marker_end"
     } >> "$override_file"
 
-    Logger::success "Migrated PATH exports to $override_file"
+    Logger::success "Migrated PATH exported to $override_file"
 }
 
 Installer::configure_user_features() {
@@ -672,7 +669,7 @@ Installer::configure_user_features() {
 
     local feature_names=(
         "Alias Expansion" "Custom Functions" "Custom Wallpapers" "Use VI Mode"
-        "Fancy Startup stuff" "Minimalist Config" "Multi-Neovim Setup" "Temp Offline config"
+        "Fancy Startup stuff" "Minimalist Config" "Multi-Neovim Setup" "Load Private config"
         "Theme Engine" "Tmux Integration"
     )
 
@@ -714,6 +711,7 @@ Installer::configure_user_features() {
 }
 
 Installer::main() {
+    cd /tmp
     local DATE=$(date +%Y-%m-%d)
     local TIMESTAMP=$(date +%s)
 
@@ -761,21 +759,22 @@ Installer::main() {
         mkdir -p "${CONFIG_PATHS[BACKUP]}"
         mv "${CONFIG_PATHS[REPO]}" "${CONFIG_PATHS[BACKUP]}/zsh-conf"
     fi
-    
+
     # Parallel Cloning
     {
         local temp_dir="/tmp/zsh_bin_${TIMESTAMP}"
-    
+
         # Start both clones concurrently
-        git clone -b remastered --single-branch --depth=1 --quiet "https://github.com/adityastomar67/zsh-conf.git" "${CONFIG_PATHS[REPO]}" &
+        git clone -b remastered --single-branch --depth=1 --quiet \
+            "https://github.com/adityastomar67/zsh-conf.git" "${CONFIG_PATHS[REPO]}" &
         git clone --depth=1 --quiet "$BIN_SOURCE_REPO" "$temp_dir" &
-    
+
         # A bare 'wait' pauses the script until ALL background '&' tasks finish!
         wait
-    
+
         # Fast Move (Assuming BIN_TARGET_DIR is inside the newly cloned REPO)
         mkdir -p "$BIN_TARGET_DIR"
-    
+
         # Use Zsh native dotglob (D) to cleanly move all files and hidden files
         # without spawning 'cp' and 'rm' separately.
         mv "$temp_dir"/*(D) "$BIN_TARGET_DIR/"
@@ -842,14 +841,19 @@ EOF
         git config --global color.diff.new "#a6e22e"
         git config --global color.diff.whitespace "red reverse"
     ) &
-    sleep 2
 
     # 10. Cleanup
-    print
+    Interface::print_banner
     System::cleanup
-
+    sleep 1
     Logger::success "Cleanup complete."
-    print
+
+    Interface::print_banner
+    if Interface::prompt_confirm "Do you want to remove complete GIT Tracking as well?"; then
+        rm -rf "${CONFIG_PATHS[REPO]}/.git"
+        rm -rf "${CONFIG_PATHS[REPO]}/.gitignore"
+    fi
+    Logger::success "GIT Tracking removed. Now you can track it on your own!"
 
     Interface::print_banner
 
@@ -872,7 +876,7 @@ EOF
 }
 
 
-# 8. Entry Point
+# Entry Point
 # ───────────────────────────────────────────────────────────────────────
 ## Only execute if this script is run directly (not sourced).
 
