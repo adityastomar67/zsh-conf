@@ -117,12 +117,7 @@ function _run_background_compilation() {
 
         # Atomic Locking
         # ─────────────────────────────────────────────────────────────────────────────────
-        # We use `mkdir` because it is an atomic operation on POSIX systems.
-        # Two processes cannot create the same directory at the exact same instant.
-        # If it fails, another compiler instance is already running.
-
-        local lock_dir="/tmp/zsh_compiling_$USER.lock"
-
+        local lock_dir="/tmp/zsh_comp_$USER.lock"
         if ! mkdir "$lock_dir" 2>/dev/null; then
             return 0
         fi
@@ -131,35 +126,12 @@ function _run_background_compilation() {
         trap "rmdir '$lock_dir'" EXIT
 
 
-        # Compiler Logic
+        # Target Definitions & Compilation Loop
         # ─────────────────────────────────────────────────────────────────────────────────
+        # Build a list of all individual files that should be compiled.
 
-        function try_compile() {
-            local source_file="$1"
-            local compiled_file="${source_file}.zwc"
-
-            # Logic:
-            #   - Source file must exist (-f).
-            #   - AND ( Compiled file doesn't exist OR Source is newer than Compiled ).
-            if [[ -f "$source_file" && ( ! -f "$compiled_file" || "$source_file" -nt "$compiled_file" ) ]]; then
-
-                # zcompile flags:
-                #   -U: Don't expand aliases in the sourced file (safety).
-                #   >/dev/null: Silence output (we are in background).
-                zcompile -U "$source_file" >/dev/null 2>&1
-            fi
-        }
-
-
-        # Target Definitions
-        # ─────────────────────────────────────────────────────────────────────────────────
-        # Build a list of all files that should be compiled.
-
-        local -a files_to_compile
-
-        # ── Core Dotfiles ─────────────────────────────────────────────────
-
-        files_to_compile+=(
+        local -a files_to_compile=(
+            # Core Dotfiles
             "$HOME/.zshrc"
             "$HOME/.zshenv"
             "$ZSH_CONFIG_ROOT"/zshrc
@@ -167,34 +139,25 @@ function _run_background_compilation() {
             "${ZDOTDIR:-$HOME/.config/zsh-conf}/.zshrc"
             "${ZDOTDIR:-$HOME/.config/zsh-conf}/.zshenv"
             "$ZSH_COMPLETION_DUMP"
+
+            # Framework Core
+            "$ZSH_CONFIG_ROOT"/conf.d/*.zsh
+            "$ZSH_CONFIG_ROOT"/lib/*~*.zwc(.)
+            "$ZSH_CONFIG_ROOT"/lib/functions/*~*.zwc(.)
+
+            # Plugins & Storage
+            "$ZSH_CONFIG_ROOT"/plugins/*~*.zwc(.)
+
+            # Find plugin scripts 1-level deep only, matching what plug() actually loads
+            # (N)ullglob, (.)Plain files
+            "$ZPLUGIN_STORAGE_DIR"/*/*.(plugin.zsh|zsh-theme|zsh|sh)(N.)
         )
-
-        # ── Framework Core (Flat structure) ────────────────────────────────
-
-        # Match all files recursively, BUT exclude (*.zwc)
-        # (N.) means: Nullglob (no error if empty) AND Plain files only (no directories)
-        files_to_compile+=(
-            "$ZSH_CONFIG_ROOT"/conf.d/*.zsh(N)
-            "$ZSH_CONFIG_ROOT"/lib/*~*.zwc(N.)
-            "$ZSH_CONFIG_ROOT"/lib/functions/*~*.zwc(N.)
-        )
-
-        # ── Plugins (Recursive structure) ──────────────────────────────────
-
-        # We need to find .zsh files deep inside plugin directories.
-        # We also explicitly look for .plugin.zsh to be safe.
-        files_to_compile+=(
-            "$ZSH_CONFIG_ROOT"/plugins/*~*.zwc(N.)
-            "$ZPLUGIN_STORAGE_DIR"/**/*.zsh(N)
-            "$ZPLUGIN_STORAGE_DIR"/**/*.plugin.zsh(N)
-        )
-
-
-        # Execution Loop
-        # ─────────────────────────────────────────────────────────────────────────────────
 
         for file in "${files_to_compile[@]}"; do
-            try_compile "$file"
+            # Compile if digest is missing OR source file is newer than digest
+            if [[ -f "$file" && ( ! -f "${file}.zwc" || "$file" -nt "${file}.zwc" ) ]]; then
+                zcompile -U "$file"
+            fi
         done
 
 
@@ -202,36 +165,22 @@ function _run_background_compilation() {
         # ─────────────────────────────────────────────────────────────────────────────────
         # Compiles specific directories into .zwc files for faster autoloading.
 
-        # Define the directories you want to compile
-        #    (Paths relative to ZSH_CONFIG_ROOT or absolute paths)
         local compile_dirs=(
             "${ZSH_CONFIG_ROOT}/conf.d/annexes"
             "${ZSH_CONFIG_ROOT}/plugins/annexes"
         )
 
-        # Loop through them
-        for func_dir in $compile_dirs; do
-            # Skip if directory doesn't exist
+        for func_dir in "${compile_dirs[@]}"; do
             [[ -d "$func_dir" ]] || continue
 
-            # Define the target digest file (e.g., folder.zwc)
             local digest_file="${func_dir}.zwc"
 
-            # Find the single newest file in the folder to compare timestamps
-            # (.om[1]) = regular files (.), ordered by mod time (om), take 1st ([1])
-            local newest_src
-            newest_src=( "$func_dir"/*(.om[1]) )
+            # Find the single newest file in the directory
+            # (.)Plain files, (om)Order by modified time, [1]Take first
+            local newest_src=( "$func_dir"/*(.om[1]) )
 
-            # Check Condition:
-            #    - If digest doesn't exist OR
-            #    - If the newest source file is newer (-nt) than the digest
-            if [[ -n "$newest_src" && ( ! -f "$digest_file" || "$newest_src" -nt "$digest_file" ) ]]; then
-
-                # Compile!
-                # -U: No aliases expansion
-                # -z: Mark as autoloadable functions (Crucial for fpath)
-                # -M: Map the file into memory (optional, often safer to omit in auto-scripts)
-                zcompile -U -z "$digest_file" "$func_dir"/*(.N) >/dev/null 2>&1
+            if (( $#newest_src )) && [[ ! -f "$digest_file" || "$newest_src[1]" -nt "$digest_file" ]]; then
+                zcompile -U -z "$digest_file" "$func_dir"/*(.)
             fi
         done
 
