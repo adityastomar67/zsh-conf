@@ -117,11 +117,7 @@ function plug() {
     # 3. Input Resolution
     # Use arguments if provided, otherwise fallback to global ZPLUGINS array
     local -a plugin_targets
-    if (( $# > 0 )); then
-        plugin_targets=("$@")
-    else
-        plugin_targets=("${ZPLUGINS[@]}")
-    fi
+    (( $# )) && plugin_targets=("$@") || plugin_targets=("${ZPLUGINS[@]}")
 
     # 4. Processing Loop
     local repo_identifier plugin_name local_path entry_point
@@ -148,31 +144,24 @@ function plug() {
 
         # ── entry point resolution ─────────────────────────────────────────────
         # Heuristic search for the init file.
-        # (N) = nullglob: Return nothing if no match
-        # (.) = plain files only: Ignore directories
+        # (N)=nullglob, (Y1)=stop at first match for maximum speed
 
-        local -a candidates=(
-            # 1. Exact match (Best) -> plugin-name.plugin.zsh or plugin-name.zsh
-            $local_path/${plugin_name}.(plugin.zsh|zsh|sh|zsh-theme)(N.)
+        # 1. Exact match (Fastest) -> plugin-name.plugin.zsh or plugin-name.zsh
+        local -a candidates=( "$local_path"/${plugin_name}.(plugin.zsh|zsh|sh|zsh-theme)(N.Y1) )
 
-            # 2. Generic match (Fallback) -> *.plugin.zsh or init.zsh
-            $local_path/*.(plugin.zsh|zsh|sh|zsh-theme)(N.)
-        )
+        # 2. Generic match (Fallback) -> *.plugin.zsh or init.zsh
+        (( $#candidates )) || candidates=( "$local_path"/*.(plugin.zsh|zsh|sh|zsh-theme)(N.Y1) )
 
-        # Pick the first valid file found
         entry_point="${candidates[1]}"
 
         # ── execution ──────────────────────────────────────────────────────────
         if [[ -n "$entry_point" ]]; then
-            if (( enable_deferral )); then
+            # Async auto-compile to significantly speed up future sourcing
+            [[ "$entry_point" -nt "${entry_point}.zwc" ]] && zcompile "$entry_point" &!
+
+            if (( enable_deferral && $+functions[zsh-defer] )); then
                 # Lazy Load
-                # Ensure we call the function correctly (lowercase 'zsh-defer')
-                if (( $+functions[zsh-defer] )); then
-                    zsh-defer source "$entry_point"
-                else
-                    # Fallback if zsh-defer isn't loaded
-                    source "$entry_point"
-                fi
+                zsh-defer source "$entry_point"
             else
                 # Eager Load
                 source "$entry_point"
