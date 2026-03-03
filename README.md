@@ -129,7 +129,7 @@ export OPENAI_API_KEY="sk-xxxx..."
 ## 💡 Tips & Tricks
 
 - **Benchmark**: See how fast your shell loads with the built-in timer (needs `ZSH_BENCHMARK="Yes"`).
-- **Update**: Pull the latest changes from the repo and rerun `install.zsh` (it handles backups safely).
+- **Update**: Pull the latest changes from the repo by running `dotup -z` (it handles backups safely).
 - **Mini Mode**: Set `ENABLE_MINIMAL_MODE="Yes"` in `user.conf` for a lightweight, dependency-free shell on servers.
 
 ---

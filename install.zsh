@@ -860,6 +860,14 @@ EOF
     fi
     Logger::success "GIT Tracking removed. Now you can track it on your own!"
 
+    if [[ -d "${CONFIG_PATHS[REPO]}_backups" ]]; then
+        Interface::print_banner
+        if Interface::prompt_confirm "Backups have been created at ${CONFIG_PATHS[REPO]}_backups, Do you want to remove it?"; then
+            rm -rf "${CONFIG_PATHS[REPO]}_backups"
+        fi
+        Logger::success "Backups have been REMOVED as well!"
+    fi
+
     Interface::print_banner
 
     # 11. Exit & Onboarding
@@ -872,6 +880,9 @@ EOF
     sleep 2
 
     if Interface::prompt_confirm "Launch new shell now?"; then
+        unset THEME_COLORS THEME_ICONS CONFIG_PATHS REQUIRED_PACKAGES COMMAND_ALIASES \
+              SYSTEM_INFO BIN_TARGET_DIR BIN_SOURCE_REPO INSTALLER_SCRIPT_PATH \
+              INSTALLER_SOURCE_DIR HAS_NERD HAS_LIGATURES ANS response pkg package item i
         cd $HOME
         exec zsh
     else
