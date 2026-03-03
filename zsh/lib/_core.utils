@@ -173,6 +173,7 @@ function plug() {
         # Reset flag for next iteration
         enable_deferral=0
     done
+    unset ZPLUGINS
 }
 
 
@@ -312,6 +313,7 @@ function _build_path() {
 
 # 1. Immediate Injection (Critical System Paths)
 _build_path "${USER_PATH_ENTRIES[@]}"
+unset USER_PATH_ENTRIES
 
 # 2. Deferred Injection (Lazy Load)
 #    Only runs if there are actually deferred entries to process
@@ -322,6 +324,7 @@ if (( ${#DEFERRED_PATH_ENTRIES} )); then
         _build_path "${DEFERRED_PATH_ENTRIES[@]}"
     fi
 fi
+unset DEFERRED_PATH_ENTRIES
 
 
 # File Helpers

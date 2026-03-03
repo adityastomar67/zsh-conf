@@ -133,6 +133,7 @@ for abbr dir in "${(@kv)DIRECTORY_SHORTCUTS}"; do
         hash -d "$abbr"="$dir"
     fi
 done
+unset DIRECTORY_SHORTCUTS
 
 # Editors & Configurations
 # ───────────────────────────────────────────────────────────────────────

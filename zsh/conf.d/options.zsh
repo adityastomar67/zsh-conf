@@ -228,3 +228,4 @@ for entry in "${INIT_TOOLS[@]}"; do
     fi
     unset bin cmd mode
 done
+unset INIT_TOOLS

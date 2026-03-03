@@ -162,6 +162,7 @@ function nvim() {
             fi
         done
     fi
+    unset NVIM_DISTROS
 ) &!
 
 #endregion
