@@ -69,7 +69,8 @@ The installation script executes a comprehensive setup flow:
 
 ## ⚙️ Configuration
 
-Start customizing by editing `~/.config/zsh-conf/user.conf`. This method is safe from git updates!
+Start customizing by editing `~/.config/zsh-conf/user.conf`. This method is safe from git updates!<br>
+Or you can just run the ```zsettings``` command to know all the availabe customisable fucntions and edit from right there.
 
 ### 1. The `user.conf` File
 

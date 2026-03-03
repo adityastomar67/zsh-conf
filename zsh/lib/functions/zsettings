@@ -1,0 +1,168 @@
+#!/usr/bin/env zsh
+#    ░▀▀█░█▀▀░█▀▀░▀█▀░▀█▀░▀█▀░█▀█░█▀▀░█▀▀
+#    ░▄▀░░▀▀█░█▀▀░░█░░░█░░░█░░█░█░█░█░▀▀█
+#    ░▀▀▀░▀▀▀░▀▀▀░░▀░░░▀░░▀▀▀░▀░▀░▀▀▀░▀▀▀
+
+# ------------------------------------------------------------------------------
+# File Purpose
+#   Provides a visual, interactive dashboard for managing user configuration.
+#
+# Problems Solved
+#   - Eliminates the need to manually open and search `user.conf`.
+#   - Prevents syntax errors by programmatically editing the file.
+#   - Visualizes "Active" vs "Disabled" plugins in a color-coded table.
+#   - Handles boolean toggles (Yes/No) instantly without typing.
+#
+# Features / Responsibilities
+#   - Parser: Uses AWK to extract `ZPLUGINS` array and `export` variables.
+#   - UI: Uses FZF to display a formatted, aligned table of settings.
+#   - Editor: Uses Perl for in-place file editing (sed replacement is risky here).
+#
+# Usage Notes
+#   - Run `zsettings` to open the dashboard.
+#   - Requires `user.conf` to follow a strict format (ZPLUGINS array, export VAR=Val).
+# ------------------------------------------------------------------------------
+
+
+emulate -L zsh
+setopt localoptions no_xtrace pipefail
+
+
+local target_file="${1:-$ZDOTDIR/user.conf}"
+
+if [[ ! -f "$target_file" ]]; then
+    print -P "  ${COLOR[RED]} [ERROR]${COLOR[RESET]} Config file not found at: $target_file"
+    return 1
+fi
+
+# Set up a secure temporary file with an automatic cleanup trap
+local tmp_file=$(mktemp)
+trap 'rm -f "$tmp_file"' EXIT INT TERM
+clear
+
+while true; do
+    ## 1. ADVANCED POSIX PARSING
+    # Extracts export/default variables, strips quotes, and deduplicates!
+    local parsed_data=$(command awk '
+        /^[ \t]*export [A-Za-z0-9_]+=/ {
+            line=$0; sub(/^[ \t]*export /, "", line)
+            idx=index(line, "="); var=substr(line, 1, idx-1); val=substr(line, idx+1)
+
+            # Deduplication logic: Only process if we haven"t seen this var yet
+            if (!seen[var]++) {
+                sub(/[ \t]+#.*/, "", val); gsub(/^"|"$/, "", val); gsub(/^'"'"'|'"'"'$/, "", val)
+                print "EXP|" var "|" val
+            }
+        }
+        /^[ \t]*:[ \t]+\$\{/ {
+            line=$0; sub(/^[ \t]*:[ \t]+\$\{/, "", line)
+            idx=index(line, ":="); var=substr(line, 1, idx-1); val=substr(line, idx+2)
+
+            # Deduplication logic
+            if (!seen[var]++) {
+                sub(/\}.*/, "", val); gsub(/^"|"$/, "", val); gsub(/^'"'"'|'"'"'$/, "", val)
+                print "DEF|" var "|" val
+            }
+        }
+    ' "$target_file")
+
+    # 2. BUILD THE VISUAL UI STRINGS
+    local -a fzf_input
+    for line in ${(f)parsed_data}; do
+        local type="${line%%|*}"
+        local rest="${line#*|}"
+        local var="${rest%%|*}"
+        local val="${rest#*|}"
+
+        # Format: RAW_TYPE | VAR_NAME | RAW_VALUE | VISIBLE_UI_STRING
+        if [[ "${val:l}" == "yes" ]]; then
+            fzf_input+=("$type|$var|$val|\033[32m[   ON  ]\033[0m   $var")
+        elif [[ "${val:l}" == "no" ]]; then
+            fzf_input+=("$type|$var|$val|\033[31m[   OFF ]\033[0m   $var")
+        else
+            fzf_input+=("$type|$var|$val|\033[36m[ 󰏫  TXT ]\033[0m   $var")
+        fi
+    done
+
+    # 3. RENDER THE FZF DASHBOARD (With Live Previews)
+    local selection=$(print -l "${fzf_input[@]}" | fzf \
+        --ansi \
+        --delimiter="|" \
+        --with-nth="4" \
+        --prompt="  Edit > " \
+        --pointer="➜" \
+        --marker="✓" \
+        --layout=reverse \
+        --border=rounded \
+        --border-label=" Configuration Editor " \
+        --header=$'\033[33m ↵ \033[0m Edit/Toggle   \033[33m ESC \033[0m Save & Exit\n─────────────────────────────────────────────' \
+        --preview "awk -v var={2} 'BEGIN {c=\"\"} /^[ \t]*#/ {c=c \$0 \"\\n\"; next} \$0 ~ var {print \"\033[36m\" c \"\033[0m\033[1;32m\" \$0 \"\033[0m\"; c=\"\"; exit} {c=\"\"}' \"$target_file\"" \
+        --preview-window="right:60%:border-left:wrap:nohidden" \
+        --bind="ctrl-p:toggle-preview" \
+        --height=80%)
+
+    # Exit loop if user presses ESC
+    [[ -z "$selection" ]] && break
+
+    # 4. EXTRACT SELECTION DATA
+    # Because we structured the data cleanly with pipes, extracting it is flawless.
+    local selected_type="${selection%%|*}"
+    local temp="${selection#*|}"
+    local selected_var="${temp%%|*}"
+    temp="${temp#*|}"
+    local current_val="${temp%%|*}"
+    local new_val
+
+    # 5. SMART INPUT HANDLING
+    if [[ "${current_val:l}" == "yes" ]]; then
+        new_val="No"
+    elif [[ "${current_val:l}" == "no" ]]; then
+        new_val="Yes"
+    else
+        # Clear screen for a clean inline editing experience
+        clear
+        print -P "  ${COLOR[BLUE]}󰏫  Editing text value for:${COLOR[RESET]} ${COLOR[BOLD]}${selected_var}${COLOR[RESET]}"
+        print -P "  ${COLOR[DIM]}─────────────────────────────────────────${COLOR[RESET]}"
+        vared -p "  > " -c current_val
+        new_val="$current_val"
+    fi
+
+    # 6. ATOMIC SURGICAL FILE UPDATE
+    # Safely replaces the value while perfectly preserving inline comments!
+    command awk -v type="$selected_type" -v var="$selected_var" -v val="$new_val" '
+        BEGIN {
+            exp_rgx = "^[ \t]*export " var "="
+            def_rgx = "^[ \t]*:[ \t]*\\$\\{" var ":="
+        }
+        type == "EXP" && $0 ~ exp_rgx {
+            match($0, /[ \t]+#.*/)
+            comment = (RSTART ? substr($0, RSTART) : "")
+            print "export " var "=\"" val "\"" comment
+            next
+        }
+        type == "DEF" && $0 ~ def_rgx {
+            match($0, /[ \t]+#.*/)
+            comment = (RSTART ? substr($0, RSTART) : "")
+            print ": ${" var ":=\"" val "\"}" comment
+            next
+        }
+        { print }
+    ' "$target_file" > "$tmp_file" && cp "$tmp_file" "$target_file"
+
+    # Brief visual feedback
+    print -P "\r\e[K  ${COLOR[GREEN]}${COLOR[RESET]} Updated ${COLOR[BOLD]}$selected_var${COLOR[RESET]} to '${COLOR[CYAN]}${new_val}${COLOR[RESET]}'."
+    sleep 0.35
+    unset new_val
+done
+
+# 7. THE HOT-RELOADER
+clear
+print -P "  ${COLOR[GREEN]}  Configuration successfully saved.${COLOR[RESET]}\n"
+
+# Prompt the user to instantly apply the changes to the current terminal
+if read -q "?  ${COLOR[YELLOW]}${COLOR[RESET]} Reload Zsh now to apply changes? [y/N] "; then
+    print "\n"
+    exec zsh
+else
+    print -P "\n  ${COLOR[DIM]}Changes will apply on the next terminal launch.${COLOR[RESET]}\n"
+fi
