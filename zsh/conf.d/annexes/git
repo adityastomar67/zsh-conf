@@ -71,7 +71,7 @@ function __pull() {
     local current_branch=$(command git branch --show-current 2>/dev/null)
     local -a remotes=($(command git remote 2>/dev/null))
 
-    print "  \n${COLOR[BLUE]}  SYNCING CHANGES${COLOR[RESET]}"
+    print "\n  ${COLOR[BLUE]}  SYNCING CHANGES${COLOR[RESET]}"
     print "  ${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}"
     print "  Local:  ${COLOR[MAGENTA]}  ${current_branch}${COLOR[RESET]}"
     print "  Remote: ${COLOR[DIM]}  ${remotes[1]:-origin}${COLOR[RESET]}\n"
@@ -127,7 +127,7 @@ function __push() {
     local current_branch=$(command git branch --show-current 2>/dev/null)
     local -a remotes=($(command git remote 2>/dev/null))
 
-    print "  \n${COLOR[BLUE]}  PUSHING CHANGES${COLOR[RESET]}"
+    print "\n  ${COLOR[BLUE]}  PUSHING CHANGES${COLOR[RESET]}"
     print "  ${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}"
     print "  Local:  ${COLOR[MAGENTA]}  ${current_branch}${COLOR[RESET]}"
     print "  Remote: ${COLOR[DIM]}  ${remotes[1]:-origin}${COLOR[RESET]}\n"
