@@ -71,10 +71,10 @@ function __pull() {
     local current_branch=$(command git branch --show-current 2>/dev/null)
     local -a remotes=($(command git remote 2>/dev/null))
 
-    print "\n${COLOR[BLUE]}  SYNCING CHANGES${COLOR[RESET]}"
-    print "${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}"
-    print "Local:  ${COLOR[MAGENTA]}  ${current_branch}${COLOR[RESET]}"
-    print "Remote: ${COLOR[DIM]}  ${remotes[1]:-origin}${COLOR[RESET]}\n"
+    print "  \n${COLOR[BLUE]}  SYNCING CHANGES${COLOR[RESET]}"
+    print "  ${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}"
+    print "  Local:  ${COLOR[MAGENTA]}  ${current_branch}${COLOR[RESET]}"
+    print "  Remote: ${COLOR[DIM]}  ${remotes[1]:-origin}${COLOR[RESET]}\n"
 
     command git pull --progress "$@" 2>&1 | sed \
         -e "s/^\(remote:\)/${COLOR[BLUE]}\1${COLOR[RESET]}/g" \
@@ -107,10 +107,10 @@ function __pull() {
     local EXIT_CODE=${pipestatus[1]}
 
     if [[ $EXIT_CODE -eq 0 ]]; then
-        print "\n${COLOR[GREEN]}  UPDATE COMPLETE${COLOR[RESET]}\n"
+        print "\n${COLOR[GREEN]}    UPDATE COMPLETE${COLOR[RESET]}\n"
     else
-        print "\n${COLOR[RED]}  MERGE CONFLICT / ERROR${COLOR[RESET]}"
-        print "${COLOR[DIM]}   Check the output above for details.${COLOR[RESET]}\n"
+        print "\n${COLOR[RED]}    MERGE CONFLICT / ERROR${COLOR[RESET]}"
+        print "${COLOR[DIM]}     Check the output above for details.${COLOR[RESET]}\n"
     fi
 
     return $EXIT_CODE
