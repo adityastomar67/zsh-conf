@@ -7,9 +7,7 @@
 <h1><a href="https://github.com/adityastomar67/zsh-conf">Zsh-Conf</a></h1>
 </div>
 
-> **A Blazing Fast, Modular, and Aesthetic Zsh Configuration Framework.**
-
-> A shell config with ~20ms load times. (Tested on M4)
+> **Blazing Fast, Modular, and Aesthetic Zsh Configuration Framework.** <br> A shell config with ~20ms load times. (Tested on M4)
 
 This configuration is designed for speed, modularity, and a beautiful terminal experience. It leverages modern tools like `zoxide`, `fzf`, `eza`, and `starship` to provide a powerful command-line environment without the bloat.
 
@@ -37,10 +35,21 @@ This configuration is designed for speed, modularity, and a beautiful terminal e
 To install, simply run the installation script:
 
 ```zsh
+# Change directory to /tmp to avoid cluttering the home folder
 cd /tmp
-curl -Lo install.zsh https://raw.githubusercontent.com/adityastomar67/zsh-conf/refs/heads/remastered/install.zsh
+
+# Download the zsh configuration installer from the GitHub repository
+#   -L: ensures we follow links
+#   -o: specifies the output filename
+curl -Lo \
+    install.zsh \
+    https://raw.githubusercontent.com/adityastomar67/zsh-conf/refs/heads/remastered/install.zsh
+
+# Grant execute permissions to the downloaded script
 chmod +x install.zsh
-./install.zsh
+
+# Run the installer
+command zsh install.zsh
 ```
 
 ### Protocol
