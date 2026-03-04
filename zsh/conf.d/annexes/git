@@ -651,7 +651,7 @@ fi
 
 case "$cmd" in
     status|st|state) __status "$@"       ;;
-    clone.    )      __clone "$@"        ;;
+    clone)           __clone "$@"        ;;
     checkout)        __checkout "$@"     ;;
     pull)            __pull "$@"         ;;
     log)             __log "$@"          ;;
