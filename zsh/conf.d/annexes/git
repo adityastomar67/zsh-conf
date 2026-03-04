@@ -117,6 +117,58 @@ function __pull() {
 }
 
 # ── Branch Management ─────────────────────────────────────────────────────────
+# Function: __push
+# Logic:
+#   - Displays a visual header with the current branch and remote destination.
+#   - Executes 'git push' colorizing object compression, network speeds, and states.
+#   - Highlights critical branch states: [new branch], [rejected], and forced updates.
+# -----------------------------------------------------------------------------
+function __push() {
+    local current_branch=$(command git branch --show-current 2>/dev/null)
+    local -a remotes=($(command git remote 2>/dev/null))
+
+    print "  \n${COLOR[BLUE]}  PUSHING CHANGES${COLOR[RESET]}"
+    print "  ${COLOR[DIM]}────────────────────────────────────────────${COLOR[RESET]}"
+    print "  Local:  ${COLOR[MAGENTA]}  ${current_branch}${COLOR[RESET]}"
+    print "  Remote: ${COLOR[DIM]}  ${remotes[1]:-origin}${COLOR[RESET]}\n"
+
+    # git push writes its progress to stderr, so 2>&1 is required to pipe it to sed
+    command git push "$@" 2>&1 | sed \
+        -e "s/^\(remote:\)/${COLOR[BLUE]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(hint:\)/${COLOR[YELLOW]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(fatal:\)/${COLOR[RED]}${BOLD}\1${COLOR[RESET]}/g" \
+        -e "s/^\(error:\)/${COLOR[RED]}${BOLD}\1${COLOR[RESET]}/g" \
+        -e "s/^\(To \)\(http.*\)/${COLOR[DIM]}\1${COLOR[RESET]}${COLOR[CYAN]}\2${COLOR[RESET]}/g" \
+        -e "s/^\(To \)\(git@.*\)/${COLOR[DIM]}\1${COLOR[RESET]}${COLOR[CYAN]}\2${COLOR[RESET]}/g" \
+        -e "s/\(Everything up-to-date\)/${COLOR[GREEN]}  \1${COLOR[RESET]}/g" \
+        -e "s/\(100%\)/${COLOR[GREEN]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(Enumerating objects:\)/${COLOR[DIM]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(Counting objects:\)/${COLOR[DIM]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(Delta compression.*\)/${COLOR[DIM]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(Compressing objects:\)/${COLOR[DIM]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(Writing objects:\)/${COLOR[DIM]}\1${COLOR[RESET]}/g" \
+        -e "s/^\(Total .*\)/${COLOR[DIM]}\1${COLOR[RESET]}/g" \
+        -e "s/\(\[new branch\]\)/${COLOR[GREEN]}\1${COLOR[RESET]}/g" \
+        -e "s/\(\[rejected\]\)/${COLOR[RED]}${BOLD}\1${COLOR[RESET]}/g" \
+        -e "s/\(\[deleted\]\)/${COLOR[RED]}\1${COLOR[RESET]}/g" \
+        -e "s/\(forced update\)/${COLOR[RED]}${BOLD}\1${COLOR[RESET]}/g" \
+        -e "s/\([a-f0-9]\{7\}\.\.[a-f0-9]\{7\}\)/${COLOR[MAGENTA]}\1${COLOR[RESET]}/g" \
+        -e "s/\( -> \)/ ${COLOR[CYAN]}->${COLOR[RESET]} /g"
+
+    # Catch the exit code of 'git push', NOT 'sed'
+    local EXIT_CODE=${pipestatus[1]}
+
+    if [[ $EXIT_CODE -eq 0 ]]; then
+        print "\n${COLOR[GREEN]}    PUSH COMPLETE${COLOR[RESET]}\n"
+    else
+        print "\n${COLOR[RED]}    PUSH REJECTED / ERROR${COLOR[RESET]}"
+        print "${COLOR[DIM]}     Check the output above for details.${COLOR[RESET]}\n"
+    fi
+
+    return $EXIT_CODE
+}
+
+# ── Branch Management ─────────────────────────────────────────────────────────
 # Function: __clone
 # Logic:
 #   - Displays a visual header with the repository source and destination directory.
@@ -654,6 +706,7 @@ case "$cmd" in
     clone)           __clone "$@"        ;;
     checkout)        __checkout "$@"     ;;
     pull)            __pull "$@"         ;;
+    push)            __push "$@"         ;;
     log)             __log "$@"          ;;
     add)             __add "$@"          ;;
     fetch)           __fetch "$@"        ;;
