@@ -21,13 +21,13 @@ This configuration is designed for speed, modularity, and a beautiful terminal e
 - **🧩 Modular Architecture**: Clean separation between core logic, plugins, and user-specific config.
 - **🔌 Plugin Management**: Done by own core module.
 - **🎨 Visual Excellence**:
-  - Integrated **Starship** prompt support.
-  - Syntax Highlighting & Auto-suggestions.
-  - "Fancy Startup" with ASCII art and motivational quotes.
+    - Integrated **Starship** prompt support.
+    - Syntax Highlighting & Auto-suggestions.
+    - "Fancy Startup" with ASCII art and motivational quotes.
 - **🛠️ Developer Ready**:
-  - Pre-configured for **Git**, **Go**, **Python**, **Node**, etc.
-  - **Tmux** auto-launch integration.
-  - **Neovim** profile switcher (LazyVim, NvChad, AstroNvim, etc.).
+    - Pre-configured for **Git**, **Go**, **Python**, **Node**, etc.
+    - **Tmux** auto-launch integration.
+    - **Neovim** profile switcher (LazyVim, NvChad, AstroNvim, etc.).
 - **🔒 Secure**: Environment variables and API keys are loaded safely from `.env`.
 
 ---
@@ -57,6 +57,7 @@ The installation script executes a comprehensive setup flow:
 <br>
 
 **Dependency Detection Details**
+
 - The installer detects tools already present via **PATH**, **Volta**, **NVM**, or the OS package manager.
 - For tools with different binary names (e.g., `ripgrep` → `rg`, `git-delta` → `delta`), the installer checks the correct binary.
 - On macOS, if Homebrew is missing, dependency installation is skipped with a clear message so you can install via your preferred manager.
@@ -70,7 +71,7 @@ The installation script executes a comprehensive setup flow:
 ## ⚙️ Configuration
 
 Start customizing by editing `~/.config/zsh-conf/user.conf`. This method is safe from git updates!<br>
-Or you can just run the ```zsettings``` command to know all the availabe customisable fucntions and edit from right there.
+Or you can just run the `zsettings` command to know all the availabe customisable options and edit from right there.
 
 ### 1. The `user.conf` File
 
@@ -99,7 +100,7 @@ For custom aliases, functions, or exports that you don't want tracked by git (or
 
 - **File**: `~/User-Overrides.zsh`
 - **Usage**: Automatically sourced at the end of `.zshrc`.
-  - During installation, any `PATH` exports found in your existing `~/.zshrc` are copied into this file (once), so your custom paths are preserved.
+    - During installation, any `PATH` exports found in your existing `~/.zshrc` are copied into this file (once), so your custom paths are preserved.
 
 ### 3. Secrets (API Keys)
 
@@ -132,6 +133,8 @@ export OPENAI_API_KEY="sk-xxxx..."
 - **Benchmark**: See how fast your shell loads with the built-in timer (needs `ZSH_BENCHMARK="Yes"`).
 - **Update**: Pull the latest changes from the repo by running `dotup -z` (it handles backups safely).
 - **Mini Mode**: Set `ENABLE_MINIMAL_MODE="Yes"` in `user.conf` for a lightweight, dependency-free shell on servers.
+  - **Excludes**: Plugin manager, heavy plugins (autosuggestions, syntax highlighting), Starship prompt, custom functions (`pj`, `lg`, `weather`), benchmarking tools, and the fancy startup sequence.
+  - **Retains**: Basic aliases, history management, basic completions, Vi-mode keybindings, and optional Tmux auto-start.
 
 ---
 
@@ -205,17 +208,17 @@ Any shortcut defined in `user.conf` also becomes a global named directory.
 
 Use these _anywhere_ in a command.
 
-- **`:G`**  -> `| grep` (e.g., `ps aux :G python`)
-- **`:L`**  -> `| less` (e.g., `cat huge_file.log :L`)
+- **`:G`** -> `| grep` (e.g., `ps aux :G python`)
+- **`:L`** -> `| less` (e.g., `cat huge_file.log :L`)
 - **`:NE`** -> `2> /dev/null` (Silence errors)
 
 ### Suffix Aliases
 
 Just type the file name to open it!
 
-- `main.py`     -> Runs `python main.py`
-- `README.md`   -> Opens in `$EDITOR`
-- `image.png`   -> Opens in system image viewer
+- `main.py` -> Runs `python main.py`
+- `README.md` -> Opens in `$EDITOR`
+- `image.png` -> Opens in system image viewer
 - `archive.zip` -> Lists contents
 
 ### The "Magic" Fixer

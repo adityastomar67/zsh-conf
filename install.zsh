@@ -434,6 +434,54 @@ System::is_tool_installed() {
     System::tool_installed_via_pkg_manager "$pkg"
 }
 
+System::git_setup() {
+        # 1. Branch & Header
+        git config --global color.status.header "#9e9e9e italic"
+        git config --global color.status.branch "#ffd700 bold"
+        git config --global color.status.nobranch "#00bfff bold"
+
+        # 2. Staging Area (Index)
+        git config --global color.status.added "#a6e22e bold"
+        git config --global color.status.updated "#9fef66 bold"
+        git config --global color.status.changed "#fd971f bold"
+
+        # 3. Working Tree (Unstaged)
+        git config --global color.status.worktree "#f92672 bold"
+        git config --global color.status.untracked "#ae81ff"
+        git config --global color.status.ignored "#555555"
+
+        # 4. Critical Events (FIXED)
+        git config --global color.status.unmerged "#ffffff #ff0033 bold ul"
+
+        # 5. Diff Colors
+        git config --global color.diff.meta "#75715e"
+        git config --global color.diff.frag "#9fef66 bold"
+        git config --global color.diff.func "#f8f8f2"
+        git config --global color.diff.old "#f92672"
+        git config --global color.diff.new "#a6e22e"
+        git config --global color.diff.whitespace "red reverse"
+
+        # 6. The Safe Sync (Replaces `git pull`)
+        # Automatically stashes your uncommitted changes, fetches, rebases your commits on top of the remote, and unstashes your changes. No ugly merge commits!
+        git config --global alias.up "pull --rebase --autostash"
+
+        # 7. The Safe Overwrite (Replaces `git push -f`)
+        # Standard force-pushing is reckless. '--force-with-lease' checks if anyone else pushed to the remote branch while you were working. If they did, it safely aborts the push!
+        git config --global alias.pf "push --force-with-lease"
+
+        # 8. The Quick Undo
+        # Accidentally committed too early? This undoes the commit but leaves all your files perfectly staged so you can modify them and try again.
+        git config --global alias.undo "reset --soft HEAD~1"
+
+        # 9. The Panic Button
+        # Completely obliterates all uncommitted changes and tracked/untracked files, returning the directory to exactly what the last commit looks like.
+        git config --global alias.nuke "clean -fd && git reset --hard HEAD"
+
+        # 10. The God-Tier Log (Replaces `git log`)
+        # Draws a highly optimized, color-coded topological graph of your branches in the terminal.
+        git config --global alias.lg "log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(auto)%d%C(reset)' --all"
+}
+
 System::cleanup() {
     # 1. Determine Source vs Destination
     local current_script_path="${INSTALLER_SCRIPT_PATH:-${(%):-%x}}"
@@ -819,33 +867,8 @@ EOF
     # 9. Finalization
     Interface::print_banner
     Logger::info "Finalizing..."
-    (
-        # 1. Branch & Header
-        git config --global color.status.header "#9e9e9e italic"
-        git config --global color.status.branch "#ffd700 bold"
-        git config --global color.status.nobranch "#00bfff bold"
 
-        # 2. Staging Area (Index)
-        git config --global color.status.added "#a6e22e bold"
-        git config --global color.status.updated "#9fef66 bold"
-        git config --global color.status.changed "#fd971f bold"
-
-        # 3. Working Tree (Unstaged)
-        git config --global color.status.worktree "#f92672 bold"
-        git config --global color.status.untracked "#ae81ff"
-        git config --global color.status.ignored "#555555"
-
-        # 4. Critical Events (FIXED)
-        git config --global color.status.unmerged "#ffffff #ff0033 bold ul"
-
-        # 5. Diff Colors
-        git config --global color.diff.meta "#75715e"
-        git config --global color.diff.frag "#9fef66 bold"
-        git config --global color.diff.func "#f8f8f2"
-        git config --global color.diff.old "#f92672"
-        git config --global color.diff.new "#a6e22e"
-        git config --global color.diff.whitespace "red reverse"
-    ) &
+    System::git_setup &
 
     # 10. Cleanup
     Interface::print_banner

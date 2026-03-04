@@ -19,7 +19,10 @@
 #    __pull   : Visualizes branch states, fast-forwards, and conflicts cleanly.
 #    __status : Parses `git status -sb` to build an icon-based file tree.
 #    __log    : Replaces the standard log with a fully interactive, searchable
-#               FZF interface, complete with quick-copy shortcuts and a split-pane preview.
+#                   FZF interface, complete with quick-copy shortcuts and a split-pane preview.
+#    __fetch  : Fetches all remote branches and prunes stale references.
+#    __clean  : Identifies merged branches (except main/master).
+#    __rebase : Opens an interactive rebase session on the default branch.
 #
 # Features:
 #    Contextual Icons: Nerd Fonts mapping to added, deleted, renamed, or conflicted files.
@@ -65,11 +68,6 @@ fi
 #   - Provides a clear visual summary of the update status (success or conflict).
 # -----------------------------------------------------------------------------
 function __pull() {
-    if ! is_in_git_repo; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
-        return 1
-    fi
-
     local current_branch=$(command git branch --show-current 2>/dev/null)
     local -a remotes=($(command git remote 2>/dev/null))
 
@@ -191,11 +189,6 @@ function __clone() {
 #   - [Ctrl-O]: Performs a checkout of the selected commit.
 # -----------------------------------------------------------------------------
 function __log () {
-    if ! is_in_git_repo; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
-        return 1
-    fi
-
     if [[ "$#" -gt 0 ]]; then
         command git log "$@"
         return $?
@@ -238,11 +231,6 @@ function __log () {
 #   - Opens selected files in the system $EDITOR.
 # -----------------------------------------------------------------------------
 function __status() {
-    if ! is_in_git_repo; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
-        return 1
-    fi
-
     # Added 'command' to bypass aliases
     command git status -sb | awk '
     BEGIN {
@@ -268,8 +256,8 @@ function __status() {
         P_ADDED   = C_GREEN "" C_RESET
         P_DEL     = C_RED "" C_RESET
         P_RENAME  = C_MAGENTA "󰑕" C_RESET
-        P_MOD_STG = C_GREEN "" C_RESET
-        P_MOD_UNS = C_YELLOW "" C_RESET
+        P_MOD_STG = C_GREEN "" C_RESET
+        P_MOD_UNS = C_YELLOW "" C_RESET
 
         # ─── O(1) FAST LOOKUP DICTIONARY ───
         # Maps exact 2-character Git status codes directly to their pre-built strings
@@ -352,11 +340,6 @@ function __status() {
 #   - Supports deleting local branches.
 # -----------------------------------------------------------------------------
 function __checkout() {
-    if ! is_in_git_repo; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
-        return 1
-    fi
-
     if [[ "$#" -gt 0 ]]; then
         command git checkout "$@"
         return $?
@@ -468,11 +451,6 @@ function __checkout() {
 #   - Falls back to standard 'git add' if arguments are provided.
 # -----------------------------------------------------------------------------
 function __add() {
-    if ! is_in_git_repo; then
-        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
-        return 1
-    fi
-
     if [[ "$#" -gt 0 ]]; then
         command git add "$@"
         return $?
@@ -564,6 +542,92 @@ function __add() {
     fi
 }
 
+# ── Smart Interactive Rebase ────────────────────────────────────────────────
+# Function: __rebase
+# Logic:
+#   - Analyzes remote branches to identify the default branch.
+#   - Fetches the latest default branch from origin.
+#   - Opens an interactive rebase session on the default branch.
+#   - Uses autosquash and autostash to handle conflicts automatically.
+# -----------------------------------------------------------------------------
+function __rebase() {
+    print -n -P "  ${COLOR[BLUE]}${COLOR[RESET]}  Analyzing remote branches..."
+    local default_branch=$(command git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
+    [[ -z "$default_branch" ]] && default_branch="main"
+
+    # \r\e[K instantly clears the "Analyzing" text and replaces it with "Fetching"
+    print -n -P "\r\e[K  ${COLOR[BLUE]}${COLOR[RESET]}  Fetching latest ${COLOR[BOLD]}${default_branch}${COLOR[RESET]}..."
+    command git fetch origin "$default_branch" --quiet
+
+    # Replaces "Fetching" with the final action before handing control to the editor
+    print -P "\r\e[K  ${COLOR[MAGENTA]}${COLOR[RESET]}  Rebasing interactively on ${COLOR[BOLD]}${default_branch}${COLOR[RESET]}..."
+    command git rebase -i origin/"$default_branch" --autosquash --autostash
+}
+
+# ── Ghost Fetch ──────────────────────────────────────────────────────────────
+# Function: __fetch
+# Logic:
+#   - Fetches all remote branches and prunes stale references.
+#   - Uses parallel fetching with 10 jobs for speed.
+#   - Outputs a formatted status after fetching.
+#   - Falls back to standard 'git fetch' if arguments are provided.
+#   - Handles color output even when piped.
+#   - Provides a clean status display with Git's colorized output.
+#   - Includes a trailing newline for breathing room.
+# -----------------------------------------------------------------------------
+function __fetch() {
+    print -n -P "  ${COLOR[BLUE]}󰊢${COLOR[RESET]}  Syncing with remote..."
+    command git fetch --all --prune --jobs=10 --quiet
+
+    print -P "\r\e[K  ${COLOR[GREEN]}${COLOR[RESET]}  Sync complete. Status:"
+    print -P "  ${COLOR[DIM]}────────────────────────${COLOR[RESET]}"
+
+    # FIX 2: Force Git to output colors even when piped!
+    # '-c color.status=always' injects the color configuration for just this one command.
+    command git -c color.status=always status --short --branch | while read -r line; do
+        # We use print -r (raw) to ensure it doesn't accidentally evaluate Git's
+        # internal color escape codes as standard text formatting.
+        print -r -- "    $line"
+    done
+    print "" # Trailing newline for breathing room
+}
+
+# ── Branch Housekeeping ──────────────────────────────────────────────────────
+# Function: __branch_clean
+# Logic:
+#   - Identifies merged branches (except main/master).
+#   - Deletes merged branches silently.
+#   - Provides a clean status display with Git's colorized output.
+#   - Includes a trailing newline for breathing room.
+# -----------------------------------------------------------------------------
+function __branch_clean() {
+    # Added the missing trash icon back in!
+    print -n -P "  ${COLOR[YELLOW]}${COLOR[RESET]}  Scanning for merged branches..."
+
+    local current_branch=$(command git branch --show-current)
+
+    # --- PURE GIT FORMATTING (100% Cross-Platform) ---
+    # --format='%(refname:short)' forces Git to output a perfectly clean list
+    # with absolutely no leading spaces or '*' symbols. No sed or awk needed!
+    local -a branches_to_delete
+    branches_to_delete=( $(command git branch --format='%(refname:short)' --merged | grep -vE "^(main|master|${current_branch})$") )
+
+    # Empty state handling
+    if (( ${#branches_to_delete[@]} == 0 )); then
+        print -P "\r\e[K  ${COLOR[GREEN]}${COLOR[RESET]}  Repository is clean. No stale branches found."
+        return 0
+    fi
+
+    # Tell the user exactly how many branches are being deleted
+    print -n -P "\r\e[K  ${COLOR[YELLOW]}${COLOR[RESET]}  Deleting ${COLOR[BOLD]}${#branches_to_delete[@]}${COLOR[RESET]} merged branches..."
+
+    # Execute the deletion silently
+    command git branch -d "${branches_to_delete[@]}" >/dev/null 2>&1
+
+    # Success State
+    print -P "\r\e[K  ${COLOR[GREEN]}${COLOR[RESET]}  Successfully swept ${COLOR[BOLD]}${#branches_to_delete[@]}${COLOR[RESET]} branches."
+}
+
 
 ## ── Wrapper Engine ─────────────────────────────────────────────────────────────
 ## ------------------------------------------------------------------------------
@@ -578,21 +642,31 @@ fi
 local cmd="$1"
 shift   # Remove the sub-command so $@ contains ONLY the target arguments
 
+if [[ "$cmd" != "clone" ]]; then
+    if ! is_in_git_repo; then
+        print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
+        return 1
+    fi
+fi
+
 case "$cmd" in
-    status|st|state) __status "$@" ;; #DONE
-    clone|down)      __clone "$@" ;; #DONE
-    checkout)        __checkout "$@" ;; #DONE
-    pull|up)         __pull "$@" ;; #DONE
-    log)             __log "$@" ;; #DONE
-    add)             __add "$@" ;; #DONE
-    # diff)            __diff "$@" ;;
-    # stash)           __stash "$@" ;;
-    # tag)             __tag "$@" ;;
-    # branch)          __branch "$@" ;;
-    # remote)          __remote "$@" ;;
-    # merge)           __merge "$@" ;;
-    # reset)           __reset "$@" ;;
-    # commit)          __commit "$@" ;;
+    status|st|state) __status "$@"       ;;
+    clone.    )      __clone "$@"        ;;
+    checkout)        __checkout "$@"     ;;
+    pull)            __pull "$@"         ;;
+    log)             __log "$@"          ;;
+    add)             __add "$@"          ;;
+    fetch)           __fetch "$@"        ;;
+    branch-clean)    __branch_clean "$@" ;;
+    rebase)          __rebase "$@"       ;;
+    # diff)            __diff "$@"         ;;
+    # stash)           __stash "$@"        ;;
+    # tag)             __tag "$@"          ;;
+    # branch)          __branch "$@"       ;;
+    # remote)          __remote "$@"       ;;
+    # merge)           __merge "$@"        ;;
+    # reset)           __reset "$@"        ;;
+    # commit)          __commit "$@"       ;;
 
     # Fallback to raw Git
     *)               command git "$cmd" "$@" ;;
