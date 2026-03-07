@@ -1,7 +1,4 @@
 #!/usr/bin/env zsh
-#    ░█▀▀░█▀█░█░█░█▀█░▀█▀░█▀▄░█▀█░█░█░█▀█
-#    ░█░░░█░█░█░█░█░█░░█░░█░█░█░█░█▄█░█░█
-#    ░▀▀▀░▀▀▀░▀▀▀░▀░▀░░▀░░▀▀░░▀▀▀░▀░▀░▀░▀
 
 # ------------------------------------------------------------------------------
 # File Purpose
@@ -158,11 +155,11 @@ while true; do
     print -f "\e[H"
 
     local status_color="${COLOR[GREEN]}"
-    local status_text="RUNNING"
+    local status_text="RUNNING "
 
     if (( is_paused )); then
         status_color="${COLOR[YELLOW]}"
-        status_text="PAUSED "
+        status_text="PAUSED  "
     elif (( remaining < 10 )); then
         status_color="${COLOR[RED]}"
         status_text="CRITICAL"
@@ -170,7 +167,7 @@ while true; do
 
     # Draw the TUI Container.
     print "${COLOR[BLUE]}╭──────────────────────────────────────╮${COLOR[RESET]}"
-    print "${COLOR[BLUE]}│             ${status_color}  $status_text               ${COLOR[BLUE]}│${COLOR[RESET]}"
+    print "${COLOR[BLUE]}│             ${status_color}  $status_text              ${COLOR[BLUE]}│${COLOR[RESET]}"
 
     # Format the time numbers into fixed-width slots for stability.
     print -f "${COLOR[BLUE]}│             ${COLOR[B_WHITE]}%02d:%02d:%02d${COLOR[GREY]}.%02d              ${COLOR[BLUE]}│${COLOR[RESET]}\n" $h $m $s $ms

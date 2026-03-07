@@ -42,9 +42,8 @@ print "\n${COLOR[BLUE]}::${COLOR[RESET]} ${COLOR[BOLD]}Initializing Project Repo
 # 2. Pre-Flight Safety Checks
 
 # !!! CRITICAL: Check for existing Git metadata
-# We abort if .git exists to prevent overwriting history or remote pointers.
-if [[ -d ".git" ]]; then
-    print "${COLOR[RED]}[ERROR]${COLOR[RESET]} This directory is already a git repository." >&2
+if ! is_in_git_repo; then
+    print "${COLOR[RED]} [ERROR]${COLOR[RESET]} Not a git repository."
     return 1
 fi
 

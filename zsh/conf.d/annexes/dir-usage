@@ -1,10 +1,6 @@
 #!/usr/bin/env zsh
 # Not showinhg any names after the icon
 
-#    ░█▀▄░▀█▀░█▀▄░░░█░█░█▀▀░█▀█░█▀▀░█▀▀
-#    ░█░█░░█░░█▀▄░░░█░█░▀▀█░█▀█░█░█░█▀▀
-#    ░▀▀░░▀▀▀░▀░▀░▀░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀▀▀
-
 # ------------------------------------------------------------------------------
 # File Purpose
 #   Provides a visual directory and file usage reporting tool.
@@ -56,7 +52,7 @@ _dir_usage_visualizer() {
         bar_width = 12
     }
 
-    # Helper: Convert strings like "500M" or "1.2G" into raw integers for comparison
+    # Helper: Convert strings like "500M" or "1.2G" into raw integers for math
     function parse_size(s,   val, unit) {
         val  = substr(s, 1, length(s)-1) + 0
         unit = substr(s, length(s))
@@ -67,52 +63,49 @@ _dir_usage_visualizer() {
     }
 
     {
-        # 1. Capture Size String
         sizes[NR] = $1
 
-        # 2. Capture Name
-        # We delete the size field and leading whitespace to preserve the full
-        # filename even if it contains spaces.
+        # --- 100% BULLETPROOF STRING EXTRACTION ---
         raw_line = $0
-        sub(/^[0-9.]+[KMGTP]?\s+/, "", raw_line)
+        # This standard POSIX regex deletes:
+        # 1. Any leading spaces (^[ \t]*)
+        # 2. The size block itself ([^ \t]+)
+        # 3. The spaces/tabs between the size and the filename ([ \t]+)
+        sub(/^[ \t]*[^ \t]+[ \t]+/, "", raw_line)
         names[NR] = raw_line
 
-        # 3. Math for Scaling
-        # We track the max_val to ensure the largest file takes up 100% of the bar.
+        # Math for Scaling
         raw_vals[NR] = parse_size($1)
         if (raw_vals[NR] > max_val) max_val = raw_vals[NR]
     }
 
     END {
         for (i=1; i<=NR; i++) {
-            # --- Complex Logic: Bar Calculation ---
-            # Calculates the ratio of the current item relative to the largest item.
             if (max_val > 0) percent = raw_vals[i] / max_val; else percent = 0
             len = int(percent * bar_width)
 
-            # Build the visual bar (■) and the empty track (·)
             bar   = ""; for (j=0; j<len; j++) bar = bar "■"
             empty = ""; for (j=len; j<bar_width; j++) empty = empty "·"
 
-            # --- Complex Logic: Color Heatmap ---
-            # We determine urgency based on the size unit.
+            # Heatmap Colors
             unit  = substr(sizes[i], length(sizes[i]))
             color = c_green
             if (unit == "M") color = c_yell
             if (unit == "G") color = c_red
 
-            # --- Complex Logic: Icon Mapping ---
-            # Identifies file types using regex patterns.
-            icon = ""
-            n    = names[i]
-            if (n ~ /\/$/ || n ~ /^\.\// || n == ".") icon = ""
-            if (n ~ /\.(zip|tar|gz|rar|7z)$/)         icon = ""
-            if (n ~ /\.(jpg|png|gif|svg)$/)           icon = ""
-            if (n ~ /\.(mp4|mkv|mov)$/)               icon = ""
-            if (n ~ /\.(py|js|rs|go|c|cpp|rb|zsh)$/)  icon = ""
+            # --- SMART ICON MAPPING ---
+            n = names[i]
+            icon = "" # Default to file
 
-            # Render the dashboard row
-            print -f "  %s%-7s%s %s%s%s%s %s%s%s %s\n",
+            if (n ~ /\/$/ || n == "." || n == "..") { icon = "" }
+            else if (n ~ /\.(zip|tar|gz|rar|7z)$/)  { icon = "" }
+            else if (n ~ /\.(jpg|png|gif|svg)$/)    { icon = "" }
+            else if (n ~ /\.(mp4|mkv|mov)$/)        { icon = "" }
+            else if (n ~ /\.(py|js|rs|go|c|cpp|rb|zsh|sh)$/) { icon = "" }
+            else if (n !~ /\.[a-zA-Z0-9]+$/)        { icon = "" }
+
+            # Final Render Output
+            printf "  %s%-7s%s %s%s%s%s%s  %s%s%s %s\n",
                 color, sizes[i], c_reset,
                 color, bar, c_dim, empty, c_reset,
                 c_blue, icon, c_reset,
@@ -132,9 +125,9 @@ _dir_usage_visualizer() {
 #   Entry point for the Disk Usage Report. Handles flag detection for
 #   OS compatibility and manages the output pipeline.
 # ------------------------------------------------------------------------------
-# 1. Detection Logic
-# We check if the 'du' binary supports -b (GNU specific) for byte-exactness.
-# Otherwise, we fallback to standard human-readable flags.
+# Detection Logic
+#   We check if the 'du' binary supports -b (GNU specific) for byte-exactness.
+#   Otherwise, we fallback to standard human-readable flags.
 if [[ -z "$_DU_OPTS" ]]; then
     if du -b /dev/null >/dev/null 2>&1; then
         _DU_OPTS="-sbh" # GNU/Linux standard
@@ -144,8 +137,8 @@ if [[ -z "$_DU_OPTS" ]]; then
 fi
 
 # 2. Header
-print -P "\n  %B%F{blue}DISK USAGE REPORT%f%b"
-print -P "  %F{240}──────────────────────────────────────────────────────────%f"
+print -P "\n  ${COLOR[BOLD]}${COLOR[BLUE]}DISK USAGE REPORT${COLOR[RESET]}"
+print -P "  ${COLOR[GREY]}──────────────────────────────────────────────────────────${COLOR[RESET]}"
 
 # 3. Pipeline Execution
 #    - du: Calculates sizes
@@ -160,5 +153,5 @@ else
     du $_DU_OPTS .[^.]* ./* 2>/dev/null | sort -rh | head -20 | _dir_usage_visualizer
 fi
 
-print -P "  %F{240}──────────────────────────────────────────────────────────%f\n"
-
+print -P "  ${COLOR[GREY]}──────────────────────────────────────────────────────────${COLOR[RESET]}\n"
+unset _DU_OPTS

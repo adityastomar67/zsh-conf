@@ -1,7 +1,4 @@
 #!/usr/bin/env zsh
-#    ░█▄█░█▀█░▀█▀░█▀▄░▀█▀░█░█
-#    ░█░█░█▀█░░█░░█▀▄░░█░░▄▀▄
-#    ░▀░▀░▀░▀░░▀░░▀░▀░▀▀▀░▀░▀
 
 # ------------------------------------------------------------------------------
 # File Purpose
@@ -33,7 +30,7 @@ emulate -L zsh
 setopt localoptions no_notify no_monitor
 
 # ------------------------------------------------------------------------------
-# 1. Dependency Check
+# Dependency Check
 
 local awk_cmd="awk"
 local use_unicode="0"
@@ -51,7 +48,7 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 2. Terminal State Management
+# Terminal State Management
 
 # ---- SAFE: Ensure terminal is restored on exit
 # cnorm: restores cursor | sgr0: resets colors | clear: wipes screen.
@@ -61,7 +58,7 @@ tput civis  # Hide the cursor for better immersion
 clear       # Initial screen wipe
 
 # ------------------------------------------------------------------------------
-# 3. Character Set Selection
+# Character Set Selection
 
 # Half-width Katakana (standard for the Matrix effect)
 local chars_japanese="ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ0123456789:・.=*+-<>"
@@ -71,7 +68,7 @@ local selected_chars="$chars_ascii"
 [[ "$use_unicode" == "1" ]] && selected_chars="$chars_japanese"
 
 # ------------------------------------------------------------------------------
-# 4. Execution Loop (The Clock)
+# Execution Loop (The Clock)
 
 # We use a Zsh while loop as the "metronome". Every 'print' sends a pulse to AWK.
 while :; do
@@ -116,7 +113,7 @@ BEGIN {
             # We calculate the position of the very last character in the tail
             # and replace it with a space to "move" the stream down.
             if (y[c] - l[c] > 0 && y[c] - l[c] <= lines) {
-                print -f "\033[%d;%dH ", y[c] - l[c], c;
+                printf "\033[%d;%dH ", y[c] - l[c], c;
             }
 
             # 2. Body Rendering (Dim Green)
@@ -124,7 +121,7 @@ BEGIN {
             # in green (\033[32m).
             if (y[c] > 0 && y[c] <= lines) {
                 r_char = substr(chars, int(rand() * len_chars) + 1, 1);
-                print -f "\033[%d;%dH\033[32m%s", y[c], c, r_char;
+                printf "\033[%d;%dH\033[32m%s", y[c], c, r_char;
             }
 
             # 3. Head Rendering (Bright White)
@@ -132,7 +129,7 @@ BEGIN {
             # We print this one row ahead of the green body (\033[1;37m).
             if (y[c] + 1 > 0 && y[c] + 1 <= lines) {
                 r_char_head = substr(chars, int(rand() * len_chars) + 1, 1);
-                print -f "\033[%d;%dH\033[1;37m%s", y[c] + 1, c, r_char_head;
+                printf "\033[%d;%dH\033[1;37m%s", y[c] + 1, c, r_char_head;
             }
 
             y[c]++;
@@ -145,4 +142,3 @@ BEGIN {
     # which would cause the animation to stutter.
     fflush();
 }'
-
