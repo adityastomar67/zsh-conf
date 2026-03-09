@@ -193,8 +193,9 @@ export FZF_DEFAULT_OPTS="
     --layout='reverse'
     --margin='1'
     --padding='1,1,0,1'
-    --preview '[[ \$(file --mime {}) =~ binary ]] && print {} is a binary file || (bat --style=numbers --color=always {} || cat {}) 2> /dev/null | head -500'
-
+    --preview '[[ \$(file --mime {}) =~ binary ]] && print  {} is a binary file || (bat --style=numbers --color=always {} || cat {}) 2> /dev/null | head -500'
+    --preview-window 'right:65%'
+    
     # -- -- -- KEYBINDINGS -- -- --
     --bind 'ctrl-j:preview-down'
     --bind 'ctrl-k:preview-up'

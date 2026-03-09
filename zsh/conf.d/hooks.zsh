@@ -412,3 +412,20 @@ docker_connect_widget() {
     zle redisplay
 }
 zle -N docker_connect_widget
+
+# Play a sound on command failure
+precmd() {
+    local exit_code=$?
+    local sound_file="$ZSH_CONFIG_ROOT/bin/faaah.mp3"
+    
+    # Guard: Only proceed if command failed AND sound file exists
+    if [[ $exit_code -ne 0 && -f "$sound_file" ]]; then
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            afplay "$sound_file" >/dev/null 2>&1 &!
+        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            # Native Linux (tries paplay, thenffplay, then play)
+            { paplay "$sound_file" || ffplay -nodisp -autoexit "$sound_file" || play -q "$sound_file"; } >/dev/null 2>&1 &!
+        fi
+    fi
+}
