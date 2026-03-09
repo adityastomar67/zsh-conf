@@ -163,32 +163,39 @@ _fzf_comprun() {
 # ── global fzf options & keybindings ──────────────────────────────────────────
 
 export FZF_DEFAULT_OPTS="
-    # 1. TOKYO NIGHT COLOR PALETTE
+    # -- -- -- TOKYO NIGHT COLOR PALETTE -- -- --
     --color=fg:#c0caf5,bg:-1,hl:#36608a:bold
     --color=fg+:#ffffff,bg+:#1f2335,hl+:#76b9e0:bold
-    --color=info:#7aa2f7,prompt:#f7768e,pointer:#f7768e
-    --color=marker:#9ece6a,spinner:#9ece6a,header:#9ece6a
-    --color=border:#414868,label:#aeaeae,query:#ddb6f2
+    --color=info:#7aa2f7
+    --color=prompt:#f7768e
+    --color=pointer:#f7768e
+    --color=marker:#9ece6a
+    --color=spinner:#9ece6a
+    --color=header:#9ece6a
+    --color=label:#aeaeae
+    --color=query:#ddb6f2
+    --color=border:#414868
     --color=preview-border:#f7768e
-    --gutter ' ' --color gutter:-1
+    --gutter ' '
+    --color gutter:-1
 
-    # 2. UI SETTINGS
+    # -- -- -- UI SETTINGS -- -- --
     --multi
     --border='rounded'
-    --border-label='  Fuzzy Finder'
+    --border-label='   Fuzzy Finder '
     --border-label-pos='4'
     --preview-window='border-rounded,hidden'
     --prompt='  '
     --pointer='▌'
     --marker=' '
     --info='inline'
-    --height='45%'
+    --height='65%'
     --layout='reverse'
     --margin='1'
     --padding='1,1,0,1'
     --preview '[[ \$(file --mime {}) =~ binary ]] && print {} is a binary file || (bat --style=numbers --color=always {} || cat {}) 2> /dev/null | head -500'
 
-    # 3. KEYBINDINGS
+    # -- -- -- KEYBINDINGS -- -- --
     --bind 'ctrl-j:preview-down'
     --bind 'ctrl-k:preview-up'
     --bind 'ctrl-a:select-all'
@@ -205,27 +212,49 @@ export FZF_DEFAULT_OPTS="
 
 # Centralized list of noisy directories to ignore globally
 local _fzf_ignore_list=(
-    .git .mypy_cache .tox .cache .venv venv node_modules __pycache__ site-packages
+    # ── Version Control ──
+    .git .svn .hg
+
+    # ── Python ──
+    __pycache__ .mypy_cache .pytest_cache .ruff_cache .tox .venv venv env site-packages
+
+    # ── Node.js & Frontend ──
+    node_modules bower_components .npm .yarn .next .nuxt
+
+    # ── Rust, Go, Java, C++ (Build Artifacts) ──
+    target build dist out vendor .gradle
+
+    # ── OS Junk & Caches ──
+    .cache .DS_Store .Trash .Trashes Thumbs.db tmp temp logs
+
+    # ── IDE & Editor Data ──
+    .idea .vscode .eclipse
 )
 
+# Safely map the prefixes to new arrays
+local -a rg_excludes=( "${(@)_fzf_ignore_list/#/--glob=!}" )
+local -a fd_excludes=( "${(@)_fzf_ignore_list/#/--exclude=}" )
+
+# Assign the Default File Searcher (Ctrl-T & Default FZF)
 if (( $+commands[rg] )); then
-    # RIPGREP: Native .gitignore support + ultra-fast filtering
-    export FZF_DEFAULT_COMMAND="rg --files --hidden --follow ${(@)_fzf_ignore_list/#/--glob \!}"
-    export FZF_ALT_C_COMMAND='find . -type d'
+    export FZF_DEFAULT_COMMAND="rg --files --hidden --follow ${rg_excludes[*]}"
 elif (( $+commands[fd] )); then
-    # FD: Purpose-built for file discovery
-    local fd_excludes="${(@)_fzf_ignore_list/#/--exclude }"
-    export FZF_DEFAULT_COMMAND="fd --type f --hidden --follow --strip-cwd-prefix $fd_excludes"
-    export FZF_ALT_C_COMMAND="fd --type d --hidden --follow --strip-cwd-prefix $fd_excludes"
+    export FZF_DEFAULT_COMMAND="fd --type f --hidden --follow --strip-cwd-prefix ${fd_excludes[*]}"
 else
-    # FIND: Standard POSIX fallback
-    export FZF_DEFAULT_COMMAND='find . -type f'
-    export FZF_ALT_C_COMMAND='find . -type d'
+    # Fallback for standard POSIX find
+    local find_prune="\\( -name \"${(j:\" -o -name \")_fzf_ignore_list}\" \\) -prune -o"
+    export FZF_DEFAULT_COMMAND="find . $find_prune -type f -print"
 fi
 
-# Ensure Ctrl-T (File Finder) uses the same optimized command
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 
+# Assign the Directory Searcher (Alt-C)
+if (( $+commands[fd] )); then
+    export FZF_ALT_C_COMMAND="fd --type d --hidden --follow --strip-cwd-prefix ${fd_excludes[*]}"
+else
+    local find_prune="\\( -name \"${(j:\" -o -name \")_fzf_ignore_list}\" \\) -prune -o"
+    export FZF_ALT_C_COMMAND="find . $find_prune -type d -print"
+fi
 
 # ── keybinding-specific preview strategies ───────────────────────────────────
 
@@ -342,4 +371,3 @@ zstyle ':fzf-tab:*' fzf-flags \
 
 zstyle ':fzf-tab:*' fzf-bindings 'space:accept'
 zstyle ':fzf-tab:*' accept-line enter
-
