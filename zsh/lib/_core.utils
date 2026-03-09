@@ -61,6 +61,8 @@ if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
     autoload -Uz PrettyAlias
 fi
 
+autoload -Uz zsettings
+
 # Clipboard Abstraction (Cross-Platform)
 #   - Detects the correct clipboard command based on OS.
 export _clip="cat" # Default fallback prevents crashes on headless servers
@@ -102,7 +104,7 @@ fi
 #               If no arguments are passed, it uses the global $ZPLUGINS array.
 #
 # Usage:
-#   plug "zsh-users/zsh-syntax-highlighting" "defer" "zsh-users/zsh-autosuggestions"
+#   plug "zsh-users/zsh-syntax-highlighting", "defer" "zsh-users/zsh-autosuggestions"
 # ------------------------------------------------------------------------------
 function plug() {
     # 1. Safety & Options

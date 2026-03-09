@@ -423,7 +423,7 @@ play_error_sound() {
     local sound_file="$ZSH_CONFIG_ROOT/bin/faaah.mp3"
     
     # Guard: Only proceed if command failed AND sound file exists
-    if [[ $exit_code -ne 0 && -f "$sound_file" ]]; then
+    if [[ $exit_code -ne 0 && $exit_code -ne 130 && -f "$sound_file" ]]; then
         if [[ "$OSTYPE" == "darwin"* ]]; then
             # macOS: Volume is a float where 1.0 is 100%
             afplay -v 0.4 "$sound_file" >/dev/null 2>&1 &!
@@ -442,5 +442,5 @@ play_error_sound() {
 }
 
 if [[ ${ENABLE_FANCY_STARTUP:l} == "yes" ]]; then
-    add-zsh-hook precmd _play_error_sound
+    add-zsh-hook precmd play_error_sound
 fi
