@@ -413,19 +413,34 @@ docker_connect_widget() {
 }
 zle -N docker_connect_widget
 
-# Play a sound on command failure
-precmd() {
+
+# ------------------------------------------------------------------------------
+# Widget: Play sound on wrong command
+# Description: Just a fancy way of telling the command is wrong.
+# ------------------------------------------------------------------------------
+play_error_sound() {
     local exit_code=$?
     local sound_file="$ZSH_CONFIG_ROOT/bin/faaah.mp3"
     
     # Guard: Only proceed if command failed AND sound file exists
     if [[ $exit_code -ne 0 && -f "$sound_file" ]]; then
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS
-            afplay "$sound_file" >/dev/null 2>&1 &!
+            # macOS: Volume is a float where 1.0 is 100%
+            afplay -v 0.4 "$sound_file" >/dev/null 2>&1 &!
         elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            # Native Linux (tries paplay, thenffplay, then play)
-            { paplay "$sound_file" || ffplay -nodisp -autoexit "$sound_file" || play -q "$sound_file"; } >/dev/null 2>&1 &!
+            # Native Linux (Tries paplay, then ffplay, then play)
+            # paplay volume is 0-65536 (19660 is ~30%)
+            # ffplay volume is 0-100
+            # play volume is a float multiplier
+            { 
+                paplay --volume=19660 "$sound_file" || \
+                ffplay -volume 40 -nodisp -autoexit "$sound_file" || \
+                play -v 0.4 -q "$sound_file"
+            } >/dev/null 2>&1 &!
         fi
     fi
 }
+
+if [[ ${ENABLE_FANCY_STARTUP:l} == "yes" ]]; then
+    add-zsh-hook precmd _play_error_sound
+fi
