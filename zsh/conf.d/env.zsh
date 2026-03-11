@@ -64,6 +64,10 @@ export XDG_STATE_HOME="$HOME/.local/state"
 # Disable the "hint" messages you are seeing in HOMEBREW
 export HOMEBREW_NO_ENV_HINTS=1
 
+# Async Mode: Prevents lagging while typing large commands
+export ZSH_AUTOSUGGEST_MANUAL_REBIND=1
+export ZSH_AUTOSUGGEST_USE_ASYNC=1
+
 
 # Default Applications
 # ───────────────────────────────────────────────────────────────────────
@@ -149,3 +153,51 @@ if [[ -n "$SSH_CONNECTION" ]]; then
         fi
     fi
 fi
+
+
+# ------------------------------------------------------------------------------
+# Function: command_not_found_handler
+# Description: Intercepts mistyped commands, renders a beautiful error, and
+#              provides context-aware suggestions (typos, missing paths).
+# ------------------------------------------------------------------------------
+command_not_found_handler() {
+    local cmd="$1"
+
+    # Print our beautiful, icon-rich primary error message
+    printf "\n  ${COLOR[RED]}${COLOR[RESET]}  ${COLOR[DIM]}zsh:${COLOR[RESET]} ${COLOR[BOLD]}command not found:${COLOR[RESET]} ${COLOR[RED]}%s${COLOR[RESET]}\n" "$cmd"
+
+    # Advanced Feature: "Forgot the ./" Detector
+    # If the file actually exists in the current directory, remind them to use ./
+    if [[ -x "$cmd" || -f "$cmd" ]]; then
+        printf "  ${COLOR[GREEN]}${COLOR[RESET]}  ${COLOR[DIM]}Did you mean:${COLOR[RESET]} ${COLOR[BOLD]}${COLOR[BLUE]}./%s${COLOR[RESET]} ${COLOR[DIM]}?${COLOR[RESET]}\n" "$cmd"
+    fi
+
+    # Advanced Feature: Smart Typo Dictionary
+    # A fast, hardcoded associative array of common developer fat-finger mistakes
+    typeset -A common_typos
+    common_typos=(
+        "zhs"    "zsh"
+        "gti"    "git"
+        "gerp"   "grep"
+        "mkae"   "make"
+        "dc"     "docker-compose"
+        "dk"     "docker"
+        "cls"    "clear"
+        "python" "python3"
+        "pip"    "pip3"
+        "k"      "kubectl"
+        "pnpm"   "npm (or install pnpm)"
+        "yarn"   "npm (or install yarn)"
+    )
+
+    # If the mistyped command exists in our dictionary, print the suggestion!
+    if [[ -n "${common_typos[$cmd]}" ]]; then
+        printf "  ${COLOR[GREEN]}${COLOR[RESET]}  ${COLOR[DIM]}Did you mean:${COLOR[RESET]} ${COLOR[BOLD]}${COLOR[BLUE]}%s${COLOR[RESET]} ${COLOR[DIM]}?${COLOR[RESET]}\n" "${common_typos[$cmd]}"
+    fi
+
+    printf "\n"
+
+    # CRITICAL: We must return standard exit code 127.
+    # This ensures your background audio player still triggers on typos!
+    return 127
+}

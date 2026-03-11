@@ -99,9 +99,6 @@ setopt NOBEEP                  # No beep on error
 # Autosuggestions Config
 # ───────────────────────────────────────────────────────────────────────
 
-# Async Mode: Prevents lagging while typing large commands
-ZSH_AUTOSUGGEST_USE_ASYNC=1
-
 # Strategy: Try history first, then completion engine
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 

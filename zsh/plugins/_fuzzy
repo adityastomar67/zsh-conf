@@ -195,7 +195,7 @@ export FZF_DEFAULT_OPTS="
     --padding='1,1,0,1'
     --preview '[[ \$(file --mime {}) =~ binary ]] && print  {} is a binary file || (bat --style=numbers --color=always {} || cat {}) 2> /dev/null | head -500'
     --preview-window 'right:65%'
-    
+
     # -- -- -- KEYBINDINGS -- -- --
     --bind 'ctrl-j:preview-down'
     --bind 'ctrl-k:preview-up'
@@ -230,6 +230,9 @@ local _fzf_ignore_list=(
 
     # ── IDE & Editor Data ──
     .idea .vscode .eclipse
+
+    # ── MacOS Specific ──
+    Library Applications .Trash Pictures Movies Music
 )
 
 # Safely map the prefixes to new arrays
