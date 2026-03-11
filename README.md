@@ -22,7 +22,7 @@ This configuration is designed for speed, modularity, and a beautiful terminal e
     - Integrated **Starship** prompt support.
     - Syntax Highlighting & Auto-suggestions.
     - "Fancy Startup" with ASCII art and motivational quotes.
-    - Most popular "Faaaah" sounds on wrong commands.
+    - Popular "Faaaah" sounds on wrong command inputs.
 - **🛠️ Developer Ready**:
     - Pre-configured for **Git**, **Go**, **Python**, **Node**, etc.
     - **Tmux** auto-launch integration.
