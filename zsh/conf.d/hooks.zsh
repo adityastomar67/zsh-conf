@@ -96,29 +96,30 @@ zle -N magic_dot_expansion
 # Interactive User Assistance
 # ───────────────────────────────────────────────────────────────────────
 ## Widgets that provide context-aware information when the line is empty.
+
 # ------------------------------------------------------------------------------
 # Widget: Abbreviation Expansion (Fish-like behavior)
 # Description: When you type an alias and press space, it expands to the full command.
 # ------------------------------------------------------------------------------
 # This widget checks if the word you just typed is an alias.
 # If it is, it expands it immediately when you press SPACE.
+expand-alias-on-space() {
+    # Get the last word typed
+    local word="${LBUFFER##* }"
 
-# function expand-alias-on-space() {
-#     # Get the last word typed
-#     local word="${LBUFFER##* }"
+    # Check if it is a defined alias
+    if alias "$word" >/dev/null 2>&1; then
+        # Expand it (native Zsh widget)
+        zle _expand_alias
+    fi
 
-#     # Check if it is a defined alias
-#     if alias "$word" >/dev/null 2>&1; then
-#         # Expand it (native Zsh widget)
-#         zle _expand_alias
-#     fi
+    # Insert the actual space
+    zle self-insert
+}
 
-#     # Insert the actual space
-#     zle self-insert
-# }
+# Register the widget and bind it to the Spacebar
+zle -N expand-alias-on-space
 
-# # Register the widget and bind it to the Spacebar
-# zle -N expand-alias-on-space
 
 # ------------------------------------------------------------------------------
 # Widget: Magic Enter
@@ -173,6 +174,10 @@ magic_enter() {
     zle redisplay
 }
 zle -N magic_enter
+
+# ── Autosuggest Integration (must be set BEFORE the plugin loads) ─────────────
+typeset -ga ZSH_AUTOSUGGEST_CLEAR_WIDGETS
+ZSH_AUTOSUGGEST_CLEAR_WIDGETS+=(magic_enter)
 
 
 # ------------------------------------------------------------------------------
@@ -295,19 +300,21 @@ add-zsh-hook precmd _transient_restore
 
 # 3. Finish Hook (Runs when you hit Enter)
 _transient_finish() {
-    # Explicitly clear the autosuggestion ghost text
-    if (( $+functions[_zsh_autosuggest_clear] )); then
-        _zsh_autosuggest_clear
+    if [[ -n "$_ZSH_AUTOSUGGEST_ASYNC_FD" ]]; then
+        zle -F "$_ZSH_AUTOSUGGEST_ASYNC_FD" 2>/dev/null
+        builtin exec {_ZSH_AUTOSUGGEST_ASYNC_FD}<&- 2>/dev/null
+        _ZSH_AUTOSUGGEST_ASYNC_FD=
     fi
-    # Force clear the display variable to ensure no artifacts remain
+
+    # Hard-clear the ghost text display variable.
     POSTDISPLAY=""
 
-    # Standard Transient Logic
+    # Swap to transient prompt.
     if [[ "$PROMPT" != "$_TRANS_PROMPT" ]]; then
         _OLD_PROMPT="$PROMPT"
     fi
-
     PROMPT="$_TRANS_PROMPT"
+
     zle reset-prompt
 }
 add-zle-hook-widget line-finish _transient_finish
@@ -447,4 +454,3 @@ play_error_sound() {
 if [[ ${ENABLE_FANCY_STARTUP:l} == "yes" ]]; then
     add-zsh-hook precmd play_error_sound
 fi
-

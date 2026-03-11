@@ -1,75 +1,220 @@
 #!/usr/bin/env zsh
 
-# ______ _            _
-# | ___ \ |          | |
-# | |_/ / | ___   ___| | _____
-# | ___ \ |/ _ \ / __| |/ / __|
-# | |_/ / | (_) | (__|   <\__ \
-# \____/|_|\___/ \___|_|\_\___/
+# ==============================================================================
+#  ____  _            _
+# | __ )| | ___   ___| |__  ___
+# |  _ \| |/ _ \ / __| |/ // __|
+# | |_) | | (_) | (__|   <\__ \
+# |____/|_|\___/ \___|_|\_\___/
 #
-#  :: Minimal Terminal Color Palette Tester (Zsh Version)
-#  :: Renders standard (0-7) and bright (8-15) ANSI color blocks.
-#  :: Works natively on macOS and Linux without external dependencies.
+#  :: Professional Terminal Color & Style Palette
+#  :: Renders 16-color, 256-color palettes, and text styling options.
+#  :: Highly customizable via flags with a minimal default UI.
 #  :: Updated By: GitHub@adityastomar67
-#
-#  USAGE:
-#      1. Make executable: chmod +x Blocks
-#      2. Run:             ./Blocks
-
-# ==============================================================================
-# [1] CONFIGURATION
 # ==============================================================================
 
-# Constants for the block character
-typeset -r BLOCK="██"
+# Halt on errors
+setopt ERR_RETURN PIPE_FAIL
 
-# ==============================================================================
-# [2] FUNCTIONS
-# ==============================================================================
+# Global defaults
+typeset -g BLOCK_CHAR=${BLOCK_CHAR:-"██"}
+typeset -g BLOCK_REPEATS=${BLOCK_REPEATS:-3}
+typeset -g MODE_EXTENDED=0
+typeset -g MODE_STYLES=0
+typeset -g MODE_BG=0
+
+# Clean array of color names using zero-based indexing for ease below
+typeset -a COLOR_NAMES=(
+    "Black" "Red" "Green" "Yellow"
+    "Blue" "Magenta" "Cyan" "White"
+)
+
+typeset -g SCRIPT_NAME=${0:t}
 
 # ------------------------------------------------------------------------------
-# :: Print Palette
-#    Iterates through ANSI color codes and prints them.
-#    Arguments:
-#      $1: Base color code (30 for standard, 90 for bright)
-#      $2: Style prefix (e.g., "1;" for bold/bright, or empty)
+# :: Help / Usage Function
 # ------------------------------------------------------------------------------
-print_palette() {
-    local base=$1
-    local style=$2
-    local color_code
+usage() {
+    cat <<EOF
+Usage: ${SCRIPT_NAME} [options]
 
-    # Zsh Loop: {0..7} iterates from 0 to 7 inclusive
-    for i in {0..7}; do
-        # Calculate the specific ANSI color code
-        color_code=$(( base + i ))
+A professional terminal color palette and style tester.
 
-        # Zsh Printing:
-        # print -n   : Do not print a newline at the end
-        # $'\e[...m' : ANSI Escape sequence
-        # \e[0m      : Reset color
-        print -n $'\e['"${style}${color_code}m ${BLOCK} "$'\e[0m'
+Options:
+  -x, --extended    Show 256-color extended palette
+  -s, --styles      Show text formatting styles (bold, italic, etc.)
+  -b, --background  Test colors as backgrounds instead of foregrounds
+  -c, --char CHAR   Use a custom block character (default: "██")
+  -r, --repeats N   Number of times to repeat the block character (default: 3)
+  -h, --help        Show this help message
+
+Examples:
+  ${SCRIPT_NAME}                # Show regular 16-color palette
+  ${SCRIPT_NAME} -x             # Show full 256-color spectrum
+  ${SCRIPT_NAME} -s             # Test terminal text styles
+  ${SCRIPT_NAME} -c "■" -b      # Use squares on background colors
+EOF
+    exit 0
+}
+
+# ------------------------------------------------------------------------------
+# :: Argument Parsing
+# ------------------------------------------------------------------------------
+while (( $# > 0 )); do
+    case "$1" in
+        -x|--extended)   MODE_EXTENDED=1 ;;
+        -s|--styles)     MODE_STYLES=1 ;;
+        -b|--background) MODE_BG=1 ;;
+        -c|--char)
+            if (( $# > 1 )); then
+                shift
+                BLOCK_CHAR="$1"
+            else
+                print -u2 "Error: $1 requires an argument."
+                exit 1
+            fi
+            ;;
+        -r|--repeats)
+            if (( $# > 1 )); then
+                shift
+                BLOCK_REPEATS="$1"
+            else
+                print -u2 "Error: $1 requires an argument."
+                exit 1
+            fi
+            ;;
+        -h|--help)       usage ;;
+        *)               print -u2 "Unknown option: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+# Helper: Print formatted section headers
+print_header() {
+    print -P "\n%F{12}%B::%b %U${1}%u%f\n"
+}
+
+# Helper: Build the repetition string of our block character
+build_blocks() {
+    local out=""
+    for ((i=0; i<BLOCK_REPEATS; i++)); do out+="${BLOCK_CHAR}"; done
+    print "$out"
+}
+
+typeset blocks_str="$(build_blocks)"
+
+# ------------------------------------------------------------------------------
+# :: 1. Standard 16-Color Palette (Aesthetic Minimal Mode)
+# ------------------------------------------------------------------------------
+print_standard_palette() {
+    local os_icon=""
+    case "$OSTYPE" in
+        darwin*) os_icon="󰀵 " ;;
+        linux*)  os_icon="󰣇 " ;;
+        *)       os_icon=" " ;;
+    esac
+
+    # Dynamic username styling
+    local user_info="%F{12}%n%f%F{8}@%f%F{14}%m%f"
+
+    local header_info="%n@%m"
+    local raw_info_length=${#${(%)header_info}}
+
+    # Inner box total width is exactly 33 visual characters
+    # "─ " (2) + icon (2) + info (L) + " " (1) + dashes = 33
+    local dash_count=$(( 33 - 6 - raw_info_length ))
+    local header_dashes=""
+    # Fallback to avoid negative dash counts
+    (( dash_count < 2 )) && dash_count=2
+    for ((i=0; i<dash_count; i++)); do header_dashes+="─"; done
+
+    print -P "  %F{8}╭─%f %B${os_icon}${header_info}%b %F{8} ${header_dashes}╮%f"
+
+    # Row 1: Normal Colors
+    local row1="  %F{8}│%f  "
+    for i in {31..36}; do
+        row1+=$'\e['"${i}m${BLOCK_CHAR}${BLOCK_CHAR} "$'\e[0m'
+    done
+    row1+=" %F{8}│%f"
+    print -P "$row1"
+
+    # Row 2: Bright Colors
+    local row2="  %F{8}│%f  "
+    for i in {91..96}; do
+        row2+=$'\e['"1;${i}m${BLOCK_CHAR}${BLOCK_CHAR} "$'\e[0m'
+    done
+    row2+=" %F{8}│%f"
+    print -P "$row2"
+
+    print -P "  %F{8}╰─────────────────────────────────╯%f\n"
+}
+
+# ------------------------------------------------------------------------------
+# :: 2. Text Styles Tester
+# ------------------------------------------------------------------------------
+print_styles() {
+    print_header "Terminal Text Styles"
+
+    typeset -A styles
+    styles=(
+        "1" "Bold"
+        "2" "Dim/Faint"
+        "3" "Italic"
+        "4" "Underline"
+        "5" "Blinking"
+        "7" "Reverse/Invert"
+        "8" "Hidden"
+        "9" "Strikethrough"
+    )
+
+    for code in 1 2 3 4 5 7 8 9; do
+        printf "  \033[%sm%-15s\033[0m : \\e[%sm\n" "$code" "${styles[$code]}" "$code"
     done
 }
 
-# ==============================================================================
-# [3] MAIN EXECUTION
-# ==============================================================================
+# ------------------------------------------------------------------------------
+# :: 3. Extended 256-Color Palette
+# ------------------------------------------------------------------------------
+print_extended_palette() {
+    print_header "Standard & High-Intensity (0-15)"
+    print -n "  "
+    for i in {0..15}; do
+        printf "\033[48;5;%sm  \033[0m" "$i"
+    done
+    print "\n"
 
-main() {
-    print "" # Top spacing
+    print_header "256 Color Cube (16-231)"
+    for ((g=0; g<6; g++)); do
+        print -n "  "
+        for ((r=0; r<6; r++)); do
+            for ((b=0; b<6; b++)); do
+                local color=$((16 + (r * 36) + (g * 6) + b))
+                printf "\033[48;5;%sm  \033[0m" "$color"
+            done
+            print -n "  "
+        done
+        print ""
+    done
 
-    # 1. Print Standard Colors (ANSI 30-37)
-    #    No style prefix needed
-    print_palette 30 ""
-
-    print "" # Newline between rows
-
-    # 2. Print Bright/Bold Colors (ANSI 90-97)
-    #    "1;" adds the bold attribute, making colors pop on some terminals
-    print_palette 90 "1;"
-
-    print "\n" # Bottom spacing
+    print_header "Grayscale Ramp (232-255)"
+    print -n "  "
+    for i in {232..255}; do
+        printf "\033[48;5;%sm  \033[0m" "$i"
+    done
+    print "\n"
 }
 
-main
+# ==============================================================================
+# :: ROUTING
+# ==============================================================================
+
+if (( MODE_EXTENDED )); then
+    print_extended_palette
+elif (( MODE_STYLES )); then
+    print_styles
+else
+    print_standard_palette
+    print -P "  %F{8}Tip: Run \`%B${0:t} --help%b\` for more modes (256-colors, styles, etc.).%f"
+fi
+
+print "" # Bottom spacing

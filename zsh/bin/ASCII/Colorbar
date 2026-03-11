@@ -45,7 +45,7 @@ main() {
     # Height: 14 lines
     # Colors: White(7), Yellow(3), Cyan(6), Green(2), Magenta(5), Red(1), Blue(4)
     # ---------------------------------------------------------
-    repeat 14; do
+    repeat 7; do
         print -n "$MARGIN"
         for c in 7 3 6 2 5 1 4; do
             # ANSI Backgrounds are 40 + color_index
@@ -74,7 +74,7 @@ main() {
     # ---------------------------------------------------------
     # Optimization: Instead of looping 28 times per line, we print chunks.
     # Pattern from original: 5xBlue, 5xWhite, 5xMagenta, 13xBlack
-    repeat 5; do
+    repeat 2; do
         print -n "$MARGIN"
 
         # 5 blocks of Blue (5 * 2 spaces = 10 spaces)
