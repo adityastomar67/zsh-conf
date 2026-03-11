@@ -390,7 +390,7 @@ function theme_gh0st() {
     _register_prompt_hook _gh0st_updater
 
     # ── Visual Assets ──────────────────────────────────────────────────
-    local icon_dir="%(~.%B%F{black}.%B%F{cyan})%f%b"
+    local icon_dir="%(~.%B%F{black}  .%B%F{cyan})%f%b"
     local p_user="%B%F{blue}%n"
     local p_sep="%F{red}/"
     local p_host="%F{yellow}%m"

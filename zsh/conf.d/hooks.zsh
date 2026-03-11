@@ -174,6 +174,10 @@ magic_enter() {
 }
 zle -N magic_enter
 
+# ── Autosuggest Integration (must be set BEFORE the plugin loads) ─────────────
+typeset -ga ZSH_AUTOSUGGEST_CLEAR_WIDGETS
+ZSH_AUTOSUGGEST_CLEAR_WIDGETS+=(magic_enter)
+
 
 # ------------------------------------------------------------------------------
 # Hook: Auto LS on CD
@@ -295,19 +299,21 @@ add-zsh-hook precmd _transient_restore
 
 # 3. Finish Hook (Runs when you hit Enter)
 _transient_finish() {
-    # Explicitly clear the autosuggestion ghost text
-    if (( $+functions[_zsh_autosuggest_clear] )); then
-        _zsh_autosuggest_clear
+    if [[ -n "$_ZSH_AUTOSUGGEST_ASYNC_FD" ]]; then
+        zle -F "$_ZSH_AUTOSUGGEST_ASYNC_FD" 2>/dev/null
+        builtin exec {_ZSH_AUTOSUGGEST_ASYNC_FD}<&- 2>/dev/null
+        _ZSH_AUTOSUGGEST_ASYNC_FD=
     fi
-    # Force clear the display variable to ensure no artifacts remain
+
+    # Hard-clear the ghost text display variable.
     POSTDISPLAY=""
 
-    # Standard Transient Logic
+    # Swap to transient prompt.
     if [[ "$PROMPT" != "$_TRANS_PROMPT" ]]; then
         _OLD_PROMPT="$PROMPT"
     fi
-
     PROMPT="$_TRANS_PROMPT"
+
     zle reset-prompt
 }
 add-zle-hook-widget line-finish _transient_finish
@@ -447,4 +453,3 @@ play_error_sound() {
 if [[ ${ENABLE_FANCY_STARTUP:l} == "yes" ]]; then
     add-zsh-hook precmd play_error_sound
 fi
-
