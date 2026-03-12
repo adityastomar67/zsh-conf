@@ -85,6 +85,17 @@ else
 fi
 
 
+# User Overrides
+# ───────────────────────────────────────────────────────────────────────
+## This section is reserved for `YOUR CUSTOM` settings.
+## Anything defined here will override the managed configuration above.
+## Loads work-specific or private settings that are custom to every different user and ignored by Git.
+
+[[ "${LOAD_PRIVATE_CONFIG:l}" == "yes" ]] \
+    && [[ -f "$HOME/User-Overrides.zsh" ]] \
+    && zsh-defer source "$HOME/User-Overrides.zsh"
+
+
 # Terminal Decorations
 # ───────────────────────────────────────────────────────────────────────
 ## Adds visual flair to the terminal startup.
@@ -115,17 +126,6 @@ if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
     fi
     unset valid_commands cmd cmd_name random_idx
 fi
-
-
-# User Overrides
-# ───────────────────────────────────────────────────────────────────────
-## This section is reserved for `YOUR CUSTOM` settings.
-## Anything defined here will override the managed configuration above.
-## Loads work-specific or private settings that are custom to every different user and ignored by Git.
-
-[[ "${LOAD_PRIVATE_CONFIG:l}" == "yes" ]] \
-    && [[ -f "$HOME/User-Overrides.zsh" ]] \
-    && source "$HOME/User-Overrides.zsh"
 
 
 # Benchmarking Report
