@@ -286,11 +286,11 @@ zle -N copy_buffer_to_clipboard
 # Widget: Transient Prompt
 # Description: Shrinks the prompt to a minimal symbol after execution.
 # ------------------------------------------------------------------------------
-# 1. Define Variables
+# Define Variables
 typeset -g _TRANS_PROMPT="%{${COLOR[YELLOW]}%}::%{${COLOR[RESET]}%} "
 typeset -g _OLD_PROMPT=""
 
-# 2. Restore Hook (Runs before drawing a NEW prompt)
+# Restore Hook (Runs before drawing a NEW prompt)
 _transient_restore() {
     if [[ -n "$_OLD_PROMPT" ]]; then
         PROMPT="$_OLD_PROMPT"
@@ -298,7 +298,7 @@ _transient_restore() {
 }
 add-zsh-hook precmd _transient_restore
 
-# 3. Finish Hook (Runs when you hit Enter)
+# Finish Hook (Runs when you hit Enter)
 _transient_finish() {
     if [[ -n "$_ZSH_AUTOSUGGEST_ASYNC_FD" ]]; then
         zle -F "$_ZSH_AUTOSUGGEST_ASYNC_FD" 2>/dev/null

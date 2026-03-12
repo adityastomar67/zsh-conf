@@ -526,6 +526,8 @@ System::cleanup() {
                 if Interface::prompt_confirm "Delete the downloaded installer script ($script_file)?"; then
                     rm -f "$script_file"
                     Logger::success "Installer script removed."
+                else
+                    Logger::info "Installer script kept."
                 fi
             fi
         fi
@@ -880,15 +882,19 @@ EOF
     if Interface::prompt_confirm "Do you want to remove complete GIT Tracking as well?"; then
         rm -rf "${CONFIG_PATHS[REPO]}/.git"
         rm -rf "${CONFIG_PATHS[REPO]}/.gitignore"
+        Logger::success "GIT Tracking removed. Now you can track it on your own!"
+    else
+        Logger::info "GIT Tracking kept."
     fi
-    Logger::success "GIT Tracking removed. Now you can track it on your own!"
 
     if [[ -d "${CONFIG_PATHS[REPO]}_backups" ]]; then
         Interface::print_banner
         if Interface::prompt_confirm "Backups have been created at ${CONFIG_PATHS[REPO]}_backups, Do you want to remove it?"; then
             rm -rf "${CONFIG_PATHS[REPO]}_backups"
+            Logger::success "Backups have been REMOVED as well!"
+        else
+            Logger::info "Backups kept at ${CONFIG_PATHS[REPO]}_backups."
         fi
-        Logger::success "Backups have been REMOVED as well!"
     fi
 
     Interface::print_banner
