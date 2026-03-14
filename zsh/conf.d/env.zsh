@@ -76,7 +76,7 @@ export ZSH_AUTOSUGGEST_USE_ASYNC=1
 # ------------------------------------------------------------------------------
 # Sudo Prompt
 # Custom prompt when asking for root password (displays username).
-export SUDO_PROMPT=$'\n\033[1;31m╭─  PRIVILEGE ESCALATION\033[0m\n\033[1;31m╰─\033[0m \033[1;36m%u\033[0m \033[2mpassword:\033[0m '
+export SUDO_PROMPT=$'\n\033[1;31m╭─  PRIVILEGE ESCALATION\033[0m\n\033[1;31m╰─\033[0m \033[1;33m%u\033[0m \033[2mpassword:\033[0m '
 
 # ------------------------------------------------------------------------------
 # Manpager (Manual Page Viewer)

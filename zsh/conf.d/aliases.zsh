@@ -76,10 +76,10 @@ alias history="fc -l -t '%Y-%m-%d %H:%M:%S' 1 | awk '{num=\$1; date=\$2; time=\$
 # ------------------------------------------------------------------------------
 # Safety Nets
 # Force interactive mode (-i) to prompt before destructive actions.
-alias mv="mv -i"
-alias cp="cp -i"
-alias ln="ln -i"
-alias rm="rm -i"      # "Are you sure?" prompt for deletions
+alias mv="command mv -i"
+alias cp="command cp -i"
+alias ln="command ln -i"
+alias rm="command rm -i"      # "Are you sure?" prompt for deletions
 
 # ------------------------------------------------------------------------------
 # "The Magic Fixer"
