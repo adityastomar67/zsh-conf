@@ -30,7 +30,9 @@
 
 # Load the function definitions from Zsh's function path
 autoload -Uz up-line-or-beginning-search \
-    down-line-or-beginning-search add-zsh-hook edit-command-line
+    down-line-or-beginning-search \
+    add-zsh-hook \
+    edit-command-line
 
 # Register them as ZLE widgets so they can be bound to keys
 zle -N up-line-or-beginning-search
@@ -146,7 +148,7 @@ magic_enter() {
     # ::: Python VirtualEnv Detector :::
     if [[ -f "requirements.txt" || -f "pyproject.toml" ]]; then
         if [[ -z "$VIRTUAL_ENV" ]]; then
-             print "${COLOR[RED]}::: ⚠️  PYTHON PROJECT DETECTED (No VirtualEnv Active) ⚠️  :::${COLOR[RESET]}"
+             print "${COLOR[RED]}:::   PYTHON PROJECT DETECTED (No VirtualEnv Active)   :::${COLOR[RESET]}"
              print ""
         fi
     fi
@@ -405,7 +407,7 @@ docker_connect_widget() {
     local cid
     cid=$(docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}" | \
           fzf --header-lines=1 \
-              --prompt="🐳 Shell > " \
+              --prompt=" Shell > " \
               --height=40% \
               --layout=reverse \
               --preview='docker logs --tail 20 {1}' \
@@ -430,10 +432,12 @@ play_error_sound() {
     local sound_file="$ZSH_CONFIG_ROOT/bin/faaah.mp3"
 
     # Guard: Proceed if command failed (-ne 0), AND was NOT:
-    #   130: SIGINT  (Ctrl+C)
-    #   129: SIGHUP  (Window/Tab Closed)
-    #   143: SIGTERM (App Quit / Cmd+Q)
-    if [[ $exit_code -ne 0 && $exit_code -ne 130 && $exit_code -ne 129 && $exit_code -ne 143 && -f "$sound_file" ]]; then
+    if [[ $exit_code -ne 0 && \
+            $exit_code -ne 130 && \     # SIGINT  (Ctrl+C)
+            $exit_code -ne 129 && \     # SIGHUP  (Window/Tab Closed)
+            $exit_code -ne 143 && \     # SIGTERM (App Quit / Cmd+Q)
+            -f "$sound_file" ]]; then   # If sound file exists
+
         if [[ "$OSTYPE" == "darwin"* ]]; then
             # macOS: Volume is a float where 1.0 is 100%
             afplay -v 0.4 "$sound_file" >/dev/null 2>&1 &!
