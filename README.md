@@ -93,7 +93,7 @@ This is your control center. Tweak flags to enable/disable features:
 # ---------------- Features ---------------- #
 export ENABLE_AUTO_TMUX="No"        # Auto-start Tmux?
 export LOAD_CUSTOM_ALIASES="Yes"    # Load alias shortcuts?
-export ENABLE_FANCY_STARTUP="No"    # Show cool banner?
+export ENABLE_FANCY_STARTUP="No"    # Show cool banner? Faah Sound?
 export ZSH_BENCHMARK="Yes"          # Measure startup time?
 
 # ---------------- Visuals ----------------- #
