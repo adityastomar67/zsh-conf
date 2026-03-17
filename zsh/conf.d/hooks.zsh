@@ -9,7 +9,7 @@
 #   mode synchronization) without assigning specific keybindings.
 #
 # Problems Solved
-#   - Defines the logic for "Smart Sudo" (toggling sudo on the current/last command).
+#   - Logic for "Smart Sudo" (toggling sudo on the current/last command).
 #   - Prepares the "Edit in Editor" functionality.
 #   - Fixes input issues in programs like Vim/Nano by managing terminal modes.
 #
@@ -19,12 +19,12 @@
 #   - Terminal Application Mode hooks (`smkx`/`rmkx`).
 #
 # Usage Notes
-#   - This file creates the widgets. You must bind keys to them in `keybinds.zsh`.
+#   - This file creates the widgets. You must bind keys in `keybinds.zsh`.
 # ------------------------------------------------------------------------------
 
 
 # Smart History Search Setup
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Prepares the "Up/Down" arrow logic to filter history based on current input
 ## rather than just cycling through every command.
 
@@ -35,13 +35,14 @@ autoload -Uz up-line-or-beginning-search \
     edit-command-line
 
 # Register them as ZLE widgets so they can be bound to keys
-zle -N up-line-or-beginning-search
-zle -N down-line-or-beginning-search
+zle -N up-line-or-beginning-search \
+    down-line-or-beginning-search
 
 
 # Custom Editor Widgets
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Advanced macros to speed up command line editing.
+
 # ------------------------------------------------------------------------------
 # Widget: Pop-Command
 # Description:
@@ -96,15 +97,15 @@ zle -N magic_dot_expansion
 
 
 # Interactive User Assistance
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Widgets that provide context-aware information when the line is empty.
 
 # ------------------------------------------------------------------------------
 # Widget: Abbreviation Expansion (Fish-like behavior)
-# Description: When you type an alias and press space, it expands to the full command.
-# ------------------------------------------------------------------------------
+# Description: When you type an alias and press space, it expands to the full.
 # This widget checks if the word you just typed is an alias.
 # If it is, it expands it immediately when you press SPACE.
+# ------------------------------------------------------------------------------
 expand-alias-on-space() {
     # Get the last word typed
     local word="${LBUFFER##* }"
@@ -185,9 +186,9 @@ ZSH_AUTOSUGGEST_CLEAR_WIDGETS+=(magic_enter)
 # ------------------------------------------------------------------------------
 # Hook: Auto LS on CD
 # Description: Automatically lists files when changing directories.
-# ------------------------------------------------------------------------------
 # PRE-CALCULATE: Decide the command ONCE at startup.
 #    We store the command and args in an array for safe execution.
+# ------------------------------------------------------------------------------
 typeset -a _chpwd_ls_cmd
 
 if (( $+commands[eza] )); then
@@ -198,18 +199,18 @@ else
     _chpwd_ls_cmd=(ls -la)
 fi
 
-# 2. EXECUTE: The function is now extremely dumb and fast.
-function chpwd_auto_ls() {
+# EXECUTE: The function is now extremely dumb and fast.
+chpwd_auto_ls() {
     emulate -L zsh
 
     # Return immediately if in HOME to reduce clutter
     [[ "$PWD" == "$HOME" ]] && return
 
-    # 1. Network Guard: Skip on /Volumes or /Network to avoid hangs
+    # Network Guard: Skip on /Volumes or /Network to avoid hangs
     if [[ "$PWD" == /Volumes* || "$PWD" == /Network* ]]; then
         return
     fi
-    # 2. Size Guard: Check file count quickly
+    # Size Guard: Check file count quickly
     #    ls -1A = one column, all files
     #    wc -l  = count lines
     local count=$(command ls -1A | wc -l)
@@ -220,7 +221,7 @@ function chpwd_auto_ls() {
         return
     fi
 
-    # 3. Safe Execution
+    # Safe Execution
     print
     "${_chpwd_ls_cmd[@]}"
 }
@@ -228,7 +229,7 @@ add-zsh-hook chpwd chpwd_auto_ls
 
 
 # Terminal State Synchronization
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Lifecycle hooks to manage Terminal Application Mode (smkx/rmkx).
 
 if [[ "$TERM" != "dumb" ]] && (( ${+terminfo[smkx]} && ${+terminfo[rmkx]} )); then
@@ -248,7 +249,8 @@ fi
 
 
 # Productivity & UI Enhancements
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
+
 # ------------------------------------------------------------------------------
 # Widget: Fancy Ctrl-Z
 # Description: Toggles between backgrounding and foregrounding jobs.
@@ -268,8 +270,8 @@ zle -N fancy_ctrl_z
 # ------------------------------------------------------------------------------
 # Widget: Copy Buffer to Clipboard
 # Description: Cross-platform command line copying.
-# ------------------------------------------------------------------------------
 # EXECUTE: The widget simply uses the pre-found command.
+# ------------------------------------------------------------------------------
 copy_buffer_to_clipboard() {
     emulate -L zsh
 
@@ -323,7 +325,8 @@ add-zle-hook-widget line-finish _transient_finish
 
 
 # Integration Widgets (External Tools)
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
+
 # ------------------------------------------------------------------------------
 # Widget: Git FZF Fixup
 # Description: Interactively select a commit to fixup via FZF.
@@ -349,13 +352,13 @@ git_fzf_fixup() {
             --header=$'\033[1;33m• Enter:\033[0m Fixup (Skip Msg)   \033[1;33m• Ctrl-S:\033[0m Squash (Add Msg)   \033[1;33m• Ctrl-E:\033[0m Amend (Rewrite Msg)\n'
     )
 
-    # 1. Abort if user pressed Escape
+    # Abort if user pressed Escape
     if [[ -z "$output" ]]; then
         zle redisplay
         return 0
     fi
 
-    # 2. Parse FZF's multi-line output natively into a Zsh array
+    # Parse FZF's multi-line output natively into a Zsh array
     local -a lines=( "${(@f)output}" )
     local key="${lines[1]}"
     local selected="${lines[2]}"
@@ -368,7 +371,7 @@ git_fzf_fixup() {
 
     local hash="${selected[(w)1]}"
 
-    # 3. Execution Router based on the key you pressed
+    # Execution Router based on the key you pressed
     case "$key" in
         ctrl-s)
             # SQUASH: Opens the editor. When you rebase, Git will COMBINE

@@ -27,7 +27,7 @@
 
 
 # Basic Permissions & Input
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 # umask 022: User has full access, group/others have read/execute only.
 umask 022
@@ -38,7 +38,7 @@ WORDCHARS='|-.'
 
 
 # Navigation Options
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 setopt AUTO_CD              # Typing 'dir' becomes 'cd dir'
 setopt AUTO_LIST            # Automatically list choices on ambiguous completion
@@ -50,7 +50,7 @@ setopt PUSHD_SILENT         # Do not print the stack every time you cd
 
 
 # Completion Behavior
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 setopt COMPLETE_IN_WORD     # Allow completion from within a word/cursor position
 setopt GLOB_COMPLETE        # Show autocompletion menu for globs
@@ -69,7 +69,7 @@ unsetopt CORRECT            # Disable "Did you mean..?" spelling correction
 
 
 # History Configuration
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 setopt SHARE_HISTORY             # Share history between open terminals immediately
 setopt INC_APPEND_HISTORY_TIME   # Append to history file as soon as command finishes
@@ -87,7 +87,7 @@ export HISTORY_IGNORE="(zsh|clear|ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)
 
 
 # Job Control & Feedback
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 setopt NOTIFY                  # Report status of background jobs immediately
 setopt NOHUP                   # Don't kill background jobs on exit
@@ -97,7 +97,7 @@ setopt NOBEEP                  # No beep on error
 
 
 # Autosuggestions Config
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 # Strategy: Try history first, then completion engine
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
@@ -124,7 +124,7 @@ ZSH_AUTOSUGGEST_IGNORE_WIDGETS=(
 
 
 # Completion Engine Initialization
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 ## Smart caching logic for `compinit`.
 # Allow completion to match dotfiles
@@ -156,7 +156,7 @@ fi
 
 
 # Zstyle Configuration
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Visuals and behavior for the completion menu.
 
 # ── Matching Strategy ──
@@ -206,7 +206,7 @@ zstyle ':completion:*:*:*:*:warnings' format \
 
 
 # Tool Initialization
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 # Iterate and Execute tools defined in user.conf
 for entry in "${INIT_TOOLS[@]}"; do

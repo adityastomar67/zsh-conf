@@ -22,13 +22,13 @@
 #   - Global Aliases (Pipe expansions).
 #
 # Usage Notes
-#   To disable this entire file, set `LOAD_CUSTOM_ALIASES="No"` in $ZDOTDIR/user.conf.
+#   To disable, set `LOAD_CUSTOM_ALIASES="No"` in $ZDOTDIR/user.conf.
 #   $EDITOR is defined in '$ZSH_CONFIG_ROOT/conf.d/env.zsh'
 # ------------------------------------------------------------------------------
 
 
 # Initialization
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Preparation steps: Feature flags, clean slate, and OS detection.
 
 # Feature Guard
@@ -45,7 +45,7 @@ detected_os=$(uname -s)
 
 
 # System & Privileges
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Wrappers for administrative commands and safety features.
 # Admin Helpers
 alias -- _="sudo"        # Quick sudo shorthand
@@ -67,7 +67,7 @@ fi
 # -t: time format (takes the string arguments)
 alias history="fc -l -t '%Y-%m-%d %H:%M:%S' 1 | awk '{num=\$1; date=\$2; time=\$3; sub(/^[ \t]*[0-9]+[ \t]+[^ \t]+[ \t]+[^ \t]+[ \t]+/, \"\"); printf \"\033[2m%7s\033[0m │ \033[36m%s\033[0m \033[33m%s\033[0m │ %s\n\", num, date, time, \$0}' | less -R -S -F -X -K"
 
-# ----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 # Man Page Fuzzy Finder
 # Uses fzf to search and preview man pages interactively.
 # Requires 'fzf' to be installed.
@@ -103,7 +103,7 @@ alias which='type -a' # 'type -a' is more robust in Zsh than 'which'
 
 
 # Navigation & Directories
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Shortcuts for moving around the file system.
 
 # ------------------------------------------------------------------------------
@@ -136,7 +136,7 @@ done
 unset DIRECTORY_SHORTCUTS
 
 # Editors & Configurations
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Shortcuts for editing configuration files and selecting editors.
 # Shell Configuration Editors
 # Only define aliases if the configuration files exist.
@@ -170,7 +170,7 @@ fi
 
 
 # Utilities & Tools
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Replacing legacy unix tools with modern Rust/Go alternatives.
 
 # ------------------------------------------------------------------------------
@@ -295,7 +295,7 @@ alias killl='killall -q'
 
 
 # Package Management
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Shortcuts for Arch Linux (Pacman) and derivatives.
 
 if (( $+commands[pacman] )); then
@@ -333,7 +333,7 @@ fi
 
 
 # Git Configuration
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Extensive shortcuts for Git operations.
 
 if (( $+commands[git] )); then
@@ -386,7 +386,7 @@ fi
 
 
 # Global Output Modifiers
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Global aliases (-g) are expanded anywhere in the command line,
 ## not just at the beginning. They act like pipes.
 
@@ -408,7 +408,7 @@ alias -g ':LL'="2>&1 | less"         # Pipe Output+Errors to Less
 
 
 # Suffix Aliases
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Executing files based on extension (e.g., typing 'main.py' runs python).
 
 # Define the System Opener
@@ -468,7 +468,7 @@ alias -s patch="git apply"
 
 
 # Miscellaneous
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 
 alias cls="clear"                   # Clear screen
 alias clean="clear"                 # Clear screen too

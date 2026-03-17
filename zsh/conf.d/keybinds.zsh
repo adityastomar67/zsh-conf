@@ -27,7 +27,7 @@
 
 
 # System Initialization
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## We load the terminfo module to communicate with the terminal
 ## emulator correctly. This allows us to ask "what is the code for Key X?"
 ## instead of hardcoding raw ANSI escape sequences that might vary.
@@ -39,7 +39,7 @@ zmodload zsh/terminfo
 zmodload zsh/complist
 
 
-# ── key code definitions ───────────────────────────────────────────────
+# ── key code definitions ──────────────────────────────────────────────────────
 # Define a global associative array to map human-readable key names
 # to their specific terminal codes.
 typeset -g -A key_map
@@ -60,7 +60,7 @@ key_map[Ctrl-Left]="${terminfo[kLFT5]:-^[[1;5D}"
 key_map[Ctrl-Right]="${terminfo[kRIT5]:-^[[1;5C}"
 
 
-# ── standard editing fixes ─────────────────────────────────────────────
+# ── standard editing fixes ──────────────────────────────────────────────────
 # Standard Backspace logic (delete character to the left).
 
 # We use the $DEL variable (defined in zle.zsh) which handles autopair logic.
@@ -85,7 +85,7 @@ bindkey '^I' complete-word
 
 
 # Navigation & Cursor Movement
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Bindings for moving the cursor efficiently across the command line.
 
 # ------------------------------------------------------------------------------
@@ -111,7 +111,7 @@ bindkey '^I' complete-word
 
 
 # Deletion Logic
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 # Delete the character under the cursor (Forward Delete)
 [[ -n "${key_map[Delete]}" ]] && bindkey -- "${key_map[Delete]}" delete-char
 
@@ -120,7 +120,7 @@ bindkey '^[[3;5~' kill-word
 
 
 # Smart History Search
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Upgrades arrows to "history substring search".
 ## Example: Type "git", press Up -> filters for previous "git" commands.
 
@@ -136,13 +136,13 @@ bindkey '^[OB' down-line-or-beginning-search
 
 
 # Menu Selection System
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Configuration for the tab completion menu.
 
 # Shift + Tab: Cycle backwards through the completion menu.
 [[ -n "${key_map[BackTab]}" ]] && bindkey -- "${key_map[BackTab]}" reverse-menu-complete
 
-# ── vi-mode navigation ─────────────────────────────────────────────────
+# ── vi-mode navigation ────────────────────────────────────────────────────────
 #
 
 if [[ "${ENABLE_VI_MODE:l}" == "yes" ]]; then
@@ -170,7 +170,7 @@ fi
 
 
 # Custom Widgets & Macros
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Advanced functions mapped to specific keystrokes.
 
 # Edit Command Line: Opens current buffer in $EDITOR (Vim/Nano).

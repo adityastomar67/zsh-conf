@@ -24,7 +24,7 @@
 # ------------------------------------------------------------------------------
 
 
-# ........................[  1. Initialization  ]........................ #
+# ........................[  1. Initialization  ]............................. #
 
 # Exit if functions are disabled in config
 [[ "${LOAD_CUSTOM_FUNCTIONS:l}" != "yes" ]] && return
@@ -46,7 +46,7 @@ else
 fi
 
 
-# ........................[  2. Debugging Tools  ]........................ #
+# ........................[  2. Debugging Tools  ]............................ #
 
 # ------------------------------------------------------------------------------
 # Function: _zsh_debug_startup
@@ -58,7 +58,7 @@ fi
 #   All output is redirected to log files in ~/.config/zsh-conf/logs/ to avoid
 #   flooding the terminal.
 # ------------------------------------------------------------------------------
-function _zsh_debug_startup() {
+_zsh_debug_startup() {
     # 1. Define Log Locations
     local log_dir="$HOME/zsh-logs"
     local debug_log="$log_dir/zsh-debug.log"
@@ -90,7 +90,13 @@ function _zsh_debug_startup() {
     ZSH_BENCHMARK="No" zsh -l -i -x -v 2>> "$debug_log"
 }
 
-function _zsh_reload() {
+
+# ------------------------------------------------------------------------------
+# Function: _zsh_reload
+# Description:
+#   A reloading utility that restarts the shell.
+# ------------------------------------------------------------------------------
+_zsh_reload() {
     # If the async git worker from prompt.zsh is active, kill it.
     if (( ${+_GIT_ASYNC_PID} )) && (( _GIT_ASYNC_PID > 0 )); then
         # Check if process exists (-0) then kill (-15)
@@ -101,7 +107,8 @@ function _zsh_reload() {
     exec zsh
 }
 
-# ........................[  3. Core Overrides  ]........................ #
+
+# ........................[  3. Core Overrides  ]............................. #
 
 # ------------------------------------------------------------------------------
 # Function: alias
@@ -124,7 +131,7 @@ if [[ "${LOAD_CUSTOM_ALIASES:l}" == "yes" ]]; then
 fi
 
 
-# ........................[  4. Developer Tools  ]........................ #
+# ........................[  4. Developer Tools  ]............................ #
 
 # ------------------------------------------------------------------------------
 # Function: lg
@@ -132,7 +139,7 @@ fi
 #   Wraps 'lazygit' to enable directory changing upon exit.
 #   Emulates the behavior of yazi/ranger file managers.
 # ------------------------------------------------------------------------------
-function lg() {
+lg() {
     if ! (( $+commands[lazygit] )); then
         print "${COLOR[RED]}Error:${COLOR[RESET]} 'lazygit' is not installed." >&2
         return 1
@@ -161,13 +168,13 @@ function lg() {
 pj() {
     emulate -L zsh # Reset zsh options for this function (prevents bugs)
 
-    # 1. Dependency Check
+    # Dependency Check
     if ! (( $+commands[fzf] )); then
         print "${COLOR[RED]}Error: fzf is required.$COLOR[RESET]"
         return 1
     fi
 
-    # 2. Configuration  # TODO: Move this to a user-editable config file or environment variable
+    # Configuration  # TODO: Move this to a user-editable config file or environment variable
     # Define your search roots here
     # Search paths defined in user.conf, fallback to defaults if missing
     local -a raw_paths
@@ -183,7 +190,7 @@ pj() {
         )
     fi
 
-    # 3. Fast Validation (Zsh Magic)
+    # Fast Validation (Zsh Magic)
     # (N/) filters the list to only existing directories.
     # $^ expands the array to apply the check to each element.
     local search_paths=($^raw_paths(N/))
@@ -193,17 +200,17 @@ pj() {
         return 1
     fi
 
-    # 4. Preview Strategy (Smart Fallback)
+    # Preview Strategy (Smart Fallback)
     local preview_cmd="ls -A --color=always {}"
     (( $+commands[eza] )) && preview_cmd="eza -1 --color=always --icons --group-directories-first --git {}"
 
-    # 5. Search Execution
+    # Search Execution
     local proj
     local fzf_opts=(
         --query "$*"       # Use function args as search query
         --select-1         # Auto-select if only 1 match found
         --exit-0           # Exit if query yields no results
-        --prompt="🚀 Jump > "
+        --prompt="  Jump > "
         --preview "$preview_cmd"
         --height=50%
         --layout=reverse
@@ -218,7 +225,7 @@ pj() {
         proj=$(find "${search_paths[@]}" -mindepth 1 -maxdepth 2 -type d 2>/dev/null | fzf "${fzf_opts[@]}")
     fi
 
-    # 6. Result Handling
+    # Result Handling
     if [[ -n "$proj" ]]; then
         # Zoxide / Autojump integration
         (( $+commands[zoxide] )) && zoxide add "$proj"
@@ -231,13 +238,13 @@ pj() {
 }
 
 
-# ........................[  5. Utilities  ]........................ #
+# ........................[  5. Utilities  ].................................. #
 
 # ------------------------------------------------------------------------------
 # Function: weather
 # Description: Fetches weather report using wttr.in.
 # ------------------------------------------------------------------------------
-function weather() {
+weather() {
     # 1. Dependency Check
     if ! (( $+commands[curl] )); then
         print "${COLOR[RED]}Error: curl is required.$COLOR[RESET]"
@@ -277,7 +284,7 @@ function weather() {
 }
 
 
-# ........................[  6. Kubernetes Production Guard  ]........................ #
+# ........................[  6. Kubernetes Production Guard  ]................ #
 
 # ------------------------------------------------------------------------------
 # Function: kubectl Overload
@@ -285,7 +292,7 @@ function weather() {
 #   A safety interceptor for kubectl. It prompts for confirmation if the current
 #   context is a production environment and the command is destructive.
 # ------------------------------------------------------------------------------
-function kubectl() {
+kubectl() {
     local cmd_args="$*"
 
     # 1. Check for destructive/modifying commands
@@ -317,7 +324,7 @@ function kubectl() {
 
 
 
-# ........................[  7. Lazy Loading Wrappers  ]........................ #
+# ........................[  7. Lazy Loading Wrappers  ]...................... #
 
 # ------------------------------------------------------------------------------
 # Function: nvm (Lazy Load)
@@ -325,37 +332,37 @@ function kubectl() {
 #   Loads NVM (Node Version Manager) only when a node-related command is run.
 #   Usage: nvm, node, npm, npx, pnpm, yarn
 # ------------------------------------------------------------------------------
-# 1. Define the commands that trigger loading
+# Define the commands that trigger loading
 _NVM_TRIGGERS=(nvm node npm npx pnpm yarn)
 
-# 2. Check if NVM exists before setting up triggers
-if [[ -d "$HOME/.nvm" ]]; then
+# The "Worker" function
+_nvm_lazy_load() {
+    # Cleanup: Unset the dummy functions
+    unset -f _nvm_lazy_load
+    for c in $_NVM_TRIGGERS; do unset -f $c 2>/dev/null; done
 
-    # The "Worker" function
-    _nvm_lazy_load() {
-        # Cleanup: Unset the dummy functions
-        unset -f _nvm_lazy_load
-        for c in $_NVM_TRIGGERS; do unset -f $c 2>/dev/null; done
+    # Setup: Load NVM
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-        # Setup: Load NVM
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    # Optional: Load bash completion (makes nvm usable immediately)
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
-        # Optional: Load bash completion (makes nvm usable immediately)
-        [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    # Execution: Run the command that triggered this function
+    # "$1" is the command name (e.g., 'npm'), "$@" are the args
+    local cmd="$1"
+    shift
+    "$cmd" "$@"
+}
 
-        # Execution: Run the command that triggered this function
-        # "$1" is the command name (e.g., 'npm'), "$@" are the args
-        local cmd="$1"
-        shift
-        "$cmd" "$@"
-    }
-
-    # 3. Create the dummy triggers
+# Check if NVM exists before setting up triggers
+if [[ -d "$HOME/.nvm" ]] || (( $+commands[nvm] )); then
+    # Create the dummy triggers
     for cmd in $_NVM_TRIGGERS; do
         eval "function $cmd() { _nvm_lazy_load \"$cmd\" \"\$@\"; }"
     done
 fi
+
 
 # ------------------------------------------------------------------------------
 # Function: pyenv (Lazy Load)
@@ -363,12 +370,11 @@ fi
 #   Loads Pyenv only when a python-related command is run.
 #   Usage: pyenv, python, pip, poetry
 # ------------------------------------------------------------------------------
-# Check if pyenv is in path OR installed in home
-# 1. Define the trigger command list
+# Define the trigger command list
 # Add any other pyenv-managed commands here (e.g., pytest, jupyter)
 _PYENV_TRIGGERS=(pyenv python pip poetry python3)
 
-# 2. The single "Worker" function
+# The single "Worker" function
 _pyenv_lazy_load() {
     # Cleanup: Remove the dummy functions/aliases so they don't loop
     unset -f _pyenv_lazy_load
@@ -395,7 +401,7 @@ _pyenv_lazy_load() {
     "$cmd" "$@"
 }
 
-# 3. Create the triggers
+# Create the triggers
 # We check if pyenv exists roughly (directory or binary) before setting traps
 if [[ -d "$HOME/.pyenv" ]] || (( $+commands[pyenv] )); then
     for cmd in $_PYENV_TRIGGERS; do
@@ -403,5 +409,3 @@ if [[ -d "$HOME/.pyenv" ]] || (( $+commands[pyenv] )); then
         eval "function $cmd() { _pyenv_lazy_load \"$cmd\" \"\$@\"; }"
     done
 fi
-
-

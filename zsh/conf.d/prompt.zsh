@@ -26,7 +26,7 @@
 
 
 # Shared Utilities
-# ────────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## Helper functions used across multiple themes to avoid code duplication.
 
 # Enable dynamic expansion within the prompt string.
@@ -289,7 +289,7 @@ function get_random_prompt_symbol() {
 # ── THEMES ─────────────────────────────────────────────────────────────
 
 # Theme: 'Z'
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## A minimalist theme optimized for speed.
 ## Uses the shared _git_engine to reduce code duplication.
 function theme_z() {
@@ -361,7 +361,7 @@ function theme_z() {
 
 
 # Theme: 'Gh0st'
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## A sleek, modern prompt using purely native Zsh features.
 ## No dependencies. Ultra-fast Git plumbing. Self-contained.
 function theme_gh0st() {
@@ -405,7 +405,7 @@ function theme_gh0st() {
 
 
 # Theme: 'Orbit'
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## A two-line prompt with connecting lines, resembling a spaceship HUD.
 function theme_orbit() {
     typeset -g _ORBIT_GIT_MSG=""
@@ -445,7 +445,7 @@ function theme_orbit() {
 
 
 # Theme: '10k'
-# ───────────────────────────────────────────────────────────────────────
+# ------------------------------------------------------------------------------
 ## A prompt with a timer, git status, and window title.
 ## No dependencies. Ultra-fast Git plumbing. Self-contained.
 function theme_10k() {
