@@ -166,8 +166,8 @@ fi
                    && alias emacs="emacsclient -c -a 'emacs'"
 
 # VS Code Wrapper (forces specific extension usage)
-# (( $+commands[code] ))  && alias code="code --extensions-dir '$HOME/.config/Code/User/extensions'"
-
+(( $+commands[code] ))  && alias code="code --extensions-dir '$HOME/.config/Code/User/extensions'"
+l
 
 # Utilities & Tools
 # ------------------------------------------------------------------------------

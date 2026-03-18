@@ -65,7 +65,8 @@ autoload -Uz zsettings
 
 # Clipboard Abstraction (Cross-Platform)
 #   - Detects the correct clipboard command based on OS.
-export _clip="cat" # Default fallback prevents crashes on headless servers
+#   - Default fallback prevents crashes on headless servers
+export _clip="cat"
 
 if [[ "$OSTYPE" == darwin* ]]; then
     _clip="pbcopy"

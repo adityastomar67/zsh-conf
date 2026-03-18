@@ -38,6 +38,9 @@ zmodload zsh/terminfo
 # Load the 'complist' module to enable keybindings inside the completion menu.
 zmodload zsh/complist
 
+# Initially load emacs mode
+bindkey -e
+
 
 # ── key code definitions ──────────────────────────────────────────────────────
 # Define a global associative array to map human-readable key names
@@ -125,14 +128,14 @@ bindkey '^[[3;5~' kill-word
 ## Example: Type "git", press Up -> filters for previous "git" commands.
 
 # Bind to standard ANSI Up/Down codes (fallbacks)
-bindkey '^[[A' up-line-or-beginning-search
-bindkey '^[OA' up-line-or-beginning-search
-bindkey '^[[B' down-line-or-beginning-search
-bindkey '^[OB' down-line-or-beginning-search
+bindkey '^[[A' history-beginning-search-backward
+bindkey '^[OA' history-beginning-search-backward
+bindkey '^[[B' history-beginning-search-forward
+bindkey '^[OB' history-beginning-search-forward
 
 # Bind to terminfo-detected codes (primary)
-[[ -n "${key_map[Up]}" ]]   && bindkey -- "${key_map[Up]}"   up-line-or-beginning-search
-[[ -n "${key_map[Down]}" ]] && bindkey -- "${key_map[Down]}" down-line-or-beginning-search
+[[ -n "${key_map[Up]}" ]]   && bindkey -- "${key_map[Up]}"   history-beginning-search-backward
+[[ -n "${key_map[Down]}" ]] && bindkey -- "${key_map[Down]}" history-beginning-search-forward
 
 
 # Menu Selection System
@@ -147,23 +150,23 @@ bindkey '^[OB' down-line-or-beginning-search
 
 if [[ "${ENABLE_VI_MODE:l}" == "yes" ]]; then
 
-    # 1. Activate Vi-Mode
+    # Activate Vi-Mode
     bindkey -v
     export KEYTIMEOUT=1 # Reduce delay when switching modes
 
-    # 2. Restore standard Ctrl keys lost by 'bindkey -v'
+    # Restore standard Ctrl keys lost by 'bindkey -v'
     bindkey '^?' "$DEL"
     bindkey '^h' "$DEL"
     bindkey '^w' backward-kill-word
     bindkey '^r' history-incremental-search-backward
 
-    # 3. Menu Navigation (hjkl) inside the completion menu
+    # Menu Navigation (hjkl) inside the completion menu
     bindkey -M menuselect 'h' vi-backward-char         # Left
     bindkey -M menuselect 'j' vi-down-line-or-history  # Down
     bindkey -M menuselect 'k' vi-up-line-or-history    # Up
     bindkey -M menuselect 'l' vi-forward-char          # Right
 
-    # 4. Menu Control
+    # Menu Control
     bindkey -M menuselect '^[' send-break  # Escape: Cancel menu
     bindkey -M menuselect '^M' accept-line # Enter: Accept selection
 fi

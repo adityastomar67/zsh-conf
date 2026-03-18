@@ -51,10 +51,8 @@ fi
 ## Iterates through distinct configuration files.
 ## We separate them into "Core" (Essential) and "Auxiliary" (Nice to have).
 
-# ------------------------------------------------------------------------------
 # Core Modules
 # These define the shell's behavior, appearance, and input handling.
-
 typeset -a core_modules
 core_modules=(
     "env"       # Environment variables overrides
@@ -69,10 +67,8 @@ for module in "${core_modules[@]}"; do
     [[ -f "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh" ]] && source "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh"
 done
 
-# ------------------------------------------------------------------------------
 # Auxiliary Modules
 # These are sourced silently to prevent startup noise from minor tools.
-
 function _load_aux_stuff() {
     local aux_modules=("functions" "aliases")
 
@@ -87,6 +83,7 @@ zsh-defer _load_aux_stuff
 
 # Defer loading the plugins
 zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
+
 
 # Background Optimization (Zcompile)
 # ─────────────────────────────────────────────────────────────────────────────────

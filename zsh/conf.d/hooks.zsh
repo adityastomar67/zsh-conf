@@ -29,14 +29,7 @@
 ## rather than just cycling through every command.
 
 # Load the function definitions from Zsh's function path
-autoload -Uz up-line-or-beginning-search \
-    down-line-or-beginning-search \
-    add-zsh-hook \
-    edit-command-line
-
-# Register them as ZLE widgets so they can be bound to keys
-zle -N up-line-or-beginning-search \
-    down-line-or-beginning-search
+autoload -Uz add-zsh-hook edit-command-line
 
 
 # Custom Editor Widgets
