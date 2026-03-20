@@ -179,8 +179,8 @@ fi
 # Edit Command Line: Opens current buffer in $EDITOR (Vim/Nano).
 bindkey '^e' edit-command-line
 
-# Smart Sudo Toggle: Toggles 'sudo' at start of line (Esc, Esc, Esc).
-bindkey "\e\e\e" toggle_sudo_prefix
+# Smart Sudo Toggle: Toggles 'sudo' at start of line (Alt + s).
+bindkey '\es' toggle_sudo_prefix
 
 # Magic Dot: Typing '...' becomes '../..'.
 bindkey '.' magic_dot_expansion
@@ -197,8 +197,8 @@ bindkey '^[c' copy_buffer_to_clipboard
 # Git FZF Fixup: Alt+f to select a commit to fixup.
 bindkey '^[f' git_fzf_fixup
 
-# Docker Connect: Alt+s to select and connect to a running container.
-bindkey '^[s' docker_connect_widget
+# Docker Connect: Alt+d to select and connect to a running container.
+bindkey '^[d' docker_connect_widget
 
 # Keybinding: Alt + p (for 'Popup')
 bindkey '^[p' pop-command
@@ -208,3 +208,6 @@ bindkey '^ ' autosuggest-accept
 
 # Expand Aliases on Space: When you type an alias and press space, it expands to the full command.
 bindkey ' ' expand-alias-on-space
+
+# Permanent key for Alt+c for Fzf
+bindkey '\ec' fzf-cd-widget

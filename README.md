@@ -234,7 +234,7 @@ Just type the file name to open it!
 ### The "Magic" Fixer
 
 - **`please`**: Forgot `sudo`? Type `please`, and it re-runs the last command with sudo.
-- **`esc^3`**: Or maybe you're in buffer and want to add sudo to the command? just escape thrice, and sudo will be added to the command.
+- **`Alt+s`**: Or maybe you're in buffer and want to add sudo to the command? just press `Alt+S`, and sudo will be added to the command.
 
 ### Contextual History Search
 
