@@ -489,8 +489,15 @@ alias ':q'='[ -n "$TMUX" ] && tmux kill-session -t $(tmux display-message -p "#S
 alias dday='date +"%Y.%m.%d - " | copy ; date +"%Y.%m.%d"'
 alias week='date +%V'
 
-# Cleanup
+
+# Memory Cleanup
+# ------------------------------------------------------------------------------
+# Because this file is sourced in the main shell context, 'local' variables
+# and 'for' loop iterators bleed into the global environment. We unset them
+# here to ensure zero footprint after the aliases are registered.
+
 unset detected_os
 unset _pac
 unset _sys_open
-
+unset _eza_opts
+unset n abbr dir s

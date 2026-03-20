@@ -328,6 +328,7 @@ if (( ${#DEFERRED_PATH_ENTRIES} )); then
     fi
 fi
 unset DEFERRED_PATH_ENTRIES
+zsh-defer unfunction _build_path 2>/dev/null
 
 
 # File Helpers

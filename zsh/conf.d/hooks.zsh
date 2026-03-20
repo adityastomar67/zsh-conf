@@ -428,20 +428,20 @@ play_error_sound() {
     local sound_file="$ZSH_CONFIG_ROOT/bin/faaah.mp3"
 
     # Guard: Proceed if command failed (-ne 0), AND was NOT:
-    if [[ $exit_code -ne 0 && \
-            $exit_code -ne 130 && \     # SIGINT  (Ctrl+C)
-            $exit_code -ne 129 && \     # SIGHUP  (Window/Tab Closed)
-            $exit_code -ne 143 && \     # SIGTERM (App Quit / Cmd+Q)
-            -f "$sound_file" ]]; then   # If sound file exists
+    # 130 = SIGINT  (Ctrl+C)
+    # 129 = SIGHUP  (Window/Tab Closed)
+    # 143 = SIGTERM (App Quit / Cmd+Q)
+    if [[ $exit_code -ne 0 &&
+          $exit_code -ne 130 &&
+          $exit_code -ne 129 &&
+          $exit_code -ne 143 &&
+          -f "$sound_file" ]]; then
 
         if [[ "$OSTYPE" == "darwin"* ]]; then
             # macOS: Volume is a float where 1.0 is 100%
             afplay -v 0.4 "$sound_file" >/dev/null 2>&1 &!
         elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
             # Native Linux (Tries paplay, then ffplay, then play)
-            # paplay volume is 0-65536 (19660 is ~30%)
-            # ffplay volume is 0-100
-            # play volume is a float multiplier
             {
                 paplay --volume=19660 "$sound_file" || \
                 ffplay -volume 40 -nodisp -autoexit "$sound_file" || \

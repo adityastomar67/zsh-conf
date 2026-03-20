@@ -154,3 +154,18 @@ elif [[ "${ENABLE_FANCY_STARTUP:l}" == "no" ]]; then
     # ---- SAFE: Fallback if benchmarking is disabled
     clear
 fi
+
+
+# Final Teardown & Memory Cleanup
+# ───────────────────────────────────────────────────────────────────────
+# The shell is completely booted. We aggressively purge the initialization
+# functions and routing variables from RAM to ensure a sterile global environment.
+
+zsh-defer unfunction _core.utils \
+           _ui.color \
+           _eval_cache \
+           _load_aux_stuff \
+           Defer \
+           _run_background_compilation 2>/dev/null
+
+unset RC

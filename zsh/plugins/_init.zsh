@@ -19,6 +19,7 @@
 #   This function (defined in _core.utils) iterates over the global $ZPLUGINS
 #   array in the $ZDOTDIR/user.conf file and installs missing dependencies.
 plug
+zsh-defer unfunction plug 2>/dev/null
 
 
 # ── conditional modules ──────────────────────────────────────────────────────

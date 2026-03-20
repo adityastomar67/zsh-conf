@@ -221,22 +221,52 @@ function _git_async_callback() {
 }
 
 # ── Hook Manager ───────────────────────────────────────────────────────
-typeset -g _CURRENT_PROMPT_HOOK=""
+typeset -g _ACTIVE_PRECMD=""
+typeset -g _ACTIVE_PREEXEC=""
+typeset -g _ACTIVE_CHPWD=""
 
-# Prevents duplicate hooks when switching themes
-function _register_prompt_hook() {
-    local hook_name="$1"
+function register_prompt_hook() {
+    local new_precmd="$1"
+    local new_preexec="$2"
+    local new_chpwd="$3"
 
-    # Remove all potential theme hooks first
-    add-zsh-hook -d precmd _gh0st_updater
-    add-zsh-hook -d precmd _orbit_updater
-    add-zsh-hook -d precmd _z_updater
-    add-zsh-hook -d precmd _10k_updater
-    add-zsh-hook -d preexec _10k_record_start
+    # We use ${(@)array:#value} to instantly delete the old hook from the array.
+    if [[ -n "$_ACTIVE_PRECMD" && "$_ACTIVE_PRECMD" != "$new_precmd" ]]; then
+        precmd_functions=("${(@)precmd_functions:#$_ACTIVE_PRECMD}")
+    fi
+    if [[ -n "$_ACTIVE_PREEXEC" && "$_ACTIVE_PREEXEC" != "$new_preexec" ]]; then
+        preexec_functions=("${(@)preexec_functions:#$_ACTIVE_PREEXEC}")
+    fi
+    if [[ -n "$_ACTIVE_CHPWD" && "$_ACTIVE_CHPWD" != "$new_chpwd" ]]; then
+        chpwd_functions=("${(@)chpwd_functions:#$_ACTIVE_CHPWD}")
+    fi
 
-    # Add the new one
-    add-zsh-hook precmd "$hook_name"
-    _CURRENT_PROMPT_HOOK="$hook_name"
+    # Nuke leftover Prompts (Instant)
+    RPROMPT=""
+    RPS1=""
+
+    # Native Hook Injection
+    # Only inject if it's not already in the array
+    if [[ -n "$new_precmd" ]]; then
+        (( ${precmd_functions[(I)$new_precmd]} )) || precmd_functions+=("$new_precmd")
+        _ACTIVE_PRECMD="$new_precmd"
+    else
+        _ACTIVE_PRECMD=""
+    fi
+
+    if [[ -n "$new_preexec" ]]; then
+        (( ${preexec_functions[(I)$new_preexec]} )) || preexec_functions+=("$new_preexec")
+        _ACTIVE_PREEXEC="$new_preexec"
+    else
+        _ACTIVE_PREEXEC=""
+    fi
+
+    if [[ -n "$new_chpwd" ]]; then
+        (( ${chpwd_functions[(I)$new_chpwd]} )) || chpwd_functions+=("$new_chpwd")
+        _ACTIVE_CHPWD="$new_chpwd"
+    else
+        _ACTIVE_CHPWD=""
+    fi
 }
 
 # ── Random Symbol ──────────────────────────────────────────────────────
@@ -350,7 +380,7 @@ function theme_z() {
 
     # 3. Register Hook
     #    Uses the shared helper to ensure clean switching
-    _register_prompt_hook _z_updater
+    register_prompt_hook _z_updater
 
     # 4. Final Left Prompt Assembly
     local prompt_symbol="➜"
@@ -387,7 +417,7 @@ function theme_gh0st() {
     }
 
     # Use the shared hook manager
-    _register_prompt_hook _gh0st_updater
+    register_prompt_hook _gh0st_updater
 
     # ── Visual Assets ──────────────────────────────────────────────────
     local icon_dir="%(~.%B%F{black}  .%B%F{cyan})%f%b"
@@ -430,7 +460,7 @@ function theme_orbit() {
         RPROMPT="%F{238}[%D{%T}]%f"
     }
 
-    _register_prompt_hook _orbit_updater
+    register_prompt_hook _orbit_updater
 
     # ── Construction ───────────────────────────────────────────────────
     local c_top="%F{blue}╭─%f"
@@ -493,9 +523,7 @@ function theme_10k() {
     }
 
     # 4. Hook Registration
-    _register_prompt_hook _10k_updater
-    add-zsh-hook preexec _10k_record_start
-    add-zsh-hook chpwd _10k_chpwd
+    register_prompt_hook _10k_updater _10k_record_start _10k_chpwd
 
     # ── Visual Assembly (Left Prompt) ──────────────────────────────────
 
@@ -526,3 +554,16 @@ case "$PROMPT_THEME" in
     "orbit")  theme_orbit  ;;
     *)        return       ;;
 esac
+
+
+# ── Memory Cleanup (The Pro Touch) ────────────────────────────────────
+# Once the active theme is loaded and its internal updater hooks are
+# registered in memory, the initializer functions are just dead weight.
+# We aggressively purge them from RAM to keep the shell footprint microscopic.
+
+zsh-defer unfunction theme_gh0st \
+    theme_z \
+    theme_10k \
+    theme_orbit \
+    register_prompt_hook \
+    get_random_prompt_symbol 2>/dev/null
