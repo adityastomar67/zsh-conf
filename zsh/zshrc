@@ -52,37 +52,25 @@ fi
 ## We separate them into "Core" (Essential) and "Auxiliary" (Nice to have).
 
 # Core Modules
-# These define the shell's behavior, appearance, and input handling.
-typeset -a core_modules
-core_modules=(
-    "env"       # Environment variables overrides
-    "options"   # Zsh setopt configurations
-    "hooks"     # Plugin manager initialization
-    "keybinds"  # Key bindings
-    "prompt"    # Prompt logic
-)
+# Defines the shell's behavior, appearance, and input handling.
+# Uses C-level path resolution to instantly source existing files.
 
-for module in "${core_modules[@]}"; do
-    # Source if file exists
-    [[ -f "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh" ]] && source "$ZSH_CONFIG_ROOT/conf.d/${module}.zsh"
+local _f
+
+for _f in "$ZSH_CONFIG_ROOT"/conf.d/{env,options,prompt}.zsh(N-.); do
+    source "$_f"
 done
 
-# Auxiliary Modules
-# These are sourced silently to prevent startup noise from minor tools.
-function _load_aux_stuff() {
-    local aux_modules=("functions" "aliases")
 
-    for module in "${aux_modules[@]}"; do
-        local target="$ZSH_CONFIG_ROOT/conf.d/${module}.zsh"
-        [[ -f "$target" ]] && source "$target"
-    done
-}
+# Auxiliary Modules & Plugins
+# We use nested brace expansion and C-level glob qualifiers to instantly resolve
+# and queue all configuration files across different directories in one pass.
 
-# Defer the whole operation
-zsh-defer _load_aux_stuff
+for _f in "$ZSH_CONFIG_ROOT"/{conf.d/{hooks,keybinds,functions,aliases},plugins/_init}.zsh(N-.); do
+    zsh-defer source "$_f"
+done
 
-# Defer loading the plugins
-zsh-defer source "$ZSH_CONFIG_ROOT/plugins/_init.zsh"
+unset _f
 
 
 # Background Optimization (Zcompile)

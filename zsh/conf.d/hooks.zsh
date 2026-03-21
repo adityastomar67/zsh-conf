@@ -182,7 +182,7 @@ ZSH_AUTOSUGGEST_CLEAR_WIDGETS+=(magic_enter)
 # PRE-CALCULATE: Decide the command ONCE at startup.
 #    We store the command and args in an array for safe execution.
 # ------------------------------------------------------------------------------
-typeset -a _chpwd_ls_cmd
+typeset -ga _chpwd_ls_cmd
 
 if (( $+commands[eza] )); then
     _chpwd_ls_cmd=(eza -al --color=always --icons --group-directories-first)

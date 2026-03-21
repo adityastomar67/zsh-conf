@@ -164,7 +164,6 @@ fi
 zsh-defer unfunction _core.utils \
            _ui.color \
            _eval_cache \
-           _load_aux_stuff \
            Defer \
            _run_background_compilation 2>/dev/null
 
