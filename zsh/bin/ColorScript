@@ -47,10 +47,10 @@ readonly count=${#scripts}
 # ------------------------------------------------------------------------------
 _help() {
     print "${COLOR[BOLD]}${COLOR[BLUE]}Description:${COLOR[RESET]} A collection of terminal color scripts.\n"
-    print "${COLOR[BOLD]}${COLOR[YELLOW]}Usage:${COLOR[RESET]} colorscript [OPTION] [SCRIPT NAME/INDEX]\n"
+    print "${COLOR[BOLD]}${COLOR[YELLOW]}Usage:${COLOR[RESET]} ColorScript [OPTION] [SCRIPT NAME/INDEX]\n"
 
     # Using Zsh associative array (Hash map) for cleaner formatting
-    local -A options
+    local -a options
     options=(
         "-h" "Print this help."
         "-l" "List all installed color scripts."
@@ -60,7 +60,7 @@ _help() {
 
     # Iterate over keys (k) and values (v)
     for k v in ${(kv)options}; do
-        print -f "  %-3s\t%s\n" "$k" "$v"
+        printf "  %-3s\t%s\n" "$k" "$v"
     done
 }
 

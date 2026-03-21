@@ -112,6 +112,9 @@ bindkey '^I' complete-word
 # Jump to end of line (End key)
 [[ -n "${key_map[End]}" ]]  && bindkey -- "${key_map[End]}"  end-of-line
 
+# Jump to end of line (Ctrl + -) -- Modern Terminals (Ghostty, Kitty, WezTerm using CSI u protocols)
+bindkey '^[[45;5u' end-of-line
+
 
 # Deletion Logic
 # ------------------------------------------------------------------------------
