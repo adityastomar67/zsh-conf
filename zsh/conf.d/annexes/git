@@ -391,19 +391,17 @@ function __status() {
 #   - Allows switching branches or checking out specific commits (Detached HEAD).
 #   - Supports deleting local branches.
 # -----------------------------------------------------------------------------
+# ── Git Checkout Interface ────────────────────────────────────────────────────
+# Function: __checkout
+# Logic:
+#   - Lists local and remote branches.
+#   - Allows switching branches or checking out specific commits (Detached HEAD).
+#   - Supports deleting local branches.
+# -----------------------------------------------------------------------------
 function __checkout() {
-    if [[ "$#" -gt 0 ]]; then
-        command git checkout "$@"
-        return $?
-    fi
-
-    if ! (( $+commands[fzf] )); then
-        command git branch -a
-        return 0
-    fi
-
     # --- COLOR PIPELINE HELPER ---
-    # We define the sed rules in a variable so we can reuse it for both manual and FZF checkouts
+    # Moved to the top so it applies to BOTH manual args and FZF interactive mode!
+    # --- COLOR PIPELINE HELPER ---
     local format_checkout=(
         sed
         -e "s/^\(Switched to branch \)\('[^']*'\)/${COLOR[GREEN]}\1${COLOR[CYAN]}\2${COLOR[RESET]}/g"
@@ -416,7 +414,33 @@ function __checkout() {
         -e "s/^\(and have [0-9]* and [0-9]* different commits each, respectively.\)/${COLOR[RED]}\1${COLOR[RESET]}/g"
         -e "s/^\(.*use \"git pull\".*\)/${COLOR[DIM]}\1${COLOR[RESET]}/g"
         -e "s/^\(HEAD is now at \)\([a-f0-9]\{7,\}\)/${COLOR[MAGENTA]}\1${COLOR[CYAN]}\2${COLOR[RESET]}/g"
+
+        # ── STATUS ICONS (Matching __status) ─────────────────────────
+        # M = Modified (Yellow)
+        -e "s/^M\([[:space:]]\{1,\}\)\(.*\)/ ${COLOR[YELLOW]}${COLOR[RESET]}\1${COLOR[DIM]}\2${COLOR[RESET]}/g"
+        # D = Deleted (Red)
+        -e "s/^D\([[:space:]]\{1,\}\)\(.*\)/ ${COLOR[RED]}${COLOR[RESET]}\1${COLOR[DIM]}\2${COLOR[RESET]}/g"
+        # A = Added (Green)
+        -e "s/^A\([[:space:]]\{1,\}\)\(.*\)/ ${COLOR[GREEN]}${COLOR[RESET]}\1${COLOR[DIM]}\2${COLOR[RESET]}/g"
+        # R = Renamed (Magenta)
+        -e "s/^R\([[:space:]]\{1,\}\)\(.*\)/ ${COLOR[MAGENTA]}󰑕${COLOR[RESET]}\1${COLOR[DIM]}\2${COLOR[RESET]}/g"
+        # U = Unmerged/Conflict (Red)
+        -e "s/^U\([[:space:]]\{1,\}\)\(.*\)/ ${COLOR[RED]}${COLOR[RESET]}\1${COLOR[DIM]}\2${COLOR[RESET]}/g"
     )
+
+    # --- MODE 1: Manual Arguments Provided ---
+    if [[ "$#" -gt 0 ]]; then
+        # Must use 2>&1 because checkout prints branch switches to stderr!
+        command git checkout "$@" 2>&1 | "${format_checkout[@]}"
+
+        # Return the exit code of 'git checkout', not 'sed'
+        return ${pipestatus[1]}
+    fi
+
+    if ! (( $+commands[fzf] )); then
+        command git branch -a
+        return 0
+    fi
 
     # --- DYNAMIC WIDTH CALCULATION ---
     local list_width=$(( COLUMNS * 40 / 100 ))
@@ -427,7 +451,7 @@ function __checkout() {
     local msg_width=$(( list_width - br_width - date_width - 8 ))
     (( msg_width < 10 )) && msg_width=10
 
-    # --- MODE 1: Branches (AWK Powered Truncation) ---
+    # --- MODE 2: Branches (AWK Powered Truncation) ---
     local h_br=$(printf "%-32s" "Branch")
     local h_msg=$(printf "%-${msg_width}s" "Latest Commit")
 
@@ -436,7 +460,7 @@ function __checkout() {
     # We strip Git colors, let AWK truncate the strings safely by character count, and inject the colors dynamically!
     local cmd_br="git branch --all --sort=-committerdate --format='%(HEAD)|%(refname:short)|%(contents:subject)|%(committerdate:relative)' | awk -F'|' -v mw=\"$msg_width\" -v bw=\"$br_width\" 'BEGIN { cy=\"\033[33m\"; cm=\"\033[35m\"; cd=\"\033[2m\"; cg=\"\033[32m\"; cr=\"\033[0m\" } { h=\$1; b=\$2; m=\$3; d=\$4; if(length(b)>bw) b=substr(b,1,bw-3)\"...\"; bp=sprintf(\"%-\"bw\"s\",b); if(length(m)>mw) m=substr(m,1,mw-3)\"...\"; mp=sprintf(\"%-\"mw\"s\",m); printf \"%s%2s%s %s%s%s │ %s%s%s │ %s%s%s\\n\", cy,h,cr, cm,bp,cr, cd,mp,cr, cg,d,cr }'"
 
-    # --- MODE 2: Commits (Invisible Graph Grid) ---
+    # --- MODE 3: Commits (Invisible Graph Grid) ---
     local keys_com=$'\033[1;33m• Enter:\033[0m Checkout (Detached)   \033[1;33m• Ctrl-B:\033[0m View Branches\n\n'
     local fmt_com="%C(bold blue)%h%C(reset)%<|(24)%x20 %C(dim)%<(14,trunc)%ar%C(reset)  %C(yellow)%<(15,trunc)%an%C(reset)  %C(auto)%d%C(reset) %s"
     local cmd_com="git log --all --graph --color=always --format=\"$fmt_com\""
