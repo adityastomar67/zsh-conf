@@ -209,8 +209,9 @@ function _git_async_callback() {
             # 2. Trigger Re-render and Redraw Prompt
             # Only update and redraw if ZLE is active
             if zle 2>/dev/null; then
-                if [[ -n "$_CURRENT_PROMPT_HOOK" ]]; then
-                    "$_CURRENT_PROMPT_HOOK" 2>/dev/null
+                # Re-run the active theme's updater to rebuild visual strings
+                if [[ -n "$_ACTIVE_PRECMD" ]]; then
+                    "$_ACTIVE_PRECMD" 2>/dev/null
                 fi
                 zle reset-prompt 2>/dev/null
             fi
