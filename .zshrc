@@ -155,6 +155,12 @@ elif [[ "${ENABLE_FANCY_STARTUP:l}" == "no" ]]; then
     clear
 fi
 
+# TODO: Enhnce these logs feature in future
+if (( ${+_ZSH_RELOAD_LOG} )); then
+    print -r -- "$_ZSH_RELOAD_LOG"
+    unset _ZSH_RELOAD_LOG
+fi
+
 
 # Final Teardown & Memory Cleanup
 # ───────────────────────────────────────────────────────────────────────
