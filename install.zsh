@@ -904,7 +904,7 @@ EOF
 
     # Inject Welcome Screen source if missing
     if ! grep -q "_ui.welcome" "${CONFIG_PATHS[REPO]}/.zshrc"; then
-        print 'source "$ZSH_CONFIG_ROOT/lib/_ui.welcome"' >> "${CONFIG_PATHS[REPO]}/.zshrc"
+        print '\nsource "$ZSH_CONFIG_ROOT/lib/_ui.welcome"' >> "${CONFIG_PATHS[REPO]}/.zshrc"
     fi
     sleep 2
 
