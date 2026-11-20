@@ -127,4 +127,3 @@ if "$editor" "$config_file"; then
 else
     print -P "\n%F{red}::%f Edit aborted."
 fi
-

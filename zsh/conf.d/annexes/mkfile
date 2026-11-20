@@ -148,4 +148,3 @@ for file in "$@"; do
         print "   ${COLOR[BLUE]}⚡${COLOR[RESET]} Made executable (chmod +x)"
     fi
 done
-

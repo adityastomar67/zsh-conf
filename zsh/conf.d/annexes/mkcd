@@ -145,4 +145,3 @@ if [[ -n "$(ls -A . 2>/dev/null)" ]]; then
 else
     print "\n${COLOR[GREY]}(Directory is empty)${COLOR[RESET]}"
 fi
-

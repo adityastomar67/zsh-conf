@@ -225,4 +225,3 @@ if [[ "${ENABLE_AUTO_TMUX:l}" == "yes" ]] && (( $+commands[tmux] )) && [[ -z "$T
     # -s: Session name ('b001')
     exec tmux new-session -A -s b001
 fi
-
