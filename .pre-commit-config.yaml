@@ -1,24 +1,113 @@
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
 
 repos:
-  # General file hygiene and security checks
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
-    hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-added-large-files
-      - id: check-executables-have-shebangs
-      - id: check-shebang-scripts-are-executable
-      - id: check-merge-conflict
-      - id: detect-private-key
+    # ==========================================================================
+    # 1. File Hygiene, Symlinks & Line Endings
+    # ==========================================================================
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v6.0.0
+      hooks:
+          - id: trailing-whitespace
+          - id: end-of-file-fixer
+          - id: mixed-line-ending
+            args: [--fix=lf] # Prevents CRLF (\r) breaking Zsh scripts
+          - id: check-yaml
+          - id: check-json
+          - id: check-toml
+          - id: check-added-large-files
+            args: [--maxkb=500]
+          - id: check-case-conflict
+          - id: check-symlinks
+          - id: destroyed-symlinks # Catches symlinks accidentally turned into plain text
+          - id: check-executables-have-shebangs
+          - id: check-shebang-scripts-are-executable
+          - id: check-merge-conflict
+          - id: detect-private-key
 
-  # Native Zsh syntax check
-  - repo: local
-    hooks:
-      - id: zsh-syntax-check
-        name: Check Zsh syntax
-        entry: zsh -n
-        language: system
-        files: \.(zsh|zprofile|zshrc|zshenv|zlogin|zlogout)$
-        types_or: [file]
+    # ==========================================================================
+    # 2. Secrets & Credential Scanning (Tokens, PATs, API Keys in Env Exports)
+    # ==========================================================================
+    - repo: https://github.com/gitleaks/gitleaks
+      rev: v8.30.0
+      hooks:
+          - id: gitleaks
+
+    # ==========================================================================
+    # 3. ShellCheck (Strictly Scoped to POSIX sh / Bash Helper Scripts)
+    #    Excluded from Zsh files since ShellCheck does not support Zsh syntax.
+    # ==========================================================================
+    - repo: https://github.com/shellcheck-py/shellcheck-py
+      rev: v0.11.0.1-1
+      hooks:
+          - id: shellcheck
+            args: [--severity=warning]
+            exclude_types: [zsh]
+            exclude: '(^|/)\.?z(sh|profile|shenv|shrc|login|logout)$|\.zsh(-theme)?$'
+
+    # ==========================================================================
+    # 4. Zsh-Specific Validation & Repo Guardrails
+    # ==========================================================================
+    - repo: local
+      hooks:
+          # Fix: loop over "$@" because `zsh -n f1 f2` only checks f1
+          - id: zsh-syntax-check
+            name: Check Zsh syntax (all staged files)
+            language: system
+            files: '(^|/)\.?z(sh|profile|shenv|shrc|login|logout)$|\.zsh(-theme)?$'
+            types: [text]
+            entry: >-
+                zsh -c '
+                  status=0
+                  for f in "$@"; do
+                    zsh -n -- "$f" || status=1
+                  done
+                  exit $status
+                ' --
+
+          # Dry-run zcompile into a temp dir to ensure .zwc compilation never breaks
+          - id: zsh-zcompile-check
+            name: Verify Zsh zcompile compatibility
+            language: system
+            files: '(^|/)\.?z(sh|profile|shenv|shrc|login|logout)$|\.zsh(-theme)?$'
+            types: [text]
+            entry: >-
+                zsh -c '
+                  emulate -L zsh
+                  tmp=$(mktemp -d) || exit 1
+                  trap "rm -rf -- \"$tmp\"" EXIT
+                  status=0
+                  i=0
+                  for f in "$@"; do
+                    zcompile -- "$tmp/$((++i)).zwc" "$f" || status=1
+                  done
+                  exit $status
+                ' --
+
+          # Block generated Zsh bytecode and completion dumps from ever being committed
+          - id: forbid-zsh-artifacts
+            name: Forbid compiled Zsh artifacts (.zwc / .zcompdump)
+            language: fail
+            entry: "Do not commit generated .zwc or .zcompdump files — add them to .gitignore."
+            files: '(\.zwc(\.old)?$|(^|/)\.zcompdump)'
+
+          # Catch leftover tracing/profiling flags before committing
+          - id: no-zsh-debug-leftovers
+            name: Block leftover Zsh debug/profiling statements
+            language: pygrep
+            entry: '^\s*(set\s+-x|setopt\s+xtrace|zmodload\s+zsh/zprof)\b'
+            files: '(^|/)\.?z(sh|profile|shenv|shrc|login|logout)$|\.zsh(-theme)?$'
+            types: [text]
+
+          # Heavy check on push only: boot an isolated Zsh instance to catch runtime load errors
+          # Adjust ZDOTDIR below if your .zshrc lives inside a subdirectory (e.g., "$PWD/zsh")
+          - id: zsh-startup-smoke-test
+            name: Smoke test Zsh startup (pre-push)
+            language: system
+            stages: [pre-push]
+            pass_filenames: false
+            always_run: true
+            entry: >-
+                zsh -c '
+                  ZDOTDIR="$PWD" zsh -i -c "exit 0"
+                '
