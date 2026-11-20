@@ -132,4 +132,3 @@ print "${COLOR[BLUE]}╰──────────────────�
 
 print "   ${COLOR[GREEN]}✔${COLOR[RESET]} Optimized file saved to: ${COLOR[BOLD]}$source_file${COLOR[RESET]}"
 print "   ${COLOR[GREY]}Backup saved to: $source_file.bak${COLOR[RESET]}"
-

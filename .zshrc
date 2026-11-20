@@ -107,7 +107,7 @@ if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
     # Filter out commands that are not installed on the system
     local -a valid_commands=()
     local cmd cmd_name
-    
+
     # available_visual_commands array defined in user.conf file
     for cmd in "${available_visual_commands[@]}"; do
         cmd_name=${${(z)cmd}[1]}

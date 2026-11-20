@@ -244,4 +244,3 @@ else
     print "\n${COLOR[RED]}[FATAL]${COLOR[RESET]} Failed to enter directory."
     return 1
 fi
-

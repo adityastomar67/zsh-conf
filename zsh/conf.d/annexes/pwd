@@ -120,4 +120,3 @@ if $copy; then
     print -n "$raw_path" | eval "$_clip"
     print "  ${COLOR[GREEN]}✓${COLOR[RESET]} ${COLOR[DIM]}Path copied to clipboard!${COLOR[RESET]}"
 fi
-

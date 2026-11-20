@@ -103,4 +103,3 @@ fzf \
 awk '{print $2, $1}' | \
 sed 's/,//g' | \
 xargs -r man
-

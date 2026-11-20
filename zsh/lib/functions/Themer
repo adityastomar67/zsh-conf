@@ -57,7 +57,3 @@
     zle -N _last_theme
     bindkey '^O' _last_theme
 }
-
-
-
-
