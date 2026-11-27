@@ -161,11 +161,11 @@ elif [[ "${ENABLE_FANCY_STARTUP:l}" == "no" ]]; then
     printf '\033[2J\033[H'
 fi
 
-# TODO: Enhnce these logs feature in future
-if (( ${+_ZSH_RELOAD_LOG} )); then
-    print -r -- "$_ZSH_RELOAD_LOG"
-    unset _ZSH_RELOAD_LOG
-fi
+# Startup Logs
+# ───────────────────────────────────────────────────────────────────────
+## Flushes any queued in-memory startup logs and env handoff logs (e.g. from
+## _zsh_reload) after the screen clear / benchmark UI so nothing is wiped out.
+_zsh_flush_logs
 
 
 # Final Teardown & Memory Cleanup
@@ -177,6 +177,8 @@ zsh-defer unfunction _core.utils \
            _ui.color \
            _eval_cache \
            Defer \
-           _run_background_compilation 2>/dev/null
+           _run_background_compilation \
+           _zsh_log \
+           _zsh_flush_logs 2>/dev/null
 
 unset RC

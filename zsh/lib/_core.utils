@@ -38,6 +38,50 @@ autoload -Uz compinit
 # Load color definitions (UI helpers)
 autoload -Uz _ui.color && _ui.color
 
+# Startup Logging (In-Memory + Env Handoff)
+# ───────────────────────────────────────────────────────────────────────
+## Collects startup messages in memory and flushes them after the screen clear /
+## benchmark UI so nothing is wiped out. Zero disk I/O and zero overhead when empty.
+
+typeset -ga _ZSH_STARTUP_LOGS=()
+
+# Usage: _zsh_log <info|warn|error|raw> <message>
+function _zsh_log() {
+    local level="${1:-info}"
+    shift
+    local prefix=""
+
+    case "${level:l}" in
+        info)  prefix="${COLOR[GREEN]}[INFO]${COLOR[RESET]}  " ;;
+        warn)  prefix="${COLOR[YELLOW]}[WARN]${COLOR[RESET]}  " ;;
+        error) prefix="${COLOR[RED]}[ERROR]${COLOR[RESET]} " ;;
+        raw)   prefix="" ;;
+        *)     prefix="${COLOR[CYAN]}[${level:u}]${COLOR[RESET]} " ;;
+    esac
+
+    _ZSH_STARTUP_LOGS+=( "  ${prefix}$*" )
+}
+
+# Flushes queued startup logs and any logs handed off across `exec zsh`.
+function _zsh_flush_logs() {
+    if (( ${+_ZSH_ENV_LOGS} )) && [[ -n "$_ZSH_ENV_LOGS" ]]; then
+        _ZSH_STARTUP_LOGS+=( "${(@f)_ZSH_ENV_LOGS}" )
+        unset _ZSH_ENV_LOGS
+    fi
+
+    if (( ${+_ZSH_RELOAD_LOG} )) && [[ -n "$_ZSH_RELOAD_LOG" ]]; then
+        _ZSH_STARTUP_LOGS+=( "${(@f)_ZSH_RELOAD_LOG}" )
+        unset _ZSH_RELOAD_LOG
+    fi
+
+    if (( ${#_ZSH_STARTUP_LOGS} )); then
+        print -l -- "${_ZSH_STARTUP_LOGS[@]}"
+        print
+    fi
+
+    unset _ZSH_STARTUP_LOGS
+}
+
 # Add custom binaries to PATH
 export PATH="$PATH:$ZSH_CONFIG_ROOT/bin"
 
