@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 # ------------------------[  ZSH CONFIGURATION UNINSTALLER  ]------------------------ #
-# This script removes the custom Zsh configuration, symlinks, and plugins.
+# This script removes the custom Zsh configuration, ZDOTDIR setup, and plugins.
 #
 # ARCHITECTURE (Object-Based):
 #   1. Theme::        -> Colors, Icons, and visual constants.
@@ -49,16 +49,15 @@ typeset -a PluginDirs
 
 Config::init() {
     Paths[REPO]="$HOME/.config/zsh-conf"
-    Paths[RC]="${ZDOTDIR:-$HOME}/.zshrc"
-    Paths[ENV]="${ZDOTDIR:-$HOME}/.zshenv"
+    Paths[BACKUP]="${Paths[REPO]}_backups"
+    Paths[RC]="$HOME/.zshrc"
+    Paths[ENV]="$HOME/.zshenv"
     Paths[TEMP]="$HOME/User-Overrides.zsh"
     Paths[CACHE]="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-cache"
 
-    # Plugin Managers installed by plugs.zsh
+    # Plugin storage used by plug() (user.conf ZPLUGIN_STORAGE_DIR)
     PluginDirs=(
-        "$HOME/.zinit"
-        "$HOME/.oh-my-zsh"
-        "$HOME/.local/share/zap"
+        "${ZPLUGIN_STORAGE_DIR:-$HOME/.local/share/zsh/plugins}"
     )
 }
 
@@ -199,10 +198,9 @@ Cleaner::remove_dir() {
 
 Cleaner::remove_cache() {
     {
-        # Remove compiled zsh files and caches
+        # Remove compiled zsh files and caches (only top-level in $HOME, never recurse into user repos)
         command rm -rf "${Paths[CACHE]}"
-        command find "$HOME" -name ".zcompdump*" -delete 2>/dev/null
-        command find "$HOME" -name "*.zwc" -delete 2>/dev/null
+        command rm -f "$HOME"/.zcompdump*(N) "$HOME"/*.zwc(N)
     } &
 
     UI::spinner $! "Cleaning Cache..."
@@ -211,10 +209,10 @@ Cleaner::remove_cache() {
 }
 
 Cleaner::restore_shell() {
-    if [[ $SHELL == "/usr/bin/zsh" ]] || [[ $SHELL == "/bin/zsh" ]]; then
-        if command -v bash &>/dev/null; then
+    if [[ "${SHELL:t}" == "zsh" ]]; then
+        if (( $+commands[bash] )); then
             if UI::confirm "Switch default shell back to Bash?"; then
-                chsh -s $(which bash)
+                chsh -s "$commands[bash]"
                 Log::success "Default shell set to Bash."
             fi
         else
@@ -233,7 +231,7 @@ Uninstaller::run() {
     Config::init
     UI::header
 
-    UI::typewriter "  :: Initializing cleanup sequence..." "${Color[R]}"
+    UI::typewriter "  :: Initializing cleanup sequence..."
     sleep 1
     printf "\n"
 
@@ -248,12 +246,18 @@ Uninstaller::run() {
         exit 0
     fi
 
-    # 2. Remove Symlinks
+    # 2. Remove ZDOTDIR / Entry-point Links & Files
     UI::header
-    Log::info "Removing Configuration Links..."
+    Log::info "Removing Configuration Entry Points..."
     sleep 1
     Cleaner::remove_symlinks "${Paths[RC]}"
-    Cleaner::remove_symlinks "${Paths[ENV]}"
+    if [[ -f "${Paths[ENV]}" ]] && grep -q 'ZDOTDIR="$HOME/.config/zsh-conf"' "${Paths[ENV]}" 2>/dev/null; then
+        local timestamp=$(date +%Y%m%d_%H%M%S)
+        mv "${Paths[ENV]}" "${Paths[ENV]}.bak_${timestamp}"
+        Log::backup "Backed up and cleared ZDOTDIR from ${Paths[ENV]}"
+    else
+        Cleaner::remove_symlinks "${Paths[ENV]}"
+    fi
     Cleaner::remove_symlinks "${Paths[TEMP]}"
 
     # 3. Remove Repository
@@ -298,11 +302,11 @@ Uninstaller::run() {
     echo
     sleep 2
 
-    # Check for backups to remind user
-    local backup_count=$(ls -1 "$HOME" | grep ".zshrc_" | wc -l)
-    if [[ $backup_count -gt 0 ]]; then
-        Log::info "Note: You have $backup_count backup(s) of .zshrc in $HOME."
-        Log::info "You may want to manually restore one: 'mv .zshrc_DATE .zshrc'"
+    # Check for installer backups to remind user
+    local -a backups=( "${Paths[BACKUP]}"/**/*(DN.) )
+    if (( ${#backups} > 0 )); then
+        Log::info "Note: You have ${#backups} backup file(s) in ${Paths[BACKUP]}."
+        Log::info "You may restore your previous .zshrc / .zshenv from there."
         sleep 2
     fi
 
