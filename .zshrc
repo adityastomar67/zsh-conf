@@ -120,7 +120,7 @@ if [[ "${ENABLE_FANCY_STARTUP:l}" == "yes" ]]; then
     if (( ${#valid_commands} > 0 )); then
         # Pick random index (1-based indexing)
         local random_idx=$(( RANDOM % ${#valid_commands} + 1 ))
-        clear
+        printf '\033[2J\033[H'
         ${=valid_commands[$random_idx]}     # Execute the command
         print
     fi
@@ -143,7 +143,7 @@ if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
         source "$ZSH_CONFIG_ROOT/lib/_ui.benchmark"
     else
         # ---- SAFE: Fallback if UI file is missing
-        clear
+        printf '\033[2J\033[H'
         print "${COLOR[BOLD]}${COLOR[RED]}Benchmark UI file not found at: ${COLOR[DIM]}$BENCH_UI${COLOR[RESET]}"
         print -f \
             "${COLOR[YELLOW]}Total startup time: ${COLOR[CYAN]}%6.2f ${COLOR[YELLOW]}ms${COLOR[RESET]}\n\n" \
@@ -152,7 +152,7 @@ if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
     unset total_duration_ms _startup_timer
 elif [[ "${ENABLE_FANCY_STARTUP:l}" == "no" ]]; then
     # ---- SAFE: Fallback if benchmarking is disabled
-    clear
+    printf '\033[2J\033[H'
 fi
 
 # TODO: Enhnce these logs feature in future

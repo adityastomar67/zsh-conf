@@ -31,6 +31,9 @@
 # Load the function definitions from Zsh's function path
 autoload -Uz add-zsh-hook edit-command-line
 
+# Load zsh/parameter once at module-load time (not per-keypress inside magic_enter)
+zmodload -F zsh/parameter p:jobstates 2>/dev/null
+
 
 # Custom Editor Widgets
 # ------------------------------------------------------------------------------
@@ -103,8 +106,8 @@ expand-alias-on-space() {
     # Get the last word typed
     local word="${LBUFFER##* }"
 
-    # Check if it is a defined alias
-    if alias "$word" >/dev/null 2>&1; then
+    # Check in-memory alias tables directly (avoids invoking the wrapped 'alias' function)
+    if (( $+aliases[$word] || $+galiases[$word] )); then
         # Expand it (native Zsh widget)
         zle _expand_alias
     fi
@@ -133,7 +136,7 @@ magic_enter() {
     print ""
 
     # ::: Background Jobs Detector :::
-    if [[ $(jobs | wc -l) -gt 0 ]]; then
+    if (( ${#jobstates} > 0 )); then
         print "${COLOR[CYAN]}::: Background Jobs :::${COLOR[RESET]}"
         jobs
         print ""
@@ -148,14 +151,9 @@ magic_enter() {
     fi
 
     # ::: Smart Git Status :::
-    # Optimization: Use porcelain status to check for ANY change (staged, modified, untracked)
-    # This is much faster than ls-files + diff-index.
-    # We ignore submodules for speed unless they are dirty.
-    if [[ -d .git ]] || git rev-parse --is-inside-work-tree &>/dev/null; then
-
-        # Check if dirty (Exit code 0 = clean, but here we capture output)
-        # We capture the first line. If it's not empty, it's dirty.
-        if [[ -n $(command git status --porcelain --ignore-submodules=dirty 2>/dev/null | head -n 1) ]]; then
+    # Pure-Zsh upward .git check avoids spawning git outside repositories.
+    if is_in_git_repo; then
+        if [[ -n $(command git status --porcelain --ignore-submodules=dirty 2>/dev/null) ]]; then
              # Dirty State
             print "${COLOR[YELLOW]}::: Git Status (Dirty) :::${COLOR[RESET]}"
             git status -sb
@@ -203,11 +201,9 @@ chpwd_auto_ls() {
     if [[ "$PWD" == /Volumes* || "$PWD" == /Network* ]]; then
         return
     fi
-    # Size Guard: Check file count quickly
-    #    ls -1A = one column, all files
-    #    wc -l  = count lines
-    local count=$(command ls -1A | wc -l)
-    count=${count// /}
+    # Size Guard: Pure-Zsh glob count avoids spawning ls | wc -l on every cd
+    local -a _entries=( *(ND) )
+    local count=${#_entries}
 
     if (( count > 100 )); then
         print "${COLOR[DIM]}::: Directory contains $count files. Auto-LS skipped. :::${COLOR[RESET]}"

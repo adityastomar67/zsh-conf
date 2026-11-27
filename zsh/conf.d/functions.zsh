@@ -44,6 +44,7 @@ else
     # Fallback: Load individual files
     autoload -Uz "$ZSH_CONFIG_ROOT/conf.d/annexes/"*(N:t)
 fi
+unset digest
 
 
 # ........................[  2. Debugging Tools  ]............................ #
@@ -437,11 +438,10 @@ _nvm_lazy_load() {
 
 # Check if NVM exists before setting up triggers
 if [[ -d "$HOME/.nvm" ]] || (( $+commands[nvm] )); then
-    # Create the dummy triggers
-    for cmd in $_NVM_TRIGGERS; do
-        eval "function $cmd() { _nvm_lazy_load \"$cmd\" \"\$@\"; }"
-    done
+    # Native multi-name function definition avoids eval loops
+    nvm node npm npx pnpm yarn() { _nvm_lazy_load "$0" "$@"; }
 fi
+unset _NVM_TRIGGERS
 
 
 # ------------------------------------------------------------------------------
@@ -484,8 +484,6 @@ _pyenv_lazy_load() {
 # Create the triggers
 # We check if pyenv exists roughly (directory or binary) before setting traps
 if [[ -d "$HOME/.pyenv" ]] || (( $+commands[pyenv] )); then
-    for cmd in $_PYENV_TRIGGERS; do
-        # Define a function for each trigger that calls the loader
-        eval "function $cmd() { _pyenv_lazy_load \"$cmd\" \"\$@\"; }"
-    done
+    pyenv python pip poetry python3() { _pyenv_lazy_load "$0" "$@"; }
 fi
+unset _PYENV_TRIGGERS

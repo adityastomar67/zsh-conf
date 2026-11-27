@@ -66,9 +66,10 @@ key_map[Ctrl-Right]="${terminfo[kRIT5]:-^[[1;5C}"
 # ── standard editing fixes ──────────────────────────────────────────────────
 # Standard Backspace logic (delete character to the left).
 
-# We use the $DEL variable (defined in zle.zsh) which handles autopair logic.
-bindkey "^?" "$DEL"
-bindkey "^H" "$DEL"
+# Standard Backspace logic (delete character to the left).
+# (zsh-autopair wraps backward-delete-char automatically when loaded.)
+bindkey "^?" backward-delete-char
+bindkey "^H" backward-delete-char
 
 # Buffer Deletion Commands:
 # Ctrl + U: Clear the entire line to the left of the cursor.
@@ -158,8 +159,8 @@ if [[ "${ENABLE_VI_MODE:l}" == "yes" ]]; then
     export KEYTIMEOUT=1 # Reduce delay when switching modes
 
     # Restore standard Ctrl keys lost by 'bindkey -v'
-    bindkey '^?' "$DEL"
-    bindkey '^h' "$DEL"
+    bindkey '^?' backward-delete-char
+    bindkey '^h' backward-delete-char
     bindkey '^w' backward-kill-word
     bindkey '^r' history-incremental-search-backward
 
@@ -194,8 +195,8 @@ bindkey '^M' magic_enter
 # Fancy Ctrl-Z: Toggles between background and foreground jobs.
 bindkey '^Z' fancy_ctrl_z
 
-# Copy Buffer: Alt+c copies current command line to clipboard.
-bindkey '^[c' copy_buffer_to_clipboard
+# Copy Buffer: Alt+Shift+C copies current command line to clipboard (Alt+c is used by fzf-cd-widget).
+bindkey '^[C' copy_buffer_to_clipboard
 
 # Git FZF Fixup: Alt+f to select a commit to fixup.
 bindkey '^[f' git_fzf_fixup

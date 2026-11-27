@@ -33,9 +33,6 @@
 # Without this, variables like ${vcs_info_msg_0_} won't update.
 setopt PROMPT_SUBST
 
-# Load zstat for microsecond file timestamp checking
-zmodload zsh/stat
-
 # Spellcheck prompt
 SPROMPT="zsh: correct %F{red}'%R'%f to %F{red}'%r'%f? "
 
@@ -98,18 +95,21 @@ function _git_engine() {
             is_repo=1
 
             if [[ -n "$status_out" ]]; then
-                # 1. Parse Branch (Look for header: # branch.head master)
+                # 1. Parse Branch (Look for header: # branch.oid / # branch.head)
                 # We use Zsh flag (f) to split by lines
                 local -a lines
                 lines=("${(@f)status_out}")
 
-                local line
+                local line branch_oid=""
                 for line in "${lines[@]}"; do
-                    if [[ "$line" == "# branch.head "* ]]; then
+                    if [[ "$line" == "# branch.oid "* ]]; then
+                        branch_oid="${line#\# branch.oid }"
+                        continue
+                    elif [[ "$line" == "# branch.head "* ]]; then
                         branch="${line#\# branch.head }"
-                        # Handle detached head which shows as "(detached)" or hash
-                        if [[ "$branch" == "(detached)" ]]; then
-                            branch=$(command git rev-parse --short HEAD 2>/dev/null)
+                        # Handle detached head without spawning a second git process
+                        if [[ "$branch" == "(detached)" && -n "$branch_oid" && "$branch_oid" != "(initial)" ]]; then
+                            branch="${branch_oid[1,7]}"
                         fi
                         continue
                     fi
@@ -142,6 +142,9 @@ function _git_engine() {
                             modified=1
                         fi
                     fi
+
+                    # Short-circuit once all status indicators are known
+                    (( staged && modified && untracked )) && break
                 done
             fi
 
@@ -158,8 +161,15 @@ function _git_engine() {
     _GIT_ASYNC_PID=$!
     _GIT_ASYNC_FD=$fd
 
-    # Register the callback with ZLE
-    zle -F "$fd" _git_async_callback
+    # Register the callback with ZLE (only when ZLE is active — avoids errors in scripts/pipes)
+    if zle 2>/dev/null; then
+        zle -F "$fd" _git_async_callback
+    else
+        # Non-interactive context: clean up the FD immediately
+        { exec {fd}<&- ; } 2>/dev/null
+        _GIT_ASYNC_FD=0
+        _GIT_ASYNC_PID=0
+    fi
 }
 
 # ── FD Handler ─────────────────────────────────────────────────────────
@@ -311,260 +321,217 @@ function get_random_prompt_symbol() {
         ""   # Simple angle right
     )
 
-    # Select random index based on array length
-    # Use 'print --' to prevent symbols like '-->' being parsed as flags
-    print -- "${symbols[1 + $RANDOM % ${#symbols[@]}]}"
+    # Select random index based on array length without spawning a subshell
+    PROMPT_SYMBOL="${symbols[1 + RANDOM % ${#symbols[@]}]}"
 }
 
 
 # ── THEMES ─────────────────────────────────────────────────────────────
 
-# Theme: 'Z'
-# ------------------------------------------------------------------------------
-## A minimalist theme optimized for speed.
-## Uses the shared _git_engine to reduce code duplication.
-function theme_z() {
-
-    # The View Logic (Updater)
-    function _z_updater() {
-        # Run the shared engine (Calculates raw state)
-        _git_engine
-
-        # Reset global output
-        GIT_RPROMPT=""
-
-        # Check if we are in a repo (Using shared engine flag)
-        if (( GIT_IS_REPO )); then
-            local unstaged=""
-            local staged=""
-            local untracked=""
-            local is_dirty=0
-
-            # ── Icon Setup (FIXED) ─────────────────────────────────────────
-            # Set defaults FIRST, then override if 'icons' array exists.
-            local branch_icon=""
-            local github_icon=""
-
-            if (( ${+icons} )); then
-                branch_icon="${icons[VCS_BRANCH_ICON]:-$branch_icon}"
-                github_icon="${icons[VCS_GIT_GITHUB_ICON]:-$github_icon}"
-            fi
-
-            # ── Logic ──────────────────────────────────────────────────────
-            if (( GIT_HAS_MODIFIED )); then
-                unstaged="%F{red}●"
-                is_dirty=1
-            fi
-
-            if (( GIT_HAS_STAGED )); then
-                staged="%F{green}●"
-                is_dirty=1
-            fi
-
-            if (( GIT_HAS_UNTRACKED )); then
-                untracked="%F{cyan}●"
-                is_dirty=1
-            fi
-
-            # Branch Color Logic
-            local branch_color="%F{magenta}"
-            [[ $is_dirty -eq 1 ]] && branch_color="%F{yellow}"
-
-            # ── Assembly ───────────────────────────────────────────────────
-            GIT_RPROMPT=" %F{blue}(${branch_color}${branch_icon} ${GIT_BRANCH}%F{blue})%F{reset} ${unstaged}${staged}${untracked}%F{blue} ${github_icon}%f"
-        fi
-
-        # ── FORCE UPDATE RPROMPT (CRITICAL) ────────────────────────────────
-        # Assigning it here ensures it updates every single time.
-        RPROMPT="${GIT_RPROMPT}"
-    }
-
-    # 3. Register Hook
-    #    Uses the shared helper to ensure clean switching
-    register_prompt_hook _z_updater
-
-    # 4. Final Left Prompt Assembly
-    local prompt_symbol="➜"
-    (( $+functions[get_random_prompt_symbol] )) && prompt_symbol=$(get_random_prompt_symbol)
-
-    PROMPT="%T %F{yellow}${prompt_symbol}%f %F{blue}%1~%f "
-}
-
-
-# Theme: 'Gh0st'
-# ------------------------------------------------------------------------------
-## A sleek, modern prompt using purely native Zsh features.
-## No dependencies. Ultra-fast Git plumbing. Self-contained.
-function theme_gh0st() {
-    typeset -g _GH0ST_GIT_MSG=""
-
-    function _gh0st_updater() {
-        # 1. Run Engine
-        _git_engine
-
-        # 2. Build Output based on Engine State
-        _GH0ST_GIT_MSG=""
-
-        if (( GIT_IS_REPO )); then
-            local icon="%F{green}"
-
-            # Logic: If Modified OR Untracked -> Red Dot
-            if (( GIT_HAS_MODIFIED || GIT_HAS_UNTRACKED )); then
-                icon="%F{red}"
-            fi
-
-            _GH0ST_GIT_MSG="  %F{magenta}${GIT_BRANCH} ${icon}%{${COLOR[RESET]}%}"
-        fi
-    }
-
-    # Use the shared hook manager
-    register_prompt_hook _gh0st_updater
-
-    # ── Visual Assets ──────────────────────────────────────────────────
-    local icon_dir="%(~.%B%F{black}  .%B%F{cyan})%f%b"
-    local p_user="%B%F{blue}%n"
-    local p_sep="%F{red}/"
-    local p_host="%F{yellow}%m"
-    local p_path=$'%{\e[3m%}%F{242}[%~]%f%{\e[23m%}'
-
-    PROMPT_SYMBOL=$(get_random_prompt_symbol)
-
-    local p_status="%(?.%F{green}.%F{red})${PROMPT_SYMBOL}%f"
-
-    PS1="${icon_dir} ${p_user} ${p_sep} ${p_host} ${p_path}\${_GH0ST_GIT_MSG} ${p_status} "
-}
-
-
-# Theme: 'Orbit'
-# ------------------------------------------------------------------------------
-## A two-line prompt with connecting lines, resembling a spaceship HUD.
-function theme_orbit() {
-    typeset -g _ORBIT_GIT_MSG=""
-
-    function _orbit_updater() {
-        _git_engine
-
-        _ORBIT_GIT_MSG=""
-
-        if (( GIT_IS_REPO )); then
-            local indicators=""
-
-            # Detailed Logic: Check specific flags from engine
-            (( GIT_HAS_MODIFIED ))  && indicators+="%F{red}●"
-            (( GIT_HAS_UNTRACKED )) && indicators+="%F{cyan}●"
-            (( GIT_HAS_STAGED ))    && indicators+="%F{green}●"
-
-            _ORBIT_GIT_MSG=" on %F{magenta} ${GIT_BRANCH}%f ${indicators}"
-        fi
-
-        # Enforce RPROMPT inside the loop to prevent overwrites
-        RPROMPT="%F{238}[%D{%T}]%f"
-    }
-
-    register_prompt_hook _orbit_updater
-
-    # ── Construction ───────────────────────────────────────────────────
-    local c_top="%F{blue}╭─%f"
-    local c_mid="%F{blue}─%f"
-    local c_bot="%F{blue}╰─%f"
-    local s_os="%F{white} %f"
-    local s_dir="%B%F{blue}%~%f%b"
-    local s_arrow="%B%(?.%F{green}›%f.%F{red}›%f)%b"
-
-    PS1=$'\n'"${c_top}${c_mid} ${s_os}${s_dir}\${_ORBIT_GIT_MSG}"$'\n'"${c_bot} ${s_arrow} "
-}
-
-
-# Theme: '10k'
-# ------------------------------------------------------------------------------
-## A prompt with a timer, git status, and window title.
-## No dependencies. Ultra-fast Git plumbing. Self-contained.
-function theme_10k() {
-    # 1. Execution Timer Hook
-    function _10k_record_start() {
-        _10K_START_TIME=$SECONDS
-    }
-
-    # 2. Main Updater (Git + Timer + Title + RPROMPT)
-    function _10k_updater() {
-        # ── A. Run Git Engine ──────────────────────────────────────────
-        _git_engine
-
-        local git_part=""
-        if (( GIT_IS_REPO )); then
-            local indicators=""
-            (( GIT_HAS_MODIFIED ))  && indicators+="%F{red}●"
-            (( GIT_HAS_UNTRACKED )) && indicators+="%F{cyan}●"
-            (( GIT_HAS_STAGED ))    && indicators+="%F{green}●"
-
-            # Format: [  main ●? ]
-            git_part="[ %F{magenta} ${GIT_BRANCH}%f ${indicators}%f ] "
-        fi
-
-        # ── B. Execution Time ──────────────────────────────────────────
-        local exec_part=""
-        if [[ -n "$_10K_START_TIME" ]]; then
-            local delta=$(($SECONDS - _10K_START_TIME))
-            if (( delta > 2 )); then
-                exec_part="%F{cyan}${delta}s%f "
-            fi
-            unset _10K_START_TIME
-        fi
-
-        # ── D. FORCE SET RIGHT PROMPT ──────────────────────────────────
-        # We construct RPROMPT right here to ensure it shows up.
-        # Structure: [ExecTime] [GitStatus] Path
-        RPROMPT="${exec_part}${git_part}%F{blue}%~%f"
-    }
-
-    # 3. Auto-LS on Directory Change
-    function _10k_chpwd() {
-        if (( $+commands[eza] )); then eza --icons -a
-        else ls -a; fi
-    }
-
-    # 4. Hook Registration
-    register_prompt_hook _10k_updater _10k_record_start _10k_chpwd
-
-    # ── Visual Assembly (Left Prompt) ──────────────────────────────────
-
-    # Check TMUX
-    local in_tmux=""; [[ -n "$TMUX" ]] && in_tmux="tmux "
-
-    # Suffix: Yellow/Green Arrow based on previous exit code
-    # %(!...): Check if Root
-    PROMPT_SYMBOL=$(get_random_prompt_symbol)
-    local suffix="%(!.%F{yellow}%n%f .)%(!.%F{yellow}${PROMPT_SYMBOL}%f.%F{green}${PROMPT_SYMBOL}%f)%f"
-
-    # Left Prompt Construction:
-    # 1. SSH User/Host (Green)
-    # 2. Directory Name Only (Blue, Bold) -> %1~
-    # 3. Jobs indicator (Yellow) -> %1j
-    # 4. Error code (Yellow !) -> %?
-    PS1="%F{green}${SSH_TTY:+%n@%m}%f%F{yellow}%B%(1j.*.)%(?..!)%b%f %B%F{yellow}${in_tmux}%f${suffix} "
-}
-
-
-# ── Initialization Logic ──────────────────────────────────────────────
-## Selects the theme based on the environment variable.
-
 case "$PROMPT_THEME" in
-    "gh0st")  theme_gh0st  ;;
-    "z")      theme_z      ;;
-    "10k")    theme_10k    ;;
-    "orbit")  theme_orbit  ;;
-    *)        return       ;;
+    "z")
+        # Theme: 'Z'
+        # ------------------------------------------------------------------------------
+        ## A minimalist theme optimized for speed.
+        ## Uses the shared _git_engine to reduce code duplication.
+        function _z_updater() {
+            # Run the shared engine (Calculates raw state)
+            _git_engine
+
+            # Reset global output
+            GIT_RPROMPT=""
+
+            # Check if we are in a repo (Using shared engine flag)
+            if (( GIT_IS_REPO )); then
+                local unstaged=""
+                local staged=""
+                local untracked=""
+                local is_dirty=0
+
+                # ── Icon Setup (FIXED) ─────────────────────────────────────────
+                # Set defaults FIRST, then override if 'icons' array exists.
+                local branch_icon=""
+                local github_icon=""
+
+                if (( ${+icons} )); then
+                    branch_icon="${icons[VCS_BRANCH_ICON]:-$branch_icon}"
+                    github_icon="${icons[VCS_GIT_GITHUB_ICON]:-$github_icon}"
+                fi
+
+                # ── Logic ──────────────────────────────────────────────────────
+                if (( GIT_HAS_MODIFIED )); then
+                    unstaged="%F{red}●"
+                    is_dirty=1
+                fi
+
+                if (( GIT_HAS_STAGED )); then
+                    staged="%F{green}●"
+                    is_dirty=1
+                fi
+
+                if (( GIT_HAS_UNTRACKED )); then
+                    untracked="%F{cyan}●"
+                    is_dirty=1
+                fi
+
+                # Branch Color Logic
+                local branch_color="%F{magenta}"
+                [[ $is_dirty -eq 1 ]] && branch_color="%F{yellow}"
+
+                # ── Assembly ───────────────────────────────────────────────────
+                GIT_RPROMPT=" %F{blue}(${branch_color}${branch_icon} ${GIT_BRANCH}%F{blue})%F{reset} ${unstaged}${staged}${untracked}%F{blue} ${github_icon}%f"
+            fi
+
+            # ── FORCE UPDATE RPROMPT (CRITICAL) ────────────────────────────────
+            # Assigning it here ensures it updates every single time.
+            RPROMPT="${GIT_RPROMPT}"
+        }
+
+        register_prompt_hook _z_updater
+        get_random_prompt_symbol
+        PROMPT="%T %F{yellow}${PROMPT_SYMBOL}%f %F{blue}%1~%f "
+        ;;
+
+    "gh0st")
+        # Theme: 'Gh0st'
+        # ------------------------------------------------------------------------------
+        ## A sleek, modern prompt using purely native Zsh features.
+        ## No dependencies. Ultra-fast Git plumbing. Self-contained.
+        typeset -g _GH0ST_GIT_MSG=""
+
+        function _gh0st_updater() {
+            # 1. Run Engine
+            _git_engine
+
+            # 2. Build Output based on Engine State
+            _GH0ST_GIT_MSG=""
+
+            if (( GIT_IS_REPO )); then
+                local icon="%F{green}"
+
+                # Logic: If Modified OR Untracked -> Red Dot
+                if (( GIT_HAS_MODIFIED || GIT_HAS_UNTRACKED )); then
+                    icon="%F{red}"
+                fi
+
+                _GH0ST_GIT_MSG="  %F{magenta}${GIT_BRANCH} ${icon}%{${COLOR[RESET]}%}"
+            fi
+        }
+
+        register_prompt_hook _gh0st_updater
+
+        # ── Visual Assets ──────────────────────────────────────────────────
+        local icon_dir="%(~.%B%F{black}  .%B%F{cyan})%f%b"
+        local p_user="%B%F{blue}%n"
+        local p_sep="%F{red}/"
+        local p_host="%F{yellow}%m"
+        local p_path=$'%{\e[3m%}%F{242}[%~]%f%{\e[23m%}'
+
+        get_random_prompt_symbol
+
+        local p_status="%(?.%F{green}.%F{red})${PROMPT_SYMBOL}%f"
+
+        PS1="${icon_dir} ${p_user} ${p_sep} ${p_host} ${p_path}\${_GH0ST_GIT_MSG} ${p_status} "
+        unset icon_dir p_user p_sep p_host p_path p_status
+        ;;
+
+    "orbit")
+        # Theme: 'Orbit'
+        # ------------------------------------------------------------------------------
+        ## A two-line prompt with connecting lines, resembling a spaceship HUD.
+        typeset -g _ORBIT_GIT_MSG=""
+
+        function _orbit_updater() {
+            _git_engine
+
+            _ORBIT_GIT_MSG=""
+
+            if (( GIT_IS_REPO )); then
+                local indicators=""
+
+                # Detailed Logic: Check specific flags from engine
+                (( GIT_HAS_MODIFIED ))  && indicators+="%F{red}●"
+                (( GIT_HAS_UNTRACKED )) && indicators+="%F{cyan}●"
+                (( GIT_HAS_STAGED ))    && indicators+="%F{green}●"
+
+                _ORBIT_GIT_MSG=" on %F{magenta} ${GIT_BRANCH}%f ${indicators}"
+            fi
+
+            # Enforce RPROMPT inside the loop to prevent overwrites
+            RPROMPT="%F{238}[%D{%T}]%f"
+        }
+
+        register_prompt_hook _orbit_updater
+
+        # ── Construction ───────────────────────────────────────────────────
+        local c_top="%F{blue}╭─%f"
+        local c_mid="%F{blue}─%f"
+        local c_bot="%F{blue}╰─%f"
+        local s_os="%F{white} %f"
+        local s_dir="%B%F{blue}%~%f%b"
+        local s_arrow="%B%(?.%F{green}›%f.%F{red}›%f)%b"
+
+        PS1=$'\n'"${c_top}${c_mid} ${s_os}${s_dir}\${_ORBIT_GIT_MSG}"$'\n'"${c_bot} ${s_arrow} "
+        unset c_top c_mid c_bot s_os s_dir s_arrow
+        ;;
+
+    "10k")
+        # Theme: '10k'
+        # ------------------------------------------------------------------------------
+        ## A prompt with a timer, git status, and window title.
+        ## No dependencies. Ultra-fast Git plumbing. Self-contained.
+        function _10k_record_start() {
+            _10K_START_TIME=$SECONDS
+        }
+
+        function _10k_updater() {
+            # ── A. Run Git Engine ──────────────────────────────────────────
+            _git_engine
+
+            local git_part=""
+            if (( GIT_IS_REPO )); then
+                local indicators=""
+                (( GIT_HAS_MODIFIED ))  && indicators+="%F{red}●"
+                (( GIT_HAS_UNTRACKED )) && indicators+="%F{cyan}●"
+                (( GIT_HAS_STAGED ))    && indicators+="%F{green}●"
+
+                # Format: [  main ●? ]
+                git_part="[ %F{magenta} ${GIT_BRANCH}%f ${indicators}%f ] "
+            fi
+
+            # ── B. Execution Time ──────────────────────────────────────────
+            local exec_part=""
+            if [[ -n "$_10K_START_TIME" ]]; then
+                local delta=$(($SECONDS - _10K_START_TIME))
+                if (( delta > 2 )); then
+                    exec_part="%F{cyan}${delta}s%f "
+                fi
+                unset _10K_START_TIME
+            fi
+
+            # ── D. FORCE SET RIGHT PROMPT ──────────────────────────────────
+            # We construct RPROMPT right here to ensure it shows up.
+            # Structure: [ExecTime] [GitStatus] Path
+            RPROMPT="${exec_part}${git_part}%F{blue}%~%f"
+        }
+
+        # Note: Auto-LS on chpwd is handled by hooks.zsh (chpwd_auto_ls)
+        register_prompt_hook _10k_updater _10k_record_start
+
+        local in_tmux=""; [[ -n "$TMUX" ]] && in_tmux="tmux "
+
+        get_random_prompt_symbol
+        local suffix="%(!.%F{yellow}%n%f .)%(!.%F{yellow}${PROMPT_SYMBOL}%f.%F{green}${PROMPT_SYMBOL}%f)%f"
+
+        PS1="%F{green}${SSH_TTY:+%n@%m}%f%F{yellow}%B%(1j.*.)%(?..!)%b%f %B%F{yellow}${in_tmux}%f${suffix} "
+        unset in_tmux suffix
+        ;;
 esac
 
 
 # ── Memory Cleanup (The Pro Touch) ────────────────────────────────────
 # Once the active theme is loaded and its internal updater hooks are
-# registered in memory, the initializer functions are just dead weight.
-# We aggressively purge them from RAM to keep the shell footprint microscopic.
+# registered in memory, the initializer helpers are dead weight.
+# We purge them from RAM to keep the shell footprint minimal.
 
-zsh-defer unfunction theme_gh0st \
-    theme_z \
-    theme_10k \
-    theme_orbit \
-    register_prompt_hook \
-    get_random_prompt_symbol 2>/dev/null
+unfunction register_prompt_hook get_random_prompt_symbol 2>/dev/null

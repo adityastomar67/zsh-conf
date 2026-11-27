@@ -83,6 +83,12 @@ unset _f
 # ( ... ) - runs in a subshell.
 # &!      - runs in background and disowns the process (suppresses "job finished" messages).
 function _run_background_compilation() {
+    # Throttle full stat/compile scan to once per hour across new tabs/panes
+    local stamp="${ZSH_CACHE:-$HOME/.cache/zsh-cache}/.zcompile_stamp"
+    if [[ -f "$stamp" && -z "$stamp"(#qN.mh+1) ]]; then
+        return 0
+    fi
+
     (
 
         # Safety & Globbing Options
@@ -124,6 +130,7 @@ function _run_background_compilation() {
             "${ZDOTDIR:-$HOME/.config/zsh-conf}/.zshrc"
             "${ZDOTDIR:-$HOME/.config/zsh-conf}/.zshenv"
             "$ZSH_COMPLETION_DUMP"
+            "${ZSH_CACHE:-$HOME/.cache/zsh-cache}"/eval-cache/*.zsh(N.)
 
             # Framework Core
             "$ZSH_CONFIG_ROOT"/conf.d/*.zsh
@@ -168,6 +175,8 @@ function _run_background_compilation() {
                 zcompile -U -z "$digest_file" "$func_dir"/*(.)
             fi
         done
+
+        touch "$stamp"
 
     ) &!
 }

@@ -72,7 +72,6 @@ unsetopt CORRECT            # Disable "Did you mean..?" spelling correction
 # ------------------------------------------------------------------------------
 
 setopt SHARE_HISTORY             # Share history between open terminals immediately
-setopt INC_APPEND_HISTORY_TIME   # Append to history file as soon as command finishes
 setopt EXTENDED_HISTORY          # Save timestamp and duration of commands
 setopt HIST_IGNORE_ALL_DUPS      # Don't save duplicates
 setopt HIST_IGNORE_SPACE         # Don't save commands starting with a space
@@ -91,7 +90,6 @@ export HISTORY_IGNORE="(zsh|clear|ls|cd|pwd|exit|sudo reboot|history|cd -|cd ..)
 
 setopt NOTIFY                  # Report status of background jobs immediately
 setopt NOHUP                   # Don't kill background jobs on exit
-setopt MAILWARN                # Print mail warning message
 setopt INTERACTIVE_COMMENTS    # Allow comments (#) in interactive shell
 setopt NOBEEP                  # No beep on error
 
@@ -136,22 +134,29 @@ _comp_options+=(globdots)
 #   .  : Plain files only
 #   mh : Modification time in hours
 #   +24: Older than 24 hours
+function _init_completion() {
+    if [[ ! -f "$ZSH_COMPLETION_DUMP" || -n "$ZSH_COMPLETION_DUMP"(#qN.mh+24) ]]; then
+        # Scenario A: Cache is old or missing. Rebuild.
+        #   -u: Use insecure directories silently (no interactive prompt)
+        #   -d: Dump path
+        compinit -u -d "${ZSH_COMPLETION_DUMP}"
 
-if [[ ! -f "$ZSH_COMPLETION_DUMP" || -n "$ZSH_COMPLETION_DUMP"(#qN.mh+24) ]]; then
-    # Scenario A: Cache is old or missing. Rebuild.
-    #   -i: Ignore insecure directories
-    #   -u: Use insecure directories (silently)
-    #   -d: Dump path
-    compinit -i -u -d "${ZSH_COMPLETION_DUMP}"
+        # Touch the cache file to reset the 24-hour expiration timer
+        # since compinit doesn't update the mtime if no new completion files are found.
+        touch "${ZSH_COMPLETION_DUMP}"
+    else
+        # Scenario B: Cache is fresh. Fast Load.
+        #   -C: Skip ALL security checks, trust the dump file
+        #   -d: Dump path
+        compinit -C -d "${ZSH_COMPLETION_DUMP}"
+    fi
+    unfunction _init_completion 2>/dev/null
+}
 
-    # Touch the cache file to reset the 24-hour expiration timer
-    # since compinit doesn't update the mtime if no new completion files are found.
-    touch "${ZSH_COMPLETION_DUMP}"
+if (( $+functions[zsh-defer] )); then
+    zsh-defer _init_completion
 else
-    # Scenario B: Cache is fresh. Fast Load.
-    #   -C: Skip ALL security checks, trust the dump file
-    #   -d: Dump path
-    compinit -C -d "${ZSH_COMPLETION_DUMP}"
+    _init_completion
 fi
 
 
@@ -213,16 +218,19 @@ for entry in "${INIT_TOOLS[@]}"; do
     # Zsh Magic: Split the string by ':' into an array (@s/:/)
     local parts=("${(@s/:/)entry}")
 
-    # Clean up whitespace using ${var// /} for single words
-    # and ${var## } to trim leading spaces for commands
+    # Clean up whitespace using ${var## #} / ${var%% #}
     local bin="${${parts[1]## #}%% #}"
     local cmd="${${parts[2]## #}%% #}"
     local mode="${${parts[3]## #}%% #}"
 
+    # Skip Starship when a built-in prompt.zsh theme is active so PS1/precmd aren't wasted
+    if [[ "$bin" == "starship" && "$PROMPT_THEME" == (gh0st|z|10k|orbit) ]]; then
+        continue
+    fi
+
     # Logic: Only run if installed
-    if (( $+commands[$bin] )) then
+    if (( $+commands[$bin] )); then
         _eval_cache "$bin" "$cmd" "$mode"
     fi
-    unset bin cmd mode
 done
-unset INIT_TOOLS
+unset INIT_TOOLS entry parts bin cmd mode

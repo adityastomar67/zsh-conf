@@ -36,8 +36,12 @@ export LC_ALL="en_US.UTF-8"
 
 # GPG Signing TTY
 # Set the TTY for GPG agent to the current tty.
-# Optimization: ${TTY} is faster than subshell $(tty) if already set.
-export GPG_TTY="${TTY:-$(tty)}"
+# Optimization: ${TTY} avoids spawning $(tty); skip external call when stdin isn't a tty.
+if [[ -n "$TTY" ]]; then
+    export GPG_TTY="$TTY"
+elif [[ -t 0 ]]; then
+    GPG_TTY=$(tty 2>/dev/null) && export GPG_TTY
+fi
 
 # ── true color support ────────────────────────────────────────────────────────
 # If the terminal supports truecolor (16 million colors), force the
@@ -48,7 +52,13 @@ if [[ "$COLORTERM" == "truecolor" || "$TERM" == *256* ]]; then
     export BAT_THEME="TwoDark"
 fi
 
-export LS_COLORS="di=38;5;111:ln=38;5;210:or=48;5;210;38;5;16:mi=48;5;210;38;5;16:pi=48;5;111;38;5;16:so=48;5;210;38;5;16:bd=48;5;210;38;5;16:cd=48;5;150;38;5;16:ex=01;38;5;210:*.tar=04;38;5;150:*.tgz=04;38;5;150:*.arc=04;38;5;150:*.zip=04;38;5;150:*.z=04;38;5;150:*.7z=04;38;5;150:*.jpg=38;5;210:*.jpeg=38;5;210:*.png=38;5;210:*.gif=38;5;210:*.mp4=38;5;210:*.mp3=38;5;210:*.c=38;5;114:*.cpp=38;5;114:*.py=38;5;114:*.js=38;5;114:*.rs=38;5;114:*.go=38;5;114:*.yml=38;5;216:*.yaml=38;5;216:*.toml=38;5;216:*.conf=38;5;216:*.md=38;5;216:*.txt=38;5;246:*.doc=38;5;210:*.docx=38;5;210:*.pdf=38;5;210:"
+# LS_COLORS: Fallback palette — set here so completion/ls have colors immediately.
+# NOTE: If 'dircolors' is listed in INIT_TOOLS (user.conf), its output will
+#       overwrite this value later in options.zsh. That is intentional: dircolors
+#       uses the ~/.dircolors file so the user can customise colors without editing
+#       this file. This block serves as a zero-fork fallback for systems without
+#       dircolors (macOS) or when INIT_TOOLS is empty.
+(( $+commands[dircolors] )) || export LS_COLORS="di=38;5;111:ln=38;5;210:or=48;5;210;38;5;16:mi=48;5;210;38;5;16:pi=48;5;111;38;5;16:so=48;5;210;38;5;16:bd=48;5;210;38;5;16:cd=48;5;150;38;5;16:ex=01;38;5;210:*.tar=04;38;5;150:*.tgz=04;38;5;150:*.arc=04;38;5;150:*.zip=04;38;5;150:*.z=04;38;5;150:*.7z=04;38;5;150:*.jpg=38;5;210:*.jpeg=38;5;210:*.png=38;5;210:*.gif=38;5;210:*.mp4=38;5;210:*.mp3=38;5;210:*.c=38;5;114:*.cpp=38;5;114:*.py=38;5;114:*.js=38;5;114:*.rs=38;5;114:*.go=38;5;114:*.yml=38;5;216:*.yaml=38;5;216:*.toml=38;5;216:*.conf=38;5;216:*.md=38;5;216:*.txt=38;5;246:*.doc=38;5;210:*.docx=38;5;210:*.pdf=38;5;210:"
 
 
 # XDG Base Directory Standards
@@ -141,13 +151,19 @@ if [[ -n "$SSH_CONNECTION" ]]; then
     # Revert to standard Vim on remote servers (safer than assuming Nvim config exists)
     export EDITOR='vim'
 
-    # Display System Info
+    # Display System Info (deferred so SSH login prompt renders immediately)
     # If neofetch exists, run it. If lolcat exists, colorize it.
     if (( $+commands[neofetch] )); then
         if (( $+commands[lolcat] )); then
             # -S 10: Spread rainbow
             # -F 0.05: Frequency
-            neofetch | lolcat -S 10 -F 0.05
+            if (( $+functions[zsh-defer] )); then
+                zsh-defer -c 'neofetch | lolcat -S 10 -F 0.05'
+            else
+                neofetch | lolcat -S 10 -F 0.05
+            fi
+        elif (( $+functions[zsh-defer] )); then
+            zsh-defer neofetch
         else
             neofetch
         fi

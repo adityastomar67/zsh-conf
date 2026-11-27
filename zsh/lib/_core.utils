@@ -319,10 +319,11 @@ _build_path "${USER_PATH_ENTRIES[@]}"
 unset USER_PATH_ENTRIES
 
 # 2. Deferred Injection (Lazy Load)
-#    Only runs if there are actually deferred entries to process
+#    Only runs if there are actually deferred entries to process.
+#    Using default 0 delay avoids loading zsh/mathfunc + zsh/zselect + spawning a subshell.
 if (( ${#DEFERRED_PATH_ENTRIES} )); then
     if (( $+functions[zsh-defer] )); then
-        zsh-defer -t 0.5 _build_path "${DEFERRED_PATH_ENTRIES[@]}"
+        zsh-defer _build_path "${DEFERRED_PATH_ENTRIES[@]}"
     else
         _build_path "${DEFERRED_PATH_ENTRIES[@]}"
     fi
@@ -382,9 +383,9 @@ function _safe_edit() {
 function notify_user() {
     local title="$1"
     local msg="$2"
-    case "$(uname -s)" in
-        Darwin*) osascript -e "display notification \"$msg\" with title \"$title\"" ;;
-        Linux*)
+    case "$OSTYPE" in
+        darwin*) osascript -e "display notification \"$msg\" with title \"$title\"" ;;
+        linux*)
             if (( $+commands[dunstify] )); then
                 dunstify -u low -r 9912 "$title" "$msg"
             elif (( $+commands[notify-send] )); then
@@ -403,14 +404,11 @@ function notify_user() {
 # User Overrides / Offline Config
 # ───────────────────────────────────────────────────────────────────────
 ## Creates a placeholder file for local, non-git-tracked overrides.
-## We run this asynchronously because it's not critical to the shell's operation initially.
+## Guarded before spawning so disabled setups don't fork a background subshell.
 
+if [[ "${LOAD_PRIVATE_CONFIG:l}" == "yes" && ! -s "$HOME/User-Overrides.zsh" ]]; then
 (
-    # Define the location (Use ZDOTDIR if available, else HOME)
     typeset override_file="$HOME/User-Overrides.zsh"
-
-    # Check if the file exists and is non-empty. If not, create it with template content.
-    if [[ "${LOAD_PRIVATE_CONFIG:l}" == "yes" ]] && [[ ! -s "$override_file" ]]; then
 
     # Write directly using Zsh's built-in print. No 'cat', no heredocs.
     print -r -- '# ------------------------------------------------------------------------------
@@ -439,12 +437,12 @@ function notify_user() {
 #     sudo tailscale up --exit-node=work-pc
 # }' > "$override_file"
 
-        print "${COLOR[GREEN]}[INFO] Created local override file at: ${COLOR[YELLOW]}${override_file}${COLOR[RESET]}"
-    fi
+    print "${COLOR[GREEN]}[INFO] Created local override file at: ${COLOR[YELLOW]}${override_file}${COLOR[RESET]}"
 ) &!
+fi
 
 # Wallpaper Sync
 # Lazy load the wallpaper randomizer if the binary exists.
 if [[ "${ENABLE_WALLPAPER_SYNC:l}" == "yes" ]]; then
-    zsh-defer eval 'RandomWall >/dev/null 2>&1 &!'
+    zsh-defer -c 'RandomWall >/dev/null 2>&1 &!'
 fi

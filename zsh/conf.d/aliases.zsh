@@ -39,9 +39,12 @@
 unalias -a
 
 # Environment Detection
-# Capture the kernel name to handle OS-specific flags (Darwin vs Linux).
-local detected_os
-detected_os=$(uname -s)
+# Use built-in $OSTYPE instead of forking $(uname -s) on every shell launch.
+local is_linux=0 is_darwin=0
+case "$OSTYPE" in
+    linux*)  is_linux=1 ;;
+    darwin*) is_darwin=1 ;;
+esac
 
 
 # System & Privileges
@@ -54,7 +57,7 @@ alias -- _="sudo"        # Quick sudo shorthand
 # Auto-Sudo (Linux Only)
 # On Linux, system commands almost always require root. This wrapper adds
 # 'sudo' automatically to specific commands to save typing.
-if [[ "$detected_os" == "Linux" ]]; then
+if (( is_linux )); then
     for sys_cmd in mount umount sv updatedb su shutdown poweroff reboot; do
         alias "$sys_cmd"="_ $sys_cmd"
     done
@@ -66,12 +69,6 @@ fi
 # -l: list
 # -t: time format (takes the string arguments)
 alias history="fc -l -t '%Y-%m-%d %H:%M:%S' 1 | awk '{num=\$1; date=\$2; time=\$3; sub(/^[ \t]*[0-9]+[ \t]+[^ \t]+[ \t]+[^ \t]+[ \t]+/, \"\"); printf \"\033[2m%7s\033[0m │ \033[36m%s\033[0m \033[33m%s\033[0m │ %s\n\", num, date, time, \$0}' | less -R -S -F -X -K"
-
-# ------------------------------------------------------------------------------
-# Man Page Fuzzy Finder
-# Uses fzf to search and preview man pages interactively.
-# Requires 'fzf' to be installed.
-(( $+commands[fzf] )) && alias man="fzf-man"
 
 # ------------------------------------------------------------------------------
 # Safety Nets
@@ -89,7 +86,7 @@ alias please='_ $(fc -ln -1)'
 # ------------------------------------------------------------------------------
 # GNU/BSD Compatibility
 # Linux specific flags that don't exist on macOS/BSD.
-if [[ "$detected_os" == "Linux" ]]; then
+if (( is_linux )); then
     alias chown="chown --preserve-root"
     alias chmod="chmod --preserve-root"
     alias chgrp="chgrp --preserve-root"
@@ -112,9 +109,9 @@ alias -- ~="cd ~"       # ~ Go Home
 alias -- -="cd -"       # - Go to Previous Directory
 
 # Numbered Shortcuts (Zsh Directory Stack)
-# Create aliases .1 through .100 to jump back in the directory stack.
+# Create aliases .1 through .15 to jump back in the directory stack.
 alias .1="cd -"
-for n in {2..100}; do
+for n in {2..15}; do
     alias ".$n"="cd -$n"  # Example: .5 = cd -5, .10 = cd -10
 done
 
@@ -143,7 +140,6 @@ unset DIRECTORY_SHORTCUTS
 [[ -f $ZDOTDIR/.zshrc ]]            && alias zedit='_safe_edit $ZDOTDIR/.zshrc'
 [[ -f ~/.bashrc ]]                  && alias bedit='_safe_edit ~/.bashrc'
 [[ -f ~/.config/fish/config.fish ]] && alias fedit='_safe_edit ~/.config/fish/config.fish'
-[[ -f $XDG_NVIM/init.lua ]]         && alias nvedit='_safe_edit $XDG_NVIM/init.lua'
 
 # SAFETY FIX:
 # 1. We map 'visudo' to use sudo (since regular users can't read /etc/sudoers)
@@ -206,16 +202,23 @@ fi
 
 # ------------------------------------------------------------------------------
 # Annex Shortcuts (Custom Functions)
+# Check either loaded functions or plugin annex files (since plugins/_init.zsh loads after aliases.zsh)
 # ------------------------------------------------------------------------------
 
 # 'killl' -> 'fzf-kill' (Interactive Process Killer)
-(( $+functions[fzf-kill] )) && alias killl="fzf-kill"
+if (( $+functions[fzf-kill] )) || [[ -f "$ZSH_CONFIG_ROOT/plugins/annexes/fzf-kill" ]]; then
+    alias killl="fzf-kill"
+fi
 
 # 'man' -> 'fzf-man' (Interactive Manual Browser)
-(( $+functions[fzf-man] )) && alias man="fzf-man"
+if (( $+commands[fzf] )) && { (( $+functions[fzf-man] )) || [[ -f "$ZSH_CONFIG_ROOT/plugins/annexes/fzf-man" ]]; }; then
+    alias man="fzf-man"
+fi
 
 # 'envs' -> 'fzf-env' (Environment Variable Browser)
-(( $+functions[fzf-env] )) && alias envs="fzf-env"
+if (( $+functions[fzf-env] )) || [[ -f "$ZSH_CONFIG_ROOT/plugins/annexes/fzf-env" ]]; then
+    alias envs="fzf-env"
+fi
 
 # ------------------------------------------------------------------------------
 # Listing (The 'ls' Hierarchy)
@@ -242,7 +245,7 @@ elif (( $+commands[lsd] )); then
 
 else
     # Native Fallback
-    if [[ "$detected_os" == "Darwin" ]]; then
+    if (( is_darwin )); then
         alias ls="ls -G"           # macOS color flag
         alias ll="ls -laG"
     else
@@ -255,7 +258,7 @@ fi
 # Clipboard (Cross-Platform)
 # Abstracts 'copy' and 'paste' regardless of OS.
 
-if [[ "$detected_os" == "Darwin" ]]; then
+if (( is_darwin )); then
     alias copy='pbcopy'
     alias paste='pbpaste'
 else
@@ -282,7 +285,7 @@ alias p="ps -f"
 alias paux='ps aux | grep'
 
 # Memory/CPU Sorting (Handles flag differences between macOS/Linux)
-if [[ "$detected_os" == "Linux" ]]; then
+if (( is_linux )); then
     alias psmem='ps auxf | sort -nr -k 4'
     alias pscpu='ps auxf | sort -nr -k 3'
 else
@@ -290,7 +293,7 @@ else
     alias pscpu='ps aux | sort -nr -k 3'
 fi
 
-alias killl='killall -q'
+(( $+aliases[killl] )) || alias killl='killall -q'
 
 
 # Package Management
@@ -412,7 +415,7 @@ alias -g ':LL'="2>&1 | less"         # Pipe Output+Errors to Less
 
 # Define the System Opener
 #    macOS uses 'open', Linux uses 'xdg-open'.
-if [[ "$detected_os" == "Darwin" ]]; then
+if (( is_darwin )); then
     local _sys_open="open"
 else
     local _sys_open="xdg-open"
@@ -454,9 +457,9 @@ if (( $+commands[tar] )); then
 fi
 
 # Log Files -> Bat (Syntax Highlighting)
-#    If 'bat' is installed, use it for logs. Otherwise, use 'tail -f'.
+#    If 'bat' is installed, use it for logs (keep .md mapped to $EDITOR above).
 if (( $+commands[bat] )); then
-    alias -s {log,md}="bat --paging=always"
+    alias -s log="bat --paging=always"
 else
     alias -s log="tail -f"
 fi
@@ -495,7 +498,7 @@ alias week='date +%V'
 # and 'for' loop iterators bleed into the global environment. We unset them
 # here to ensure zero footprint after the aliases are registered.
 
-unset detected_os
+unset is_linux is_darwin
 unset _pac
 unset _sys_open
 unset _eza_opts
