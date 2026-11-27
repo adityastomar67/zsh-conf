@@ -94,9 +94,84 @@ _zsh_debug_startup() {
 # ------------------------------------------------------------------------------
 # Function: _zsh_reload
 # Description:
-#   A reloading utility that restarts the shell.
+#   Cleanly restarts the current Zsh session by terminating any active async
+#   git prompt worker and replacing the shell process via `exec command zsh`
+#   (preserving login-shell state). Optionally purges compiled `.zwc` files
+#   before restarting so the configuration reloads and recompiles from source.
+#
+# Usage:
+#   zsh [-r|--rebuild|--recompile] [-v|--verbose] [-h|--help]
+#
+# Options:
+#   -r, --rebuild, --recompile  Remove `.zwc` files in `$HOME`, `$ZDOTDIR`, and
+#                               `~/.zsh` to force a full rebuild from source.
+#   -v, --verbose               List each removed `.zwc` file before reloading
+#                               (used with `-r`).
+#   -h, --help                  Show usage information without restarting.
+#
+# Notes:
+#   - Aliased to `zsh`; use `command zsh` to invoke the Zsh binary directly.
 # ------------------------------------------------------------------------------
 _zsh_reload() {
+    local -i is_login=0
+    [[ -o login ]] && is_login=1
+
+    emulate -L zsh
+
+    local -a opt_rebuild opt_verbose opt_help
+    if ! zparseopts -D -F -- \
+        r=opt_rebuild -rebuild=opt_rebuild -recompile=opt_rebuild \
+        v=opt_verbose -verbose=opt_verbose \
+        h=opt_help -help=opt_help 2>/dev/null; then
+        print -u2 "zsh (reload): invalid option in '$*' (use -h for help, or 'command zsh' for the zsh binary)"
+        return 1
+    fi
+
+    if (( ${#opt_help} )); then
+        print -l \
+            "Usage: zsh [options]" \
+            "" \
+            "Options:" \
+            "  -r, --rebuild, --recompile  Delete .zwc files and reload from source" \
+            "  -v, --verbose               List removed .zwc files before reloading" \
+            "  -h, --help                  Show this help message" \
+            "" \
+            "Tip: Run 'command zsh ...' to invoke the actual zsh binary directly."
+        return 0
+    fi
+
+    if (( $# > 0 )); then
+        print -u2 "zsh (reload): unexpected argument '$1' (use -h for help, or 'command zsh' for the zsh binary)"
+        return 1
+    fi
+
+    # Remove compiled .zwc files so startup reloads from source and regenerates them.
+    if (( ${#opt_rebuild} )); then
+        local -aU zwc_files=( "$HOME"/.z*.zwc(N.) )
+        local -a search_dirs=()
+
+        [[ -n "$ZDOTDIR" && "$ZDOTDIR" != "$HOME" && -d "$ZDOTDIR" ]] && search_dirs+=( "$ZDOTDIR" )
+        [[ -d "$HOME/.zsh" ]] && search_dirs+=( "$HOME/.zsh" )
+
+        local dir
+        for dir in "${search_dirs[@]}"; do
+            zwc_files+=( "$dir"/**/*.zwc(DN.) )
+        done
+
+        if (( ${#zwc_files} )); then
+            rm -f -- "${zwc_files[@]}"
+            local summary="${(%):-%F{green}}Cleared ${#zwc_files} .zwc file(s). Rebuilt from source.${(%):-%f}"
+            if (( ${#opt_verbose} )); then
+                local -a lines=( "  ${^zwc_files}" )
+                export _ZSH_RELOAD_LOG="${summary}"$'\n'"${(F)lines}"
+            else
+                export _ZSH_RELOAD_LOG="${summary}"
+            fi
+        else
+            export _ZSH_RELOAD_LOG="${(%):-%F{yellow}}No .zwc files found. Reloaded shell.${(%):-%f}"
+        fi
+    fi
+
     # If the async git worker from prompt.zsh is active, kill it.
     if (( ${+_GIT_ASYNC_PID} )) && (( _GIT_ASYNC_PID > 0 )); then
         # Check if process exists (-0) then kill (-15)
@@ -104,7 +179,12 @@ _zsh_reload() {
             kill -15 "$_GIT_ASYNC_PID" 2>/dev/null
         fi
     fi
-    exec zsh
+
+    if (( is_login )); then
+        exec command zsh -l
+    else
+        exec command zsh
+    fi
 }
 
 
