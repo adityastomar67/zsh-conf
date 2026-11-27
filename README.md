@@ -7,7 +7,7 @@
 <h1><a href="https://github.com/adityastomar67/zsh-conf">Zsh-Conf</a></h1>
 </div>
 
-> **Blazing Fast, Modular, and Aesthetic Zsh Configuration Framework.** <br> A shell config with ~20ms load times. (Tested on M4)
+> **Blazing Fast, Modular, and Aesthetic Zsh Configuration Framework.** <br> A shell config with <10ms (~7–9ms warm) load times. (Tested on M4)
 
 This configuration is designed for speed, modularity, and a beautiful terminal experience. It leverages modern tools like `zoxide`, `fzf`, `eza`, and `starship` to provide a powerful command-line environment without the bloat.
 
@@ -62,7 +62,7 @@ The installation script executes a comprehensive setup flow:
 3.  **Atomic Backups**: Automatically creates timestamped backups of your existing `.zshrc`, `.zshenv`, and other shell configurations to prevent data loss.
 4.  **Core Installation**: Clones the framework into `~/.config/zsh-conf` and establishes the modular directory structure.
 5.  **Configuration Linking**: Generates symlinks for entry points and initializes a local `.env` file for private environment variables.
-6.  **Performance Optimization**: Compiles shell scripts into bytecode (`.zwc`) to guarantee the ~20ms startup time from the very first launch.
+6.  **Performance Optimization**: Compiles shell scripts into bytecode (`.zwc`) to guarantee <10ms startup times from the very first launch.
 
 <br>
 
@@ -141,6 +141,9 @@ export OPENAI_API_KEY="sk-xxxx..."
 ## 💡 Tips & Tricks
 
 - **Benchmark**: See how fast your shell loads with the built-in timer (needs `ZSH_BENCHMARK="Yes"`).
+- **Reload & Rebuild**: Run `zsh` to cleanly reload your session, or `zsh -r` (`-v` for verbose) to purge `.zwc` bytecode and rebuild from source.
+- **Debug Startup**: Run `_zsh_debug_startup` to launch a traced (`-x -v`) session and capture `zprof` logs in `~/zsh-logs/`.
+- **Startup Logs**: Internal startup messages and reload summaries use an in-memory log buffer (`_zsh_log` / `_ZSH_ENV_LOGS`) that flushes after the screen clear / benchmark UI without disk I/O.
 - **Update**: Pull the latest changes from the repo by running `dotup -z` (it handles backups safely).
 - **Mini Mode**: Set `ENABLE_MINIMAL_MODE="Yes"` in `user.conf` for a lightweight, dependency-free shell on servers.
   - **Excludes**: Plugin manager, heavy plugins (autosuggestions, syntax highlighting), Starship prompt, custom functions (`pj`, `lg`, `weather`), benchmarking tools, and the fancy startup sequence.
