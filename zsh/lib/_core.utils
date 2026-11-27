@@ -1,5 +1,3 @@
-#!/usr/bin/env zsh
-
 #    ░█▀▀░█▀█░█▀▄░█▀▀░░░░█░█░▀█▀░▀█▀░█░░░█▀▀
 #    ░█░░░█░█░█▀▄░█▀▀░░░░█░█░░█░░░█░░█░░░▀▀█
 #    ░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀░░▀▀▀░░▀░░▀▀▀░▀▀▀░▀▀▀
@@ -229,10 +227,6 @@ function plug() {
 ## Caches the output of slow initialization commands (like 'starship init zsh').
 ## Saves ~100-300ms on startup.
 
-# Ensure Cache Directory Exists
-CACHE_DIR="${ZSH_CACHE:-$HOME/.cache/zsh-cache}/eval-cache"
-[[ -d "$CACHE_DIR" ]] || mkdir -p "$CACHE_DIR"
-
 # ------------------------------------------------------------------------------
 # Function: _eval_cache
 # Description:
@@ -253,7 +247,8 @@ _eval_cache() {
     local cmd="$2"
     local mode="${3:-defer}"
 
-    local cache_file="$CACHE_DIR/${name}.zsh"
+    local cache_dir="${ZSH_CACHE:-$HOME/.cache/zsh-cache}/eval-cache"
+    local cache_file="$cache_dir/${name}.zsh"
     # Access the 'commands' hash directly to check for binary existence
     local binary="$commands[$name]"
 
@@ -265,6 +260,7 @@ _eval_cache() {
     # 2. Invalidation Logic:
     #    Rebuild if: Cache missing OR Binary is newer than Cache file
     if [[ ! -e "$cache_file" || "$binary" -nt "$cache_file" ]]; then
+        [[ -d "$cache_dir" ]] || mkdir -p "$cache_dir"
 
         # Atomic Write Strategy:
         # Write to a temp file first, then move it. This prevents race conditions

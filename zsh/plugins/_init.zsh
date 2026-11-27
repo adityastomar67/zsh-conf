@@ -50,3 +50,5 @@ else
     # Fallback: Load individual files
     autoload -Uz "$ZSH_CONFIG_ROOT/plugins/annexes/"*(N:t)
 fi
+
+unset _fuzzy_file digest

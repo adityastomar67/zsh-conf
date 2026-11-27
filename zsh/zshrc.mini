@@ -1,4 +1,3 @@
-#!/usr/bin/env zsh
 #    ░▀▀█░█▀▀░█░█░█▀▄░█▀▀░░░░█▄█░▀█▀░█▀█░▀█▀
 #    ░▄▀░░▀▀█░█▀█░█▀▄░█░░░░░░█░█░░█░░█░█░░█░
 #    ░▀▀▀░▀▀▀░▀░▀░▀░▀░▀▀▀░▀░░▀░▀░▀▀▀░▀░▀░▀▀▀
@@ -80,7 +79,7 @@ if [[ ! -f "$ZSH_COMPLETION_DUMP" || -n "$ZSH_COMPLETION_DUMP"(#qN.mh+24) ]]; th
     # -i: Ignore insecure directories (don't ask user)
     # -u: Use insecure directories (silently)
     # -d: Dump path
-    compinit -i -u -d "$ZSH_COMPLETION_DUMP"
+    compinit -u -d "$ZSH_COMPLETION_DUMP"
 
     # Touch the file to reset its modification time, preventing compaudit loops
     touch "$ZSH_COMPLETION_DUMP"

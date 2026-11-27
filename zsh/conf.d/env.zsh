@@ -188,27 +188,27 @@ command_not_found_handler() {
         printf "  ${COLOR[GREEN]}${COLOR[RESET]}  ${COLOR[DIM]}Did you mean:${COLOR[RESET]} ${COLOR[BOLD]}${COLOR[BLUE]}./%s${COLOR[RESET]} ${COLOR[DIM]}?${COLOR[RESET]}\n" "$cmd"
     fi
 
-    # Advanced Feature: Smart Typo Dictionary
-    # A fast, hardcoded associative array of common developer fat-finger mistakes
-    typeset -A common_typos
-    common_typos=(
-        "zhs"    "zsh"
-        "gti"    "git"
-        "gerp"   "grep"
-        "mkae"   "make"
-        "dc"     "docker-compose"
-        "dk"     "docker"
-        "cls"    "clear"
-        "python" "python3"
-        "pip"    "pip3"
-        "k"      "kubectl"
-        "pnpm"   "npm (or install pnpm)"
-        "yarn"   "npm (or install yarn)"
-    )
+    # Advanced Feature: Smart Typo Dictionary (lazy-initialized once on first typo)
+    if (( ! ${+_COMMON_TYPOS} )); then
+        typeset -gA _COMMON_TYPOS=(
+            "zhs"    "zsh"
+            "gti"    "git"
+            "gerp"   "grep"
+            "mkae"   "make"
+            "dc"     "docker-compose"
+            "dk"     "docker"
+            "cls"    "clear"
+            "python" "python3"
+            "pip"    "pip3"
+            "k"      "kubectl"
+            "pnpm"   "npm (or install pnpm)"
+            "yarn"   "npm (or install yarn)"
+        )
+    fi
 
     # If the mistyped command exists in our dictionary, print the suggestion!
-    if [[ -n "${common_typos[$cmd]}" ]]; then
-        printf "  ${COLOR[GREEN]}${COLOR[RESET]}  ${COLOR[DIM]}Did you mean:${COLOR[RESET]} ${COLOR[BOLD]}${COLOR[BLUE]}%s${COLOR[RESET]} ${COLOR[DIM]}?${COLOR[RESET]}\n" "${common_typos[$cmd]}"
+    if [[ -n "${_COMMON_TYPOS[$cmd]}" ]]; then
+        printf "  ${COLOR[GREEN]}${COLOR[RESET]}  ${COLOR[DIM]}Did you mean:${COLOR[RESET]} ${COLOR[BOLD]}${COLOR[BLUE]}%s${COLOR[RESET]} ${COLOR[DIM]}?${COLOR[RESET]}\n" "${_COMMON_TYPOS[$cmd]}"
     fi
 
     printf "\n"
