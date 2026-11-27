@@ -150,8 +150,14 @@ if [[ "${ZSH_BENCHMARK:l}" == "yes" ]]; then
             ${total_duration_ms}
     fi
     unset total_duration_ms _startup_timer
+
+elif [[ "${ZSH_DEBUG_STARTUP:l}" == "yes" ]]; then
+    # Preserve the _zsh_debug_startup banner, then consume the one-shot flags
+    # so subsequent `zsh` reloads restore normal clearing and benchmarking.
+    unset ZSH_DEBUG_STARTUP ZSH_BENCHMARK
+
 elif [[ "${ENABLE_FANCY_STARTUP:l}" == "no" ]]; then
-    # ---- SAFE: Fallback if benchmarking is disabled
+    # ---- SAFE: Fallback if benchmarking and fancy startup are both disabled
     printf '\033[2J\033[H'
 fi
 

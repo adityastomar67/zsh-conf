@@ -74,7 +74,7 @@ _zsh_debug_startup() {
     fi
 
     # 4. User Feedback
-    clear
+    printf '\033[2J\033[H'
     print "${COLOR[YELLOW]}  Starting Zsh Debugger...${COLOR[RESET]}"
     print "   • Debug Log:   ${COLOR[UNDERLINE]}$debug_log${COLOR[RESET]}"
 
@@ -88,7 +88,8 @@ _zsh_debug_startup() {
     # 5. Launch Debug Shell
     #    -x: xtrace (print commands as they are executed)
     #    -v: verbose (print shell input lines as they are read)
-    ZSH_BENCHMARK="No" zsh -l -i -x -v 2>> "$debug_log"
+    #    ZSH_DEBUG_STARTUP=Yes prevents .zshrc from clearing the debugger banner above.
+    ZSH_BENCHMARK="No" ZSH_DEBUG_STARTUP="Yes" command zsh -l -i -x -v 2>> "$debug_log"
 }
 
 
