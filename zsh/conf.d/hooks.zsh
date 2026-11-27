@@ -158,9 +158,18 @@ magic_enter() {
             print "${COLOR[YELLOW]}::: Git Status (Dirty) :::${COLOR[RESET]}"
             git status -sb
         else
-            # Clean State
-            print "${COLOR[GREEN]}::: Git Status (Clean) :::${COLOR[RESET]}\n"
-            git log -n 3 --oneline --color=always
+            # Clean State (single git call: branch/HEAD refs on top, clean commits below)
+            print "${COLOR[GREEN]}::: Git Status (Clean) :::${COLOR[RESET]}"
+            local -a _log_lines=( "${(@f)$(command git log -n 3 --format='%C(auto)%D%x09  %C(yellow)%h%C(reset) %s' --color=always 2>/dev/null)}" )
+            if (( ${#_log_lines} )); then
+                local _refs="${_log_lines[1]%%$'\t'*}"
+                [[ -n "$_refs" ]] && print -r -- "  ${COLOR[MAGENTA]}${COLOR[RESET]} ${_refs}"
+                print ""
+                local _l
+                for _l in "${_log_lines[@]}"; do
+                    print -r -- "${_l#*$'\t'}"
+                done
+            fi
         fi
         print "\n"
     fi
