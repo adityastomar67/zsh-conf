@@ -4,7 +4,7 @@
 # File Purpose
 #   This is the master installation script for the Zsh-conf environment.
 #   It orchestrates the setup process, including dependency resolution,
-#   file backups, symlinking, and feature configuration.
+#   file backups, ZDOTDIR setup, and feature configuration.
 #
 # Problems Solved
 #   - Automates complex dotfile installation steps.
@@ -81,7 +81,6 @@ Theme::init() {
 
 typeset -A CONFIG_PATHS
 typeset -a REQUIRED_PACKAGES
-typeset -A COMMAND_ALIASES
 
 Config::init() {
     # Directory Definitions
@@ -97,11 +96,8 @@ Config::init() {
         CONFIG_PATHS[RC]="${HOME}/.zshrc"
     fi
 
-    if [[ -f "${CONFIG_PATHS[REPO]}/.zshenv" ]]; then
-        CONFIG_PATHS[ENV]="${CONFIG_PATHS[REPO]}/.zshenv"
-    else
-        CONFIG_PATHS[ENV]="${HOME}/.zshenv"
-    fi
+    # Always back up $HOME/.zshenv since Step 7 writes ZDOTDIR there
+    CONFIG_PATHS[ENV]="${HOME}/.zshenv"
 
     CONFIG_PATHS[CONF]="${CONFIG_PATHS[REPO]}/user.conf"
     CONFIG_PATHS[HIST]="${CONFIG_PATHS[CACHE]}/zhistory"
@@ -122,12 +118,6 @@ Config::init() {
         "git-delta" "lazygit" "lsd" "navi"
         "npm" "ranger" "ripgrep" "shellcheck"
         "starship" "tmux" "zoxide"
-    )
-
-    # Map package names to their actual binary names when they differ.
-    COMMAND_ALIASES=(
-        "ripgrep" "rg"
-        "git-delta" "delta"
     )
 }
 
@@ -158,14 +148,14 @@ Config::calibrate_fonts() {
     print ""
     print ""
 
-    # Feedback Loop
-    if [[ "$HAS_NERD" =~ ^[Yy]$ ]]; then
+    # Feedback Loop ((Y/n): default Yes when Enter is pressed)
+    if [[ ! "$HAS_NERD" =~ ^[Nn]$ ]]; then
         print -f "${THEME_COLORS[CYAN]}  ✔ Nerd Fonts enabled.${THEME_COLORS[RESET]}\n"
     else
         print -f "${THEME_COLORS[GREY]}  ✘ Nerd Fonts disabled. Switching to ASCII mode (simulated).${THEME_COLORS[RESET]}\n"
     fi
 
-    if [[ "$HAS_LIGATURES" =~ ^[Yy]$ ]]; then
+    if [[ ! "$HAS_LIGATURES" =~ ^[Nn]$ ]]; then
         print -f "${THEME_COLORS[CYAN]}  ✔ Ligatures confirmed.${THEME_COLORS[RESET]}\n"
     else
         print -f "${THEME_COLORS[GREY]}  ✘ Ligatures not detected (Visual only).${THEME_COLORS[RESET]}\n"
@@ -490,15 +480,10 @@ System::cleanup() {
 
     Logger::info "Cleaning up..."
 
-    # 2. Remove Install Artifacts inside the Destination
-    local artifacts=("install.zsh" "README.md" "LICENSE" "zhistory")
-
-    for item in "${artifacts[@]}"; do
-        local target="${CONFIG_PATHS[REPO]}/$item"
-        if [[ -e "$target" ]]; then
-            rm -rf "$target"
-        fi
-    done
+    # 2. Remove runtime artifacts that shouldn't live in the repo root
+    if [[ -e "${CONFIG_PATHS[REPO]}/zhistory" ]]; then
+        rm -rf "${CONFIG_PATHS[REPO]}/zhistory"
+    fi
 
     # 3. Smart Cleanup of Source
     # If the user ran the installer from outside the target directory (~/.config/zsh-conf)
@@ -551,17 +536,6 @@ FileSystem::atomic_backup() {
     cp -a "$file" "${CONFIG_PATHS[BACKUP]}/$(basename "$file")_$timestamp"
 
     Logger::success "Atomic backup: $(basename "$file") -> ${CONFIG_PATHS[BACKUP]}"
-    sleep 2
-}
-
-FileSystem::create_symlink() {
-    local src="$1"
-    local dest="$2"
-
-    # -s: Symbolic, -f: Force
-    ln -sf "$src" "$dest"
-
-    Logger::success "Symlink created: $(basename "$dest")"
     sleep 2
 }
 
@@ -638,8 +612,8 @@ Installer::ensure_zsh_shell() {
         Logger::success "Zsh is present."
     fi
 
-    # 2. Set as Default Shell
-    if [[ "${SHELL:-}" != "/usr/bin/zsh" ]] && [[ "${SHELL:-}" != "/bin/zsh" ]]; then
+    # 2. Set as Default Shell (handles /bin/zsh, /usr/bin/zsh, /opt/homebrew/bin/zsh, etc.)
+    if [[ "${SHELL:t}" != "zsh" ]]; then
         Interface::print_banner
         Logger::warn "Changing shell to Zsh (Requires Root). Reboot required."
         if Interface::prompt_confirm "Change default shell to Zsh?"; then
@@ -671,7 +645,9 @@ Installer::migrate_user_path() {
 
     [[ -n "$path_lines" ]] || return 0
 
-    print -r -- '# ------------------------------------------------------------------------------
+    # Only seed the template if User-Overrides.zsh doesn't exist yet; never clobber existing overrides.
+    if [[ ! -s "$override_file" ]]; then
+        print -r -- '# ------------------------------------------------------------------------------
 # USER OVERRIDES & SECRETS
 # ------------------------------------------------------------------------------
 # This file is for local configuration that should NOT be tracked by Git.
@@ -698,6 +674,7 @@ Installer::migrate_user_path() {
 
 # ── User Paths ─────────────────────────────────────────────────────
 # path+=("$HOME/my-custom-bin")' > "$override_file"
+    fi
 
     {
         print ""
@@ -741,7 +718,7 @@ Installer::configure_user_features() {
             print
 
             if Interface::prompt_confirm "Enable ${THEME_COLORS[BOLD]}${feature_names[$i]}${THEME_COLORS[RESET]}?"; then
-                # Queue modification logic for .zshenv
+                # Queue modification logic for user.conf
                 sed_args+=("-e" "s|${config_keys[$i]}=\"No\"|${config_keys[$i]}=\"Yes\"|g")
                 print -f "      %s Enabled %s\n" "${THEME_ICONS[GEAR]}" "${feature_names[$i]}"
             else
@@ -767,7 +744,6 @@ Installer::main() {
     typeset -g INSTALLER_SOURCE_DIR="${INSTALLER_SCRIPT_PATH:h}"
 
     cd /tmp
-    local DATE=$(date +%Y-%m-%d)
     local TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
     # 1. Initialization
@@ -818,26 +794,36 @@ Installer::main() {
     # Parallel Cloning
     {
         local temp_dir="/tmp/zsh_bin_${TIMESTAMP}"
+        local pid_repo pid_bin
 
         # Start both clones concurrently
         git clone -b remastered --single-branch --depth=1 --quiet \
             "https://github.com/adityastomar67/zsh-conf.git" "${CONFIG_PATHS[REPO]}" &
+        pid_repo=$!
+
         git clone --depth=1 --quiet "$BIN_SOURCE_REPO" "$temp_dir" &
+        pid_bin=$!
 
-        # A bare 'wait' pauses the script until ALL background '&' tasks finish!
-        wait
+        # Fail if core repository clone failed
+        wait "$pid_repo" || { rm -rf "$temp_dir"; exit 1; }
 
-        # Fast Move (Assuming BIN_TARGET_DIR is inside the newly cloned REPO)
-        mkdir -p "$BIN_TARGET_DIR"
-
-        # Use Zsh native dotglob (D) to cleanly move all files and hidden files
-        # without spawning 'cp' and 'rm' separately.
-        mv "$temp_dir"/*(D) "$BIN_TARGET_DIR/"
-        rmdir "$temp_dir" # Clean up the 'now-empty' temp folder
+        if wait "$pid_bin"; then
+            mkdir -p "$BIN_TARGET_DIR"
+            # Use Zsh native dotglob (D) to cleanly move all files and hidden files
+            mv "$temp_dir"/*(D) "$BIN_TARGET_DIR/"
+            rmdir "$temp_dir" 2>/dev/null
+        else
+            rm -rf "$temp_dir"
+        fi
     } &
+    local clone_pid=$!
 
-    Interface::spinner $! "Cloning repository..."
-    wait $!
+    Interface::spinner "$clone_pid" "Cloning repository..."
+    if ! wait "$clone_pid"; then
+        print -f "\r\033[K"
+        Logger::error "Failed to clone repository. Check your internet connection and try again."
+        exit 1
+    fi
 
     print -f "\r\033[K"
     Logger::success "Config downloaded to ${CONFIG_PATHS[REPO]}"
@@ -871,6 +857,7 @@ EOF
     Logger::info "Finalizing..."
 
     System::git_setup &
+    local git_setup_pid=$!
 
     # 10. Cleanup
     Interface::print_banner
@@ -880,8 +867,11 @@ EOF
 
     Interface::print_banner
     if Interface::prompt_confirm "Do you want to remove complete GIT Tracking as well?"; then
-        rm -rf "${CONFIG_PATHS[REPO]}/.git"
-        rm -rf "${CONFIG_PATHS[REPO]}/.gitignore"
+        rm -rf "${CONFIG_PATHS[REPO]}/.git" \
+               "${CONFIG_PATHS[REPO]}/.gitignore" \
+               "${CONFIG_PATHS[REPO]}/install.zsh" \
+               "${CONFIG_PATHS[REPO]}/README.md" \
+               "${CONFIG_PATHS[REPO]}/LICENSE"
         Logger::success "GIT Tracking removed. Now you can track it on your own!"
     else
         Logger::info "GIT Tracking kept."
@@ -908,10 +898,13 @@ EOF
     fi
     sleep 2
 
+    # Ensure background git config writes finish before exec zsh
+    wait "$git_setup_pid" 2>/dev/null
+
     if Interface::prompt_confirm "Launch new shell now?"; then
-        unset THEME_COLORS THEME_ICONS CONFIG_PATHS REQUIRED_PACKAGES COMMAND_ALIASES \
+        unset THEME_COLORS THEME_ICONS CONFIG_PATHS REQUIRED_PACKAGES \
               SYSTEM_INFO BIN_TARGET_DIR BIN_SOURCE_REPO INSTALLER_SCRIPT_PATH \
-              INSTALLER_SOURCE_DIR HAS_NERD HAS_LIGATURES ANS response pkg package item i
+              INSTALLER_SOURCE_DIR HAS_NERD HAS_LIGATURES ANS response pkg package i
         cd $HOME
         exec zsh
     else
