@@ -162,15 +162,15 @@ _zsh_reload() {
 
         if (( ${#zwc_files} )); then
             rm -f -- "${zwc_files[@]}"
-            local summary="${(%):-%F{green}}Cleared ${#zwc_files} .zwc file(s). Rebuilt from source.${(%):-%f}"
+            local summary="  ${COLOR[GREEN]}Cleared ${#zwc_files} .zwc file(s). Rebuilt from source.${COLOR[RESET]}"
             if (( ${#opt_verbose} )); then
-                local -a lines=( "  ${^zwc_files}" )
+                local -a lines=( "    ${^zwc_files}" )
                 export _ZSH_RELOAD_LOG="${summary}"$'\n'"${(F)lines}"
             else
                 export _ZSH_RELOAD_LOG="${summary}"
             fi
         else
-            export _ZSH_RELOAD_LOG="${(%):-%F{yellow}}No .zwc files found. Reloaded shell.${(%):-%f}"
+            export _ZSH_RELOAD_LOG="  ${COLOR[YELLOW]}No .zwc files found. Reloaded shell.${COLOR[RESET]}"
         fi
     fi
 
